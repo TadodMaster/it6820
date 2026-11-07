@@ -1,0 +1,1121 @@
+% =====================================================================
+%  Kiến trúc máy tính RISC-V 32-bit (RV32I) trên Logisim Evolution
+%  Tài liệu học từng bước, từng khối, có hình TikZ.
+%  Biên dịch:  pdflatex KienTruc_RV32I.tex   (chạy 2 lần để có mục lục)
+%  Hoặc dùng Overleaf (compiler: pdfLaTeX).
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{lmodern}
+\usepackage[vietnamese]{babel}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,longtable,array,enumitem,tabularx}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage[most]{tcolorbox}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usepackage[unicode,colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\setlist{itemsep=2pt,topsep=3pt,parsep=0pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\emergencystretch}{3em}
+
+% tên tín hiệu / lệnh (chữ đơn cách, gạch dưới an toàn)
+\newcommand{\sig}[1]{\texttt{\detokenize{#1}}}
+
+% hộp "Thí nghiệm", "Câu hỏi tự kiểm tra", "Lưu ý"
+\newtcolorbox{khung}[2]{enhanced,breakable,colback=#1!6,colframe=#1!70!black,
+  boxrule=0.6pt,arc=2pt,left=5pt,right=5pt,top=3pt,bottom=3pt,
+  fonttitle=\bfseries\small,coltitle=black,colbacktitle=#1!18,title={#2},
+  before skip=6pt,after skip=6pt}
+\newenvironment{thinghiem}{\begin{khung}{green}{Thí nghiệm}}{\end{khung}}
+\newenvironment{kiemtra}{\begin{khung}{orange}{Câu hỏi tự kiểm tra}}{\end{khung}}
+\newenvironment{luuy}{\begin{khung}{red}{Lưu ý}}{\end{khung}}
+
+% kiểu TikZ dùng chung
+\tikzset{
+  blk/.style={draw,rounded corners=2pt,minimum height=8mm,minimum width=16mm,
+              align=center,font=\footnotesize,fill=blue!6},
+  ctl/.style={blk,fill=orange!15},
+  mem/.style={blk,fill=green!10},
+  reg/.style={blk,fill=yellow!20,minimum width=4mm,minimum height=26mm},
+  % MUX: hình thang xoay 270 độ, nên "minimum width" là chiều CAO khi vẽ ra
+  mux/.style={draw,trapezium,trapezium angle=75,trapezium stretches=true,shape border rotate=270,
+              minimum width=12mm,minimum height=7mm,inner sep=1pt,align=center,font=\scriptsize,fill=gray!12},
+  ar/.style={-{Stealth[length=2mm]},thick},
+  bus/.style={-{Stealth[length=2mm]},line width=1.2pt},
+  cs/.style={-{Stealth[length=2mm]},thick,orange!70!black,dashed},
+  lab/.style={font=\scriptsize,inner sep=1pt},
+  stg/.style={draw,minimum width=14mm,minimum height=5mm,font=\scriptsize,inner sep=1pt}
+}
+
+\title{\textbf{Kiến trúc máy tính RISC-V 32-bit (RV32I)\\ trên Logisim Evolution}\\[4pt]
+\large Tài liệu học từng bước: từng khối, bên trong có gì, vì sao}
+\author{Nhóm bài tập lớn --- bản \LaTeX{} tiếng Việt}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Mục tiêu và cách dùng tài liệu}
+% =====================================================================
+Sau khi học hết tài liệu này, bạn có thể giải thích \textbf{mọi circuit của dự án, bên trong có gì và vì sao}, từ một cổng logic đến CPU pipeline 5 tầng, và chứng minh bằng kiểm thử rằng nó chạy đúng.
+
+\textbf{Dự án gồm:} hai CPU dùng chung các khối: \sig{main} (single-cycle) và \sig{Pipeline} (5 tầng IF, ID, EX, MEM, WB); 14 circuit; bộ nhớ kiểu Harvard (ROM lệnh 256 từ, RAM dữ liệu 256 từ); assembler, bộ mô phỏng tham chiếu và bộ kiểm thử tự động.
+
+\textbf{Cách học:} làm lần lượt các bước. Mỗi bước gồm \emph{đọc}, \emph{nhìn} (mở circuit trong Logisim), \emph{làm} (một thí nghiệm nhỏ) và \emph{kiểm tra} (trả lời không nhìn tài liệu). Chưa trả lời được thì lặp lại bước đó.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}cc>{\raggedright}p{4.6cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Giai đoạn} & \textbf{Buổi} & \textbf{Chủ đề} & \textbf{Circuit} \\
+\midrule
+0 & 1 & Công cụ và bức tranh lớn & (nhìn từ ngoài) \\
+1 & 2--3 & Nền tảng: CPU chạy chương trình, định dạng lệnh & --- \\
+2 & 4 & Giải mã và điều khiển & \sig{InstructionDecode}, \sig{MainControl}, \sig{ImmGen} \\
+3 & 5 & Thanh ghi và số học & \sig{RegisterFile}, \sig{ALUControl}, \sig{ALU}, \sig{BranchUnit} \\
+4 & 6--7 & Bộ nhớ và CPU single-cycle & \sig{Memory}, \sig{LoadExtract}, \sig{StoreMerge}, \sig{main} \\
+5 & 8--10 & Pipeline & \sig{Pipeline}, \sig{ForwardingUnit}, \sig{HazardUnit} \\
+6 & 11--12 & Chương trình, kiểm thử, công cụ, demo & assembler, simulator, test \\
+\bottomrule
+\end{tabularx}
+\caption{Lộ trình 12 buổi (mỗi buổi khoảng 90 phút, tổng cộng khoảng 18 giờ).}
+\end{table}
+
+Nếu ba người chia việc: mỗi người học sâu một phần (xem bảng ở phần~\ref{sec:chia}) nhưng cả ba cùng làm giai đoạn 0, 1 và 6.
+
+% =====================================================================
+\section{Giai đoạn 0 --- Công cụ và bức tranh lớn (buổi 1)}
+% =====================================================================
+\subsection*{Bước 0.1: mở dự án}
+\begin{enumerate}
+  \item Cần Java 21. Mở dự án bằng lệnh:\\ \texttt{java -jar logisim-evolution-4.1.0-all.jar RiscVComputer.circ}
+  \item Trong cây bên trái có 14 circuit. Chia thành ba nhóm:
+  \begin{itemize}
+    \item hai CPU: \sig{main}, \sig{Pipeline};
+    \item các khối datapath: \sig{InstructionDecode}, \sig{MainControl}, \sig{ImmGen}, \sig{RegisterFile}, \sig{ALUControl}, \sig{ALU}, \sig{BranchUnit}, \sig{Memory}, \sig{LoadExtract}, \sig{StoreMerge};
+    \item các khối chỉ có trong pipeline: \sig{ForwardingUnit}, \sig{HazardUnit}.
+  \end{itemize}
+\end{enumerate}
+
+\subsection*{Bước 0.2: các thao tác Logisim cần biết}
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Phím / thao tác} & \textbf{Tác dụng} \\
+\midrule
+Ctrl+R & đặt lại mô phỏng (PC và mọi thanh ghi về 0) \\
+Ctrl+F9 & một chu kỳ xung nhịp đầy đủ (một tick) \\
+Tab State & hiện \sig{PC} và \sig{x0..x31} trực tiếp \\
+Tunnel (đường hầm) & các tunnel cùng tên là \textbf{cùng một dây} \\
+Hàng probe cuối mạch & các giá trị cần theo dõi khi demo \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Bước 0.3: bức tranh lớn}
+Hình~\ref{fig:big} cho thấy ý tưởng chung: CPU lấy lệnh từ ROM, giải mã, thực thi bằng ALU, truy cập RAM và ghi kết quả vào thanh ghi.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=9mm]
+  \node[mem] (rom) {ROM lệnh\\256$\times$32};
+  \node[blk,right=of rom] (dec) {Giải mã\\+ điều khiển};
+  \node[blk,right=of dec] (rf) {Thanh ghi\\x0..x31};
+  \node[blk,right=of rf] (alu) {ALU};
+  \node[mem,right=of alu] (ram) {RAM dữ liệu\\256$\times$32};
+  \node[blk,above=10mm of rom] (pc) {PC};
+  \draw[ar] (pc) -- (rom);
+  \draw[ar] (rom) -- node[lab,above]{lệnh} (dec);
+  \draw[ar] (dec) -- (rf);
+  \draw[ar] (rf) -- (alu);
+  \draw[ar] (alu) -- (ram);
+  \draw[ar] (alu.north) |- ++(0,6mm) -| (pc.east) node[lab,pos=.25,above]{địa chỉ nhảy / PC+4};
+  \draw[ar] (ram.south) -- ++(0,-7mm) -| node[lab,pos=.25,below]{ghi kết quả (write-back)} (rf.south);
+\end{tikzpicture}
+\caption{Bức tranh lớn: nạp lệnh $\rightarrow$ giải mã $\rightarrow$ thanh ghi $\rightarrow$ ALU $\rightarrow$ bộ nhớ $\rightarrow$ ghi lại.}
+\label{fig:big}
+\end{figure}
+
+\begin{kiemtra}
+\begin{itemize}
+  \item \sig{main} khác \sig{Pipeline} ở điểm nào?
+  \item Vì sao có hai bộ nhớ (ROM lệnh, RAM dữ liệu)?
+  \item Tunnel dùng để làm gì?
+\end{itemize}
+\end{kiemtra}
+
+% =====================================================================
+\section{Giai đoạn 1 --- Nền tảng (buổi 2--3)}
+% =====================================================================
+\subsection{CPU chạy chương trình như thế nào}
+\begin{enumerate}
+  \item \textbf{Nạp lệnh (fetch):} đọc lệnh ở địa chỉ trong \sig{PC}.
+  \item \textbf{Giải mã (decode):} tách trường lệnh, đọc thanh ghi, sinh tín hiệu điều khiển.
+  \item \textbf{Thực thi (execute):} ALU tính; quyết định rẽ nhánh.
+  \item \textbf{Bộ nhớ (memory):} load / store.
+  \item \textbf{Ghi lại (write-back):} đưa kết quả vào thanh ghi \sig{rd}; \sig{PC} chuyển sang lệnh kế tiếp.
+\end{enumerate}
+Các ý quan trọng: trạng thái chỉ đổi ở \textbf{cạnh xung nhịp}; mạch tổ hợp khác mạch tuần tự; số âm dùng bù hai (ví dụ $-1 = \texttt{0xFFFFFFFF}$); mọi giá trị trong tài liệu viết ở hệ 16 (hex) nếu có tiền tố \texttt{0x}.
+
+\begin{thinghiem}
+Chạy tay \texttt{programs/demo.s} 3 vòng lặp trên giấy (PC, x10, x11) rồi so với bảng 40 tick ở phần~\ref{sec:demo}.
+\end{thinghiem}
+
+\subsection{Định dạng lệnh RISC-V}
+Có sáu định dạng R, I, S, B, U, J. Các trường nằm \textbf{cố định} ở cùng vị trí bit nên giải mã chỉ là đi dây.
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Kiểu} & \textbf{31--25} & \textbf{24--20} & \textbf{19--15} & \textbf{14--12} & \textbf{11--7} & \textbf{6--0}\\
+\hline
+R & funct7 & rs2 & rs1 & funct3 & rd & opcode\\
+\hline
+I & \multicolumn{2}{c|}{imm[11:0]} & rs1 & funct3 & rd & opcode\\
+\hline
+S & imm[11:5] & rs2 & rs1 & funct3 & imm[4:0] & opcode\\
+\hline
+B & imm[12$|$10:5] & rs2 & rs1 & funct3 & imm[4:1$|$11] & opcode\\
+\hline
+U & \multicolumn{4}{c|}{imm[31:12]} & rd & opcode\\
+\hline
+J & \multicolumn{4}{c|}{imm[20$|$10:1$|$11$|$19:12]} & rd & opcode\\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Chín opcode đang dùng:}
+\texttt{0x33} (R), \texttt{0x13} (I-ALU), \texttt{0x03} (load), \texttt{0x23} (store), \texttt{0x63} (branch), \texttt{0x37} (LUI), \texttt{0x17} (AUIPC), \texttt{0x6F} (JAL), \texttt{0x67} (JALR).
+
+\begin{thinghiem}
+Chạy \texttt{python tools/rv.py asm programs/demo.s -l}, rồi giải mã tay ba từ lệnh \texttt{00b50533}, \texttt{fff58593}, \texttt{fe059ce3}: viết các trường dạng nhị phân, nêu định dạng và tên lệnh.
+\end{thinghiem}
+\begin{kiemtra}
+\begin{itemize}
+  \item Định dạng nào không có \sig{rd}?
+  \item Vì sao hằng số kiểu B và J thiếu bit 0?
+  \item \sig{funct7[5]} làm thay đổi điều gì?
+\end{itemize}
+\end{kiemtra}
+
+% =====================================================================
+\section{Giai đoạn 2 --- Giải mã và điều khiển (buổi 4)}
+% =====================================================================
+
+\subsection{Khối \texorpdfstring{\texttt{InstructionDecode}}{InstructionDecode}}
+\begin{itemize}
+  \item \textbf{Mục đích:} cắt lệnh 32 bit thành các trường.
+  \item \textbf{Vào / ra:} vào \sig{Instruction}; ra \sig{opcode}(7), \sig{rd}(5), \sig{funct3}(3), \sig{rs1}(5), \sig{rs2}(5), \sig{funct7}(7).
+  \item \textbf{Bên trong:} đúng một \emph{splitter} (32 $\rightarrow$ 6 phần). Không có cổng logic.
+  \item \textbf{Vì sao:} RISC-V đặt số hiệu thanh ghi luôn ở cùng chỗ, nên có thể đọc thanh ghi \emph{trong khi} còn đang giải mã opcode.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1mm,y=1mm]
+  \draw (0,0) rectangle (112,8);
+  \foreach \x/\t in {0/{funct7 [31:25]},28/{rs2 [24:20]},48/{rs1 [19:15]},68/{funct3 [14:12]},88/{rd [11:7]}} {
+    \draw (\x,0) -- (\x,8);
+    \node[font=\tiny,anchor=west] at (\x+1,4) {\t};}
+  \node[font=\tiny,anchor=west] at (106,4) {};
+  \draw (104,0) -- (104,8);
+  \node[font=\tiny] at (108,4) {op};
+  \foreach \x in {14,38,58,78,96,108} \draw[ar] (\x,0) -- (\x,-7);
+  \node[lab,below] at (14,-7) {\sig{funct7}};
+  \node[lab,below] at (38,-7) {\sig{rs2}};
+  \node[lab,below] at (58,-7) {\sig{rs1}};
+  \node[lab,below] at (78,-7) {\sig{funct3}};
+  \node[lab,below] at (96,-7) {\sig{rd}};
+  \node[lab,below] at (108,-7) {\sig{opcode}};
+\end{tikzpicture}
+\caption{\sig{InstructionDecode}: chỉ là đi dây từ các trường bit cố định.}
+\end{figure}
+
+\begin{thinghiem}
+Gán \sig{Instruction} = \texttt{00b50533} rồi đọc sáu ngõ ra ($\mathtt{opcode}=\mathtt{0x33}$, $\mathtt{rd}=10$, $\mathtt{rs1}=10$, $\mathtt{rs2}=11$).
+\end{thinghiem}
+\begin{kiemtra}Các bit nào tạo \sig{rs2}? Vì sao khối này không có cổng logic nào?\end{kiemtra}
+
+\subsection{Khối \texorpdfstring{\texttt{MainControl}}{MainControl}}
+\begin{itemize}
+  \item \textbf{Mục đích:} từ \sig{opcode} sinh tất cả tín hiệu điều khiển của datapath.
+  \item \textbf{Vào / ra:} vào \sig{opcode}(7); ra \sig{RegWrite}, \sig{ALUSrc}, \sig{MemWrite}, \sig{MemRead}, \sig{IsBranch}, \sig{IsJAL}, \sig{IsJALR}, \sig{ALUOp}(2), \sig{ImmSel}(3), \sig{ASel}(2), \sig{WBSel}(2).
+  \item \textbf{Bên trong:} chín \emph{bộ so sánh} 7 bit (mỗi opcode một cái, kèm \emph{hằng số} 7 bit); các \emph{cổng OR} (tối đa 3 ngõ vào) cho biết lớp lệnh nào bật tín hiệu nào; các \emph{splitter} ghép bit đơn thành bus 2--3 bit.
+\end{itemize}
+
+\textbf{Các phương trình ghép bus} (viết $\{a,b,\dots\}$: phần tử đầu là bit cao nhất):
+\begin{align*}
+\mathtt{ALUOp} &= \{\mathtt{IsR}\lor\mathtt{IsI},\ \mathtt{IsI}\lor\mathtt{IsBranch}\}\\
+\mathtt{ImmSel} &= \{\mathtt{IsJAL},\ \mathtt{IsBranch}\lor\mathtt{IsLui}\lor\mathtt{IsAuipc},\ \mathtt{IsStore}\lor\mathtt{IsLui}\lor\mathtt{IsAuipc}\}\\
+\mathtt{ASel} &= \{\mathtt{IsLui},\ \mathtt{IsAuipc}\}\\
+\mathtt{WBSel} &= \{\mathtt{IsJAL}\lor\mathtt{IsJALR},\ \mathtt{IsLoad}\}
+\end{align*}
+Ý nghĩa các mã:
+\begin{itemize}
+  \item \sig{ALUOp}: 00 cộng, 01 trừ, 10 tra bảng kiểu R, 11 tra bảng kiểu I;
+  \item \sig{ImmSel}: 000 I, 001 S, 010 B, 011 U, 100 J;
+  \item \sig{ASel} (toán hạng A): 00 \sig{rs1}, 01 \sig{PC} (AUIPC), 10 hằng 0 (LUI);
+  \item \sig{WBSel} (dữ liệu ghi lại): 00 kết quả ALU, 01 dữ liệu bộ nhớ, 10 \sig{PC+4} (JAL, JALR).
+\end{itemize}
+Opcode lạ làm mọi tín hiệu bằng 0 (một lệnh NOP vô hại).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=7mm]
+  \node[lab] (op) {\sig{opcode}};
+  \node[blk,right=10mm of op,minimum height=24mm] (cmp) {9 bộ\\so sánh\\7 bit};
+  \node[blk,right=26mm of cmp,minimum height=24mm] (or) {cổng OR\\+ splitter};
+  \node[lab,right=12mm of or,align=left] (out) {\sig{RegWrite} \sig{ALUSrc}\\\sig{MemWrite} \sig{MemRead}\\\sig{IsBranch} \sig{IsJAL} \sig{IsJALR}\\\sig{ALUOp} \sig{ImmSel}\\\sig{ASel} \sig{WBSel}};
+  \draw[bus] (op) -- (cmp);
+  \draw[ar] (cmp) -- node[lab,above]{9 cờ lớp lệnh} (or);
+  \draw[bus] (or) -- (out);
+\end{tikzpicture}
+\caption{\sig{MainControl}: so sánh opcode $\rightarrow$ cờ lớp lệnh $\rightarrow$ OR $\rightarrow$ tín hiệu điều khiển.}
+\end{figure}
+
+\begin{thinghiem}
+Điền bảng tín hiệu điều khiển trên giấy cho \texttt{lw}, \texttt{sw}, \texttt{beq}, \texttt{lui}, \texttt{jal}, rồi đối chiếu với \texttt{tests/maincontrol.vec}.
+\end{thinghiem}
+\begin{kiemtra}Với \texttt{sw}, những tín hiệu nào bằng 1? \sig{ASel}=10 nghĩa là gì và dùng cho lệnh nào? Chuyện gì xảy ra với opcode 0?\end{kiemtra}
+
+\subsection{Khối \texorpdfstring{\texttt{ImmGen}}{ImmGen}}
+\begin{itemize}
+  \item \textbf{Mục đích:} dựng lại hằng số 32 bit theo định dạng do \sig{ImmSel} chọn.
+  \item \textbf{Vào / ra:} vào \sig{Instruction}, \sig{ImmSel}(3); ra \sig{Imm}(32).
+  \item \textbf{Bên trong:} 9 \emph{splitter} (cắt các trường rải rác và ghép đúng thứ tự, trong đó một splitter 32 bit ghép 12 bit 0 với \sig{instr[31:12]} cho kiểu U); 4 \emph{bộ mở rộng bit} mở rộng dấu cho I, S, B, J (12, 12, 13, 21 bit $\rightarrow$ 32); với kiểu U là hằng số 12 bit 0 và splitter ghép (\texttt{imm}$\ll 12$); hai hằng số 1 bit 0 cho bit 0 luôn bằng 0 của B và J; một \emph{multiplexer} 8-ra-1 (dùng 5 ngõ) chọn theo \sig{ImmSel} (0 I, 1 S, 2 B, 3 U, 4 J).
+  \item \textbf{Vì sao:} các bit hằng số bị xáo trộn có chủ đích để đa số bit nằm cùng vị trí giữa các định dạng; splitter xếp lại; mở rộng dấu giữ số âm vẫn âm.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=7mm]
+  \node[lab] (in) {\sig{Instruction}};
+  \node[blk,right=8mm of in,yshift=12mm] (i) {I: 12 bit\\mở rộng dấu};
+  \node[blk,below=2mm of i] (s) {S: 12 bit\\mở rộng dấu};
+  \node[blk,below=2mm of s] (b) {B: 13 bit\\mở rộng dấu};
+  \node[blk,below=2mm of b] (u) {U: $\mathtt{imm}\ll12$};
+  \node[blk,below=2mm of u] (j) {J: 21 bit\\mở rộng dấu};
+  \node[mux,right=18mm of s,minimum width=40mm,minimum height=9mm,yshift=-8mm] (m) {MUX\\8:1};
+  \node[lab,right=8mm of m] (out) {\sig{Imm}};
+  \node[ctl,below=6mm of m] (sel) {\sig{ImmSel}};
+  \foreach \n in {i,s,b,u,j} {\draw[ar] (in.east) -- (\n.west); \draw[ar] (\n.east) -- (m.west);}
+  \draw[bus] (m) -- (out);
+  \draw[cs] (sel) -- (m);
+\end{tikzpicture}
+\caption{\sig{ImmGen}: năm cách dựng hằng số, multiplexer chọn theo \sig{ImmSel}.}
+\end{figure}
+
+\begin{thinghiem}
+Giải mã \texttt{fe059ce3} (kiểu B): hằng số phải là \texttt{0xfffffff8} $=-8$. Kiểm tra trong \texttt{tests/immgen.vec}.
+\end{thinghiem}
+\begin{kiemtra}Vì sao độ lệch của B luôn chẵn? Bit dấu lấy từ đâu ở mỗi định dạng?\end{kiemtra}
+
+\textbf{Bài kiểm tra cuối giai đoạn:} từ một từ lệnh, nêu định dạng, ghi \sig{rd}, \sig{rs1}, \sig{rs2}, hằng số và các tín hiệu điều khiển mà không nhìn tài liệu.
+
+% =====================================================================
+\section{Giai đoạn 3 --- Thanh ghi và số học (buổi 5)}
+% =====================================================================
+
+\subsection{Khối \texorpdfstring{\texttt{RegisterFile}}{RegisterFile}}
+\begin{itemize}
+  \item \textbf{Mục đích:} 32 thanh ghi $\times$ 32 bit, mỗi chu kỳ đọc hai và ghi một.
+  \item \textbf{Vào / ra:} vào \sig{write_data}, \sig{CLK}, \sig{write} (\sig{RegWrite}), \sig{rd}, \sig{rs1}, \sig{rs2}; ra \sig{rs1_data}, \sig{rs2_data}.
+  \item \textbf{Bên trong:} 32 \emph{thanh ghi} (nhãn \sig{x0..x31}, sườn lên); một \emph{demultiplexer} (chọn 5 bit, bit dữ liệu = \sig{RegWrite}) dẫn tín hiệu cho phép ghi tới đúng thanh ghi \sig{rd}; hai \emph{multiplexer} 32-ra-1 làm cổng đọc (bất đồng bộ); hằng số 0 nối vào \sig{x0}.
+  \item \textbf{Cách hoạt động:} ghi: chỉ thanh ghi số \sig{rd} có WE = 1; đọc: multiplexer luôn hiện thanh ghi do \sig{rs1}/\sig{rs2} chọn. \sig{x0} chỉ nạp được 0 nên luôn bằng 0.
+  \item \textbf{Vì sao:} đọc bất đồng bộ để CPU single-cycle có toán hạng ngay trong chu kỳ; trong pipeline khối này dùng \textbf{xung nhịp đảo} (ghi ở sườn xuống).
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=6mm]
+  \node[blk] (demux) {DEMUX\\1$\rightarrow$32\\(chọn \sig{rd})};
+  \node[blk,right=26mm of demux,minimum height=30mm] (regs) {32 thanh ghi\\\sig{x0}..\sig{x31}\\(x0 luôn 0)};
+  \node[mux,right=14mm of regs,yshift=8mm,minimum width=12mm,minimum height=8mm] (m1) {MUX\\32:1};
+  \node[mux,right=14mm of regs,yshift=-8mm,minimum width=12mm,minimum height=8mm] (m2) {MUX\\32:1};
+  \node[lab,right=8mm of m1] {\sig{rs1_data}};
+  \node[lab,right=8mm of m2] {\sig{rs2_data}};
+  \node[lab,left=8mm of demux,yshift=3mm] (rw) {\sig{RegWrite}};
+  \node[lab,left=8mm of demux,yshift=-3mm] (rd) {\sig{rd}};
+  \draw[ar] (rw) -- (demux); \draw[ar] (rd) -- (demux);
+  \draw[ar] (demux) -- node[lab,above,align=center]{32 tín hiệu\\WE} (regs);
+  \draw[ar] (regs.east) -- (m1.west); \draw[ar] (regs.east) -- (m2.west);
+  \node[ctl,above=4mm of m1] (r1) {\sig{rs1}}; \draw[cs] (r1) -- (m1);
+  \node[ctl,below=4mm of m2] (r2) {\sig{rs2}}; \draw[cs] (r2) -- (m2);
+  \node[lab,above=6mm of regs] (wd) {\sig{write_data}}; \draw[ar] (wd) -- (regs);
+\end{tikzpicture}
+\caption{\sig{RegisterFile}: demux dẫn WE tới \sig{rd}; hai multiplexer là hai cổng đọc.}
+\end{figure}
+
+\begin{thinghiem}Trong \sig{main}, bấm 3 tick của demo rồi mở \sig{RegisterFile}: tìm thanh ghi nào vừa đổi và đầu ra demux nào bằng 1.\end{thinghiem}
+\begin{kiemtra}Điều gì xảy ra khi $\mathtt{rd}=0$ và $\mathtt{RegWrite}=1$? Vì sao đọc bất đồng bộ còn ghi theo xung nhịp?\end{kiemtra}
+
+\subsection{Khối \texorpdfstring{\texttt{ALUControl}}{ALUControl}}
+\begin{itemize}
+  \item \textbf{Mục đích:} biến \sig{ALUOp}, \sig{funct3}, \sig{funct7} thành mã 4 bit \sig{ALUCtrl}.
+  \item \textbf{Vào / ra:} vào \sig{funct7}(7), \sig{ALUOp}(2), \sig{funct3}(3); ra \sig{ALUCtrl}(4).
+  \item \textbf{Bên trong:} 19 hằng số 4 bit (các mã: 0 ADD, 1 SUB, 2 AND, 3 OR, 4 XOR, 5 SLL, 6 SRL, 7 SRA, 8 SLT, 9 SLTU) và 5 multiplexer: hai 8-ra-1 (bảng kiểu R và kiểu I, chọn theo \sig{funct3}), hai 2-ra-1 (ADD/SUB và SRL/SRA, chọn theo \sig{funct7[5]}), một 4-ra-1 (chọn theo \sig{ALUOp}: ép ADD, ép SUB, bảng R, bảng I).
+  \item \textbf{Vì sao:} một bảng mã = mỗi dòng một hằng số, multiplexer chọn dòng; điều khiển hai tầng (\sig{MainControl} $\rightarrow$ \sig{ALUOp} $\rightarrow$ \sig{ALUControl}) giữ các bảng nhỏ.
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}c>{\raggedright}p{3.4cm}>{\raggedright}p{3.2cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\sig{ALUOp}} & \textbf{Nhóm lệnh} & \textbf{\sig{ALUCtrl}} & \textbf{Ghi chú}\\
+\midrule
+00 & load, store, LUI, AUIPC, JALR & ADD & luôn cộng\\
+01 & branch & SUB & so sánh bằng phép trừ\\
+10 & kiểu R & theo \sig{funct3}, \sig{funct7[5]} & ADD/SUB, SRL/SRA phân biệt bằng \sig{funct7[5]}\\
+11 & kiểu I & theo \sig{funct3} & chỉ lệnh dịch xét \sig{funct7[5]}\\
+\bottomrule
+\end{tabularx}
+\caption{Hai tầng điều khiển ALU.}
+\end{table}
+
+\begin{thinghiem}Viết trên giấy mã của \texttt{sub}, \texttt{sra}, \texttt{srai}, \texttt{slti}, \texttt{lw}, \texttt{beq} rồi đối chiếu \texttt{tests/alucontrol.vec}.\end{thinghiem}
+\begin{kiemtra}Vì sao \texttt{addi} bỏ qua \sig{funct7} còn \texttt{srai} thì không? Load và branch dùng \sig{ALUOp} nào, vì sao?\end{kiemtra}
+
+\subsection{Khối \texorpdfstring{\texttt{ALU}}{ALU}}
+\begin{itemize}
+  \item \textbf{Mục đích:} tính kết quả theo mã \sig{ALUCtrl}.
+  \item \textbf{Vào / ra:} vào \sig{rs1_data}, \sig{rs2_data}, \sig{ALU_Ctrl}; ra \sig{result}.
+  \item \textbf{Bên trong:} bộ cộng, bộ trừ, cổng AND/OR/XOR 32 bit, ba bộ dịch (logic trái, logic phải, số học phải; lượng dịch \sig{B[4:0]}), bộ so sánh có dấu và không dấu, mỗi bộ theo sau là bộ mở rộng 0 từ 1 lên 32 bit (SLT/SLTU trả 0 hoặc 1), một multiplexer 16-ra-1 (dùng 10 ngõ).
+  \item \textbf{Cách hoạt động:} mọi phép tính chạy song song, multiplexer chọn một kết quả theo \sig{ALUCtrl}.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=3mm]
+  \node[lab] (a) {\sig{rs1_data}\ (A)};
+  \node[lab,below=14mm of a] (b) {\sig{rs2_data}\ (B)};
+  \node[blk,right=18mm of a,yshift=18mm] (add) {ADD};
+  \node[blk,below=2mm of add] (sub) {SUB};
+  \node[blk,below=2mm of sub] (log) {AND / OR / XOR};
+  \node[blk,below=2mm of log] (sh) {SLL / SRL / SRA};
+  \node[blk,below=2mm of sh] (cmp) {SLT / SLTU\\(so sánh + mở rộng 0)};
+  \node[mux,right=22mm of log,minimum width=50mm,minimum height=10mm] (m) {MUX\\16:1};
+  \node[lab,right=8mm of m] (res) {\sig{result}};
+  \node[ctl,above=5mm of m] (c) {\sig{ALUCtrl}};
+  \foreach \n in {add,sub,log,sh,cmp} {\draw[ar] ($(a)!0.5!(b)+(10mm,0)$) -- (\n.west); \draw[ar] (\n.east) -- (m.west);}
+  \draw[ar] (a) -- ($(a)!0.5!(b)+(10mm,0)$);
+  \draw[ar] (b) -- ($(a)!0.5!(b)+(10mm,0)$);
+  \draw[bus] (m) -- (res);
+  \draw[cs] (c) -- (m);
+\end{tikzpicture}
+\caption{\sig{ALU}: tính song song mọi phép, multiplexer chọn theo \sig{ALUCtrl}.}
+\end{figure}
+
+\begin{thinghiem}Đặt A $=-1$, B $=1$ với \sig{ALUCtrl}=8 rồi 9: SLT cho 1, SLTU cho 0. Đối chiếu \texttt{tests/alu.vec}.\end{thinghiem}
+\begin{kiemtra}Vì sao kết quả SLT phải mở rộng 0? Bộ phận nào giúp \texttt{sra} giữ dấu?\end{kiemtra}
+
+\subsection{Khối \texorpdfstring{\texttt{BranchUnit}}{BranchUnit}}
+\begin{itemize}
+  \item \textbf{Mục đích:} quyết định branch có được rẽ hay không.
+  \item \textbf{Vào / ra:} vào \sig{rs1_data}, \sig{rs2_data}, \sig{IsBranch}, \sig{funct3}; ra \sig{branch_taken}.
+  \item \textbf{Bên trong:} một bộ so sánh không dấu và một có dấu 32 bit (cho $=$, $<_u$, $<_s$); 3 cổng NOT (cho $\ne$, $\ge_u$, $\ge_s$); multiplexer 8-ra-1 một bit chọn theo \sig{funct3} (000 beq, 001 bne, 100 blt, 101 bge, 110 bltu, 111 bgeu; 010 và 011 cho 0); cổng AND với \sig{IsBranch}.
+  \item \textbf{Vì sao:} sáu điều kiện là ba phép so sánh và phủ định của chúng; AND với \sig{IsBranch} đảm bảo lệnh khác không bao giờ rẽ.
+\end{itemize}
+\begin{kiemtra}\texttt{blt} và \texttt{bltu} khác nhau trong mạch ở chỗ nào?\end{kiemtra}
+
+\textbf{Bài kiểm tra cuối giai đoạn:} tính tay \texttt{sub x13,x12,x10} qua \sig{RegisterFile} $\rightarrow$ \sig{ALUControl} $\rightarrow$ \sig{ALU}, rồi kiểm chứng bằng demo (tick 38).
+
+% =====================================================================
+\section{Giai đoạn 4 --- Bộ nhớ và CPU single-cycle (buổi 6--7)}
+% =====================================================================
+
+\subsection{Khối \texorpdfstring{\texttt{Memory}}{Memory} cùng \texorpdfstring{\texttt{LoadExtract}}{LoadExtract} và \texorpdfstring{\texttt{StoreMerge}}{StoreMerge}}
+\begin{itemize}
+  \item \textbf{Mục đích:} bộ nhớ dữ liệu với truy cập byte, nửa từ và từ (\texttt{lb lh lw lbu lhu sb sh sw}).
+  \item \textbf{Vào / ra:} vào \sig{Address}, \sig{write_data}, \sig{MemWrite}, \sig{CLK}, \sig{funct3}; ra \sig{read_data}.
+  \item \textbf{Bên trong:} một RAM 256$\times$32 với \emph{đọc bất đồng bộ} và một chân cho phép ghi (line enables); một splitter địa chỉ (độ lệch byte \sig{Address[1:0]}, chỉ số từ \sig{Address[9:2]}); \sig{LoadExtract}; \sig{StoreMerge}.
+  \item \textbf{Vì sao đọc bất đồng bộ:} lệnh load phải có dữ liệu ngay trong chu kỳ. Với đọc đồng bộ mặc định, load trả về dữ liệu không xác định (một trong các lỗi đã gặp).
+\end{itemize}
+
+\textbf{\sig{LoadExtract}:} splitter (4 byte, 2 nửa từ), multiplexer 4-ra-1$\times$8 và 2-ra-1$\times$16 chọn byte / nửa từ, 4 bộ mở rộng bit (dấu/0, 8 và 16 $\rightarrow$ 32), multiplexer 8-ra-1$\times$32 cuối cùng chọn theo \sig{funct3}. \texttt{lbu}/\texttt{lhu} mở rộng 0, \texttt{lb}/\texttt{lh} mở rộng dấu.
+
+\textbf{\sig{StoreMerge}:} RAM chỉ ghi nguyên từ, nên store byte là \textbf{đọc--sửa--ghi}: đọc từ cũ, thay một làn byte, ghi cả từ lại.
+Một ROM 16$\times$4 biến $\{\mathrm{size},\mathrm{addr}[1:0]\}$ thành bốn tín hiệu cho phép byte (\texttt{1 2 4 8} cho byte, \texttt{3 3 c c} cho nửa từ, \texttt{f} cho từ); bốn multiplexer 2-ra-1 8 bit chọn, theo từng làn, byte mới hay byte cũ; thêm 3 multiplexer byte chọn nguồn byte cho từng làn.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=8mm]
+  \node[mem] (ram) {RAM\\256$\times$32};
+  \node[blk,right=16mm of ram,yshift=8mm] (le) {\sig{LoadExtract}\\chọn byte / nửa từ\\mở rộng dấu / 0};
+  \node[lab,right=8mm of le] (rd) {\sig{read_data}};
+  \node[blk,below=14mm of ram] (sm) {\sig{StoreMerge}\\(từ cũ + dữ liệu mới)};
+  \node[lab,left=10mm of sm] (wd) {\sig{write_data}};
+  \node[lab,left=10mm of ram,yshift=6mm] (ad) {\sig{Address}};
+  \draw[ar] (ad) -- (ram);
+  \draw[ar] (ram) -- node[lab,above]{từ cũ} (le);
+  \draw[bus] (le) -- (rd);
+  \draw[ar] (ram.south) -- node[lab,right]{từ cũ} (sm.north);
+  \draw[ar] (wd) -- (sm);
+  \draw[ar] (sm.east) -- ++(10mm,0) |- node[lab,pos=.2,right]{từ mới (ghi)} ($(ram.east)+(0,-4mm)$);
+\end{tikzpicture}
+\caption{\sig{Memory}: đọc đi qua \sig{LoadExtract}; ghi đi qua \sig{StoreMerge} (đọc--sửa--ghi).}
+\end{figure}
+
+\begin{thinghiem}Trong \texttt{tests/loadextract.vec} và \texttt{tests/storemerge.vec}, tìm các dòng \texttt{sb} ở độ lệch 2 và \texttt{lb} của byte có bit cao bằng 1.\end{thinghiem}
+\begin{kiemtra}Vì sao \sig{StoreMerge} đọc được từ cũ? Với từ cũ \texttt{0x11223344} và $x1=\mathtt{0xAA}$, lệnh \texttt{sb x1,1(x0)} ghi gì vào từ 0? (Đáp án: \texttt{0x1122AA44}.)\end{kiemtra}
+
+\subsection{CPU single-cycle \texorpdfstring{\texttt{main}}{main}}
+\begin{itemize}
+  \item \textbf{Bên trong:} thanh ghi PC (xóa bằng \sig{RESET}); ROM lệnh 256$\times$32 đánh địa chỉ bằng \sig{PC[9:2]}; 2 bộ cộng (\sig{PC+4}, \sig{PC+imm}); cổng AND 32 bit với mặt nạ \texttt{0xFFFFFFFE} (cho JALR); một cổng OR (\sig{branch_taken} hoặc \sig{IsJAL}); 5 multiplexer (toán hạng A theo \sig{ASel}, toán hạng B theo \sig{ALUSrc}, write-back theo \sig{WBSel}, hai cái cho PC kế tiếp); 8 sub-circuit.
+  \item \textbf{PC kế tiếp:} $\mathtt{next\_pc}=\mathtt{IsJALR}\ ?\ \mathtt{jalr\_target}:(\mathtt{branch\_taken}\lor\mathtt{IsJAL})\ ?\ \mathtt{PC{+}imm}:\mathtt{PC{+}4}$.
+  \item \textbf{Vì sao thiết kế thế:} \texttt{lui}, \texttt{auipc}, \texttt{jal}, \texttt{jalr} dùng lại đường ALU và write-back nhờ \sig{ASel} và \sig{WBSel}, không cần phần cứng mới.
+\end{itemize}
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[x=10mm,y=10mm,scale=0.86,transform shape]
+  % IF
+  \node[blk,minimum width=10mm] (pc) at (0,0) {PC};
+  \node[blk,minimum width=10mm] (add4) at (0,-2) {+4};
+  \node[mem] (rom) at (2.3,0) {ROM lệnh};
+  % ID
+  \node[blk] (dec) at (4.6,0) {Giải mã};
+  \node[ctl] (ctl) at (4.6,1.6) {\sig{MainControl}};
+  \node[blk] (rf) at (7,0) {\sig{RegisterFile}};
+  \node[blk] (imm) at (7,-1.8) {\sig{ImmGen}};
+  % EX
+  \node[mux] (ma) at (9.1,0.4) {A};
+  \node[mux] (mb) at (9.1,-1.0) {B};
+  \node[blk,minimum height=22mm,minimum width=12mm] (alu) at (10.8,-0.3) {\sig{ALU}};
+  \node[ctl] (actl) at (10.8,1.6) {\sig{ALUControl}};
+  \node[blk] (br) at (10.8,-2.4) {\sig{BranchUnit}};
+  \node[blk] (addt) at (10.8,-3.5) {$\mathtt{PC}+\mathtt{imm}$};
+  % MEM / WB
+  \node[mem] (mem) at (14.0,-0.3) {\sig{Memory}};
+  \node[mux,minimum width=16mm] (wb) at (15.8,-0.3) {WB};
+  % IF
+  \draw[ar] (pc) -- (rom);
+  \draw[ar] (pc) -- (add4);
+  \draw[ar] (add4.west) -- ++(-0.6,0) |- node[lab,pos=.25,left]{\sig{next_pc}} (pc.west);
+  % ID
+  \draw[bus] (rom) -- node[lab,above]{lệnh} (dec);
+  \draw[ar] (dec) -- (ctl);
+  \draw[ar] (dec) -- (rf);
+  \draw[ar] (dec.south) |- (imm.west);
+  % EX
+  \draw[bus] (rf.east) -- ++(0.4,0) |- (ma.west);
+  \draw[bus] ($(rf.east)+(0.4,0)$) |- ($(mb.west)+(0,0.15)$);
+  \draw[bus] (imm.east) -- ++(0.9,0) |- ($(mb.west)+(0,-0.15)$);
+  \draw[bus] (ma.east) -- (ma.east -| alu.west);
+  \draw[bus] (mb.east) -- (mb.east -| alu.west);
+  \draw[cs] (actl) -- (alu);
+  \draw[ar] (br.east) -- ++(0.8,0) node[lab,right]{\sig{branch_taken}};
+  \draw[ar] (addt.east) -- ++(0.8,0) node[lab,right]{\sig{pc_target}};
+  % MEM / WB
+  \draw[bus] (alu) -- node[lab,above,pos=.45]{\sig{alu_result}} (mem);
+  \draw[bus] (mem) -- (wb);
+  \draw[bus] ($(alu.east)+(0.3,0)$) |- ++(0,-1.3) -| ($(wb.south)$);
+  \draw[bus] (wb.east) -- ++(0.3,0) |- (16.1,2.4) -| node[lab,pos=.3,above]{\sig{wb_data} ghi về \sig{RegisterFile}} (rf.north);
+  \draw[cs] (ctl.west) -- ++(-1.0,0) node[lab,left,align=right]{tín hiệu\\điều khiển};
+\end{tikzpicture}
+\caption{Sơ đồ khối CPU single-cycle (rút gọn): nạp lệnh $\rightarrow$ giải mã $\rightarrow$ thực thi $\rightarrow$ bộ nhớ $\rightarrow$ ghi lại. Nét cam đứt: tín hiệu điều khiển.}
+\label{fig:main}
+\end{figure}
+
+\textbf{Một lệnh đi qua năm tầng (ví dụ cho \texttt{add x10,x10,x11}, tick 3):}
+\begin{enumerate}
+  \item \textbf{IF:} ROM tại PC = \texttt{0x08} xuất \texttt{00b50533}; \sig{pc_plus4} = \texttt{0x0c}.
+  \item \textbf{ID:} cắt $\mathtt{opcode}=\mathtt{0x33}$, $\mathtt{rd}=10$, $\mathtt{rs1}=10$, $\mathtt{rs2}=11$. \sig{MainControl}: $\mathtt{RegWrite}=1$, $\mathtt{ALUSrc}=0$, $\mathtt{ALUOp}=10$. Register file xuất $x10=0$ và $x11=\mathtt{0x0a}$.
+  \item \textbf{EX:} \sig{ALUControl} cho $\mathtt{ALUCtrl}=0$ (ADD); ALU tính $0+\mathtt{0x0a}=\mathtt{0x0a}$.
+  \item \textbf{MEM:} không có gì.
+  \item \textbf{WB:} $\mathtt{wb\_data}=\mathtt{0x0a}$ được ghi vào $x10$ ở cạnh xung nhịp; PC $=$ PC$+4=\mathtt{0x0c}$.
+\end{enumerate}
+
+\begin{thinghiem}Dùng các probe ở cuối mạch và bảng ở phần~\ref{sec:demo}: theo dõi một lệnh mỗi lớp (add, addi, bnez, sw, lw, jal, ret) qua năm tầng với giá trị thật.\end{thinghiem}
+\begin{kiemtra}Vẽ lại \sig{main} từ trí nhớ thành các hộp IF, ID, EX, MEM, WB và đánh dấu ba tín hiệu chọn multiplexer lấy từ đâu. Lệnh nào dùng bộ cộng riêng \sig{PC+imm}? Đích của JALR tính thế nào?\end{kiemtra}
+
+% =====================================================================
+\section{Giai đoạn 5 --- Pipeline (buổi 8--10)}
+% =====================================================================
+
+\subsection{Các tầng, thanh ghi pipeline, thời điểm ghi}
+Năm tầng làm việc trên năm lệnh cùng lúc. Bốn \textbf{thanh ghi pipeline} (IF/ID, ID/EX, EX/MEM, MEM/WB) mang những gì tầng sau cần.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=3mm]
+  \node[blk,minimum width=17mm] (sif) {IF\\nạp lệnh};
+  \node[reg,right=of sif] (r1) {};
+  \node[blk,minimum width=17mm,right=of r1] (id) {ID\\giải mã};
+  \node[reg,right=of id] (r2) {};
+  \node[blk,minimum width=17mm,right=of r2] (ex) {EX\\ALU};
+  \node[reg,right=of ex] (r3) {};
+  \node[blk,minimum width=17mm,right=of r3] (me) {MEM\\RAM};
+  \node[reg,right=of me] (r4) {};
+  \node[blk,minimum width=17mm,right=of r4] (wb) {WB\\ghi lại};
+  \foreach \a/\b in {sif/r1,r1/id,id/r2,r2/ex,ex/r3,r3/me,me/r4,r4/wb} \draw[ar] (\a) -- (\b);
+  \node[lab,below=2mm of r1] {IF/ID};
+  \node[lab,below=2mm of r2] {ID/EX};
+  \node[lab,below=2mm of r3] {EX/MEM};
+  \node[lab,below=2mm of r4] {MEM/WB};
+  \node[ctl,above=12mm of ex] (fu) {\sig{ForwardingUnit}};
+  \node[ctl,above=12mm of id] (hu) {\sig{HazardUnit}};
+  \draw[cs] (fu.south) -- (ex.north);
+  \draw[cs] (hu.south) -- (id.north);
+  \draw[cs] (r3.north) |- (fu.east);
+  \draw[cs] (r4.north) |- ($(fu.east)+(0,2mm)$);
+  \draw[cs] (hu.west) -| node[lab,pos=.75,left,align=right]{\sig{run}:\\giữ PC,\\IF/ID} (sif.north);
+  \draw[cs] (hu.south west) -- (r1.north);
+\end{tikzpicture}
+\caption{Pipeline 5 tầng, bốn thanh ghi pipeline, hai khối xử lý hazard.}
+\label{fig:pipe}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}lp{10cm}@{}}
+\toprule
+\textbf{Thanh ghi} & \textbf{Chứa}\\
+\midrule
+IF/ID & \sig{pc_id}, \sig{instr_id}\\
+ID/EX & \sig{pc_ex}, \sig{rs1_data_ex}, \sig{rs2_data_ex}, \sig{imm_ex}, \sig{rs1_ex}, \sig{rs2_ex}, \sig{rd_ex}, \sig{funct3_ex}, \sig{funct7_ex}, từ điều khiển \sig{ctrl_ex} (13 bit: \sig{RegWrite ALUSrc MemWrite MemRead IsBranch ALUOp ASel WBSel IsJAL IsJALR})\\
+EX/MEM & \sig{alu_result_mem}, \sig{store_data_mem}, \sig{pc_plus4_mem}, \sig{rd_mem}, \sig{funct3_mem}, điều khiển \sig{RegWrite MemWrite MemRead WBSel}\\
+MEM/WB & \sig{alu_result_wb}, \sig{mem_rdata_wb}, \sig{pc_plus4_wb}, \sig{rd_wb}, điều khiển \sig{RegWrite WBSel}\\
+\bottomrule
+\end{tabular}
+\caption{Nội dung bốn thanh ghi pipeline (hậu tố \sig{_id}, \sig{_ex}, \sig{_mem}, \sig{_wb} là tầng hiện tại).}
+\end{table}
+
+\textbf{Bên trong \sig{Pipeline}:} 24 thanh ghi (PC cùng 23 thanh ghi pipeline có nhãn như \sig{pc_id}, \sig{alu_result_mem}); 8 splitter (các bit PC, đóng gói / tách từ điều khiển); 10 sub-circuit; 10 multiplexer (xem phần~\ref{sec:circ}); 3 bộ cộng (\sig{PC+4} ở IF, \sig{pc_ex+imm} và \sig{pc_ex+4} ở EX); hai cổng NOT: một tạo \sig{CLK_n}, một tạo $\mathtt{run}=\neg\mathtt{stall}$; hai cổng OR (\sig{pc_src_ex} và \sig{bubble}).
+
+\textbf{Từ điều khiển:} tín hiệu điều khiển được sinh một lần ở ID rồi đóng gói; mỗi tầng chỉ tách phần mình cần.
+
+\textbf{Thời điểm ghi:} register file ghi ở \textbf{sườn xuống} (\sig{CLK_n}), nên lệnh ở WB ghi trong nửa đầu chu kỳ và lệnh ở ID đọc giá trị mới ở nửa sau: không cần forwarding cho khoảng cách 3 lệnh.
+
+\begin{thinghiem}Mở \sig{Pipeline}, tìm bốn nhóm thanh ghi theo nhãn; với \texttt{add x2,x1,x1} hãy ghi lại nội dung từng nhóm sau 1, 2, 3, 4 tick.\end{thinghiem}
+\begin{kiemtra}Vì sao PC và IF/ID có chân cho phép ghi \sig{run} còn các thanh ghi khác thì không? Vì sao các thanh ghi pipeline bằng 0 lúc đầu và điều đó vô hại?\end{kiemtra}
+
+\subsection{Khối \texorpdfstring{\texttt{ForwardingUnit}}{ForwardingUnit}}
+\begin{itemize}
+  \item \textbf{Mục đích:} đưa cho EX giá trị mới nhất của \sig{rs1}/\sig{rs2} khi lệnh trước chưa kịp ghi.
+  \item \textbf{Vào / ra:} vào \sig{rs1_ex}, \sig{rs2_ex}, \sig{rd_mem}, \sig{RegWrite_mem}, \sig{rd_wb}, \sig{RegWrite_wb}; ra \sig{ForwardA}, \sig{ForwardB} (2 bit).
+  \item \textbf{Bên trong:} 6 bộ so sánh 5 bit, các cổng AND/NOT, 2 splitter tạo tín hiệu chọn 2 bit.
+\end{itemize}
+\textbf{Quy tắc:}
+\[
+\mathtt{ForwardA}=
+\begin{cases}
+10 & \text{nếu } \mathtt{RegWrite\_mem}\ \wedge\ \mathtt{rd\_mem}\neq0\ \wedge\ \mathtt{rd\_mem}=\mathtt{rs1\_ex}\ \ (\text{từ EX/MEM})\\
+01 & \text{ngược lại nếu điều tương tự đúng với WB}\ \ (\text{từ MEM/WB})\\
+00 & \text{còn lại}\ \ (\text{register file})
+\end{cases}
+\]
+EX/MEM được ưu tiên vì mới hơn; điều kiện $\mathtt{rd}\neq0$ ngăn forward \sig{x0}.
+\textbf{Hai chi tiết:} giá trị lấy từ EX/MEM là kết quả ALU \emph{trừ JAL/JALR thì là PC+4}; toán hạng B sau forwarding cũng là dữ liệu của lệnh store.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=10mm,y=10mm]
+  \node[mux,minimum width=18mm,minimum height=8mm] (ma) at (4.5,1.1) {A};
+  \node[mux,minimum width=18mm,minimum height=8mm] (mb) at (4.5,-1.1) {B};
+  \node[blk,minimum height=30mm,minimum width=12mm] (alu) at (6.8,0) {\sig{ALU}};
+  \node[ctl] (fa) at (4.5,2.7) {\sig{ForwardA}};
+  \node[ctl] (fb) at (4.5,-2.7) {\sig{ForwardB}};
+  \foreach \m in {ma,mb} {
+    \foreach \dy/\t in {0.45/{00: register file (đọc ở ID)},0/{10: EX/MEM (ALU hoặc PC+4)},-0.45/{01: MEM/WB (dữ liệu ghi lại)}} {
+      \draw[ar] ($(\m.west)+(-1.2,\dy)$) node[lab,left]{\t} -- ($(\m.west)+(0,\dy)$);
+    }
+  }
+  \draw[bus] (ma.east) -- (ma.east -| alu.west);
+  \draw[bus] (mb.east) -- (mb.east -| alu.west);
+  \draw[cs] (fa) -- (ma);
+  \draw[cs] (fb) -- (mb);
+  \draw[ar] ($(mb.east)+(0.3,0)$) |- ++(0,-1.0) -- ++(3.0,0) node[lab,right]{dữ liệu store};
+\end{tikzpicture}
+\caption{Forwarding: toán hạng của ALU lấy từ register file (00), MEM/WB (01) hoặc EX/MEM (10).}
+\end{figure}
+
+\subsection{Khối \texorpdfstring{\texttt{HazardUnit}}{HazardUnit}}
+\begin{itemize}
+  \item \textbf{Mục đích:} phát hiện lệnh load theo sau ngay bởi lệnh dùng kết quả của nó.
+  \item \textbf{Vào / ra:} vào \sig{MemRead_ex}, \sig{rd_ex}, \sig{rs1_id}, \sig{rs2_id}; ra \sig{stall}.
+  \item \textbf{Bên trong:} 3 bộ so sánh 5 bit, cổng OR, NOT và AND 3 ngõ vào.
+  \item \textbf{Quy tắc:} $\mathtt{stall}=\mathtt{MemRead\_ex}\wedge\mathtt{rd\_ex}\ne0\wedge(\mathtt{rd\_ex}=\mathtt{rs1\_id}\lor\mathtt{rd\_ex}=\mathtt{rs2\_id})$.
+  \item \textbf{Tác dụng:} $\mathtt{run}=\neg\mathtt{stall}$ làm PC và IF/ID đứng yên, còn từ điều khiển vào ID/EX bị thay bằng 0 (một bubble).
+\end{itemize}
+
+\begin{kiemtra}Vì sao load không forward được như kết quả ALU? Vì sao chỉ stall một chu kỳ mà không phải hai? Bộ so sánh nào bắt điều kiện $\mathtt{rd\_ex}=\mathtt{rs2\_id}$?\end{kiemtra}
+
+\subsection{Hazard điều khiển và hiệu năng}
+Branch, JAL, JALR được quyết định ở \textbf{EX}: $\mathtt{pc\_src\_ex}=\mathtt{branch\_taken}\lor\mathtt{IsJAL}\lor\mathtt{IsJALR}$. PC kế tiếp thành địa chỉ đích, lệnh đang nạp bị thay bằng 0 ($\mathtt{instr\_in}=0$) và từ điều khiển vào ID/EX bị xóa: hai lệnh sau lệnh rẽ nhánh bị hủy. Chi phí: 2 chu kỳ cho mỗi branch/lệnh nhảy được rẽ; branch không rẽ không tốn gì (dự đoán tĩnh ``không rẽ'').
+
+\begin{center}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Tình huống} & \textbf{Chu kỳ thêm}\\
+\midrule
+lệnh phụ thuộc ngay sau lệnh ALU (forwarding) & 0\\
+dùng giá trị vừa load ở lệnh kế tiếp (load-use) & 1\\
+load, một lệnh không liên quan, rồi mới dùng & 0\\
+branch không rẽ & 0\\
+branch được rẽ / \texttt{jal} / \texttt{jalr} & 2\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Tính theo chu kỳ, pipeline ở đây không nhanh hơn single-cycle, vì mô phỏng Logisim không có độ trễ cổng. Lợi ích thật là \textbf{chu kỳ xung nhịp ngắn hơn} (đường dài nhất còn một tầng thay vì năm). Cách cải thiện: quyết định JAL ở ID, bộ dự đoán nhánh, bộ đệm đích nhánh.
+
+\textbf{Giải thích 64 chu kỳ của \texttt{demo.s}:} 39 lệnh $+$ 11 lần chuyển hướng $\times2=22$ (9 \texttt{bnez} được rẽ, \texttt{jal}, \texttt{ret}) $=61$; 3 chu kỳ còn lại là thời gian làm đầy pipeline.
+
+\subsubsection*{Chương trình \texttt{hazards\_demo.s} trên pipeline}
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Địa chỉ} & \textbf{Lệnh} & \textbf{Mục đích}\\
+\midrule
+0x00 & \texttt{li x1,100} & x1 = 100\\
+0x04 & \texttt{sw x1,0(x0)} & cần x1 ngay: \textbf{forwarding}\\
+0x08 & \texttt{lw x2,0(x0)} & load\\
+0x0c & \texttt{addi x3,x2,1} & dùng x2 ngay: \textbf{stall load-use}\\
+0x10 & \texttt{add x4,x3,x2} & x3 được forward\\
+0x14 & \texttt{beq x4,x4,skip} & luôn rẽ: \textbf{flush}\\
+0x18 & \texttt{addi x5,x0,1} & không được có hiệu lực\\
+0x1c & \texttt{addi x6,x0,2} & không được có hiệu lực\\
+0x20 & \texttt{skip: addi x7,x0,7} & lệnh đầu tiên ở đích\\
+0x24 & \texttt{halt: j halt} & kết thúc\\
+\bottomrule
+\end{tabular}
+\end{center}
+Kết quả: $x1=\mathtt{0x64}$, $x2=\mathtt{0x64}$, $x3=\mathtt{0x65}$, $x4=\mathtt{0xc9}$, $x7=7$ và $x5=x6=0$.
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[x=11mm,y=-6.5mm]
+  % cột thời gian
+  \foreach \cl in {0,...,13} \node[lab] at (\cl+0.5,-0.2) {\cl};
+  \node[lab,anchor=east] at (-0.1,-0.2) {sau tick};
+  % hàng: lệnh
+  \node[lab,anchor=east] at (-0.1,1.2) {\texttt{li x1}};
+  \node[lab,anchor=east] at (-0.1,2.2) {\texttt{sw x1}};
+  \node[lab,anchor=east] at (-0.1,3.2) {\texttt{lw x2}};
+  \node[lab,anchor=east] at (-0.1,4.2) {\texttt{addi x3}};
+  \node[lab,anchor=east] at (-0.1,5.2) {\texttt{add x4}};
+  \node[lab,anchor=east] at (-0.1,6.2) {\texttt{beq}};
+  \node[lab,anchor=east] at (-0.1,7.2) {\texttt{addi x5}};
+  \node[lab,anchor=east] at (-0.1,8.2) {\texttt{addi x6}};
+  \node[lab,anchor=east] at (-0.1,9.2) {\texttt{addi x7}};
+  % các ô: (hàng, cột, nhãn)
+  \foreach \rr/\cl/\lbl in {
+    1/0/IF,1/1/ID,1/2/EX,1/3/ME,1/4/WB,
+    2/1/IF,2/2/ID,2/3/EX,2/4/ME,2/5/WB,
+    3/2/IF,3/3/ID,3/4/EX,3/5/ME,3/6/WB,
+    4/3/IF,4/4/ID,4/5/ID,4/6/EX,4/7/ME,4/8/WB,
+    5/4/IF,5/5/IF,5/6/ID,5/7/EX,5/8/ME,5/9/WB,
+    6/6/IF,6/7/ID,6/8/EX,6/9/ME,6/10/WB,
+    7/7/IF,7/8/ID,
+    8/8/IF,
+    9/9/IF,9/10/ID,9/11/EX,9/12/ME,9/13/WB} {
+    \node[stg,fill=blue!8,minimum width=10.5mm] at (\cl+0.5,\rr+0.2) {\tiny\lbl};}
+  % stall và flush
+  \node[stg,fill=orange!35,minimum width=10.5mm] at (5.5,4.2) {\tiny ID};
+  \node[stg,fill=red!25,minimum width=10.5mm] at (9.5,7.2) {\tiny X};
+  \node[stg,fill=red!25,minimum width=10.5mm] at (9.5,8.2) {\tiny X};
+  % chú thích
+  \node[stg,fill=orange!35,minimum width=8mm] (l1) at (0.5,10.6) {\tiny ID};
+  \node[lab,anchor=west] at (l1.east) {\ stall load-use (giữ ở ID)};
+  \node[stg,fill=red!25,minimum width=8mm] (l2) at (5.5,10.6) {\tiny X};
+  \node[lab,anchor=west] at (l2.east) {\ bị flush (thành bubble)};
+\end{tikzpicture}
+\caption{Pipeline của \texttt{hazards\_demo.s}. Cột là trạng thái sau mỗi tick. Cam: lệnh \texttt{addi x3} bị giữ ở ID một chu kỳ (stall load-use). Đỏ (X): hai lệnh sau \texttt{beq} bị flush thành bubble.}
+\label{fig:hazard}
+\end{figure}
+
+\subsubsection*{Trạng thái các tầng sau mỗi tick (đo trên project)}
+\begin{center}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}rllllcccc@{}}
+\toprule
+\textbf{Tick} & \textbf{IF (PC)} & \textbf{ID} & \textbf{EX} & \textbf{MEM} & \sig{stall} & \sig{pc_src_ex} & \sig{FwdA} & \sig{FwdB}\\
+\midrule
+1 & sw (04) & li & -- & -- & 0 & 0 & 00 & 00\\
+2 & lw (08) & sw & li & -- & 0 & 0 & 00 & 00\\
+3 & addi (0c) & lw & sw & li & 0 & 0 & 00 & \textbf{10}\\
+4 & add (10) & addi & lw & sw & \textbf{1} & 0 & 00 & 00\\
+5 & add (\textbf{10}, giữ) & addi & bubble & lw & 0 & 0 & 10 & 00\\
+6 & beq (14) & add & addi & bubble & 0 & 0 & \textbf{01} & 00\\
+7 & addi x5 (18) & beq & add & addi & 0 & 0 & \textbf{10} & 00\\
+8 & addi x6 (1c) & addi x5 & \textbf{beq} & add & 0 & \textbf{1} & 10 & 10\\
+9 & skip (\textbf{20}) & bubble & bubble & beq & 0 & 0 & 00 & 00\\
+10 & halt (24) & addi x7 & bubble & bubble & 0 & 0 & 00 & 00\\
+11 & (28) & halt & addi x7 & bubble & 0 & 0 & 00 & 00\\
+12 & (2c) & bubble & halt & addi x7 & 0 & \textbf{1} & 00 & 00\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{thinghiem}Nạp \texttt{programs/hazards\_demo.hex} vào \sig{Pipeline}, bấm 12 tick và tự điền bảng trên bằng các probe \sig{stall}, \sig{pc_src_ex}, \sig{ForwardA}, \sig{ForwardB} trước khi đọc đáp án.\end{thinghiem}
+\begin{kiemtra}Vì sao $x5=x6=0$ là bằng chứng flush hoạt động? Nếu không có flush thì sao? Vì sao \sig{ForwardA}=10 ở tick 5 vô hại?\end{kiemtra}
+
+\textbf{Bài kiểm tra cuối giai đoạn:} vẽ giản đồ pipeline (IF ID EX ME WB theo từng chu kỳ) của \texttt{hazards\_demo.s} trên giấy, rồi so với Hình~\ref{fig:hazard}.
+
+% =====================================================================
+\section{Giai đoạn 6 --- Chương trình, kiểm thử, công cụ (buổi 11--12)}
+% =====================================================================
+
+\subsection{Chương trình và công cụ}
+\begin{itemize}
+  \item \textbf{Assembler} (\texttt{tools/rv.py asm}): nhãn, lệnh giả (\texttt{li}, \texttt{mv}, \texttt{bnez}, \texttt{ret}, \texttt{j}), macro kiểm tra; tạo ảnh ROM dạng \texttt{v2.0 raw}.
+  \item \textbf{Bộ mô phỏng tham chiếu} (\texttt{tools/rv.py sim}): viết độc lập với mạch; là ``chuẩn'' của mọi bài test.
+  \item \textbf{Bộ chạy không giao diện} (\texttt{tools/java/Run.java}): nạp ROM, đảo xung nhịp, đọc PC, thanh ghi và RAM của mạch thật.
+  \item \textbf{Bộ sinh mạch} (\texttt{tools/build}): sinh circuit từ netlist và kiểm tra từng net.
+\end{itemize}
+
+\subsection{Ba mức kiểm thử}
+\begin{enumerate}
+  \item \textbf{Test module} (\texttt{tests/run\_tests.ps1}): 106 hàng test-vector trên 9 module, do chính Logisim chạy.
+  \item \textbf{Chương trình} (\texttt{tests/run\_cpu\_tests.py}): 7 chương trình trên cả hai CPU; sau khi chạy, cả 32 thanh ghi và mọi từ dữ liệu khác 0 phải bằng kết quả của bộ mô phỏng tham chiếu.
+  \item \textbf{Chương trình ngẫu nhiên} (\texttt{tests/fuzz.py}): chương trình ngẫu nhiên 60--80 lệnh chỉ dùng 7 thanh ghi (nên hầu hết lệnh đều phụ thuộc lệnh gần đó).
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=10mm]
+  \node[blk] (src) {chương trình\\\texttt{.s}};
+  \node[blk,right=of src] (asm) {assembler\\\texttt{rv.py asm}};
+  \node[mem,right=of asm] (hex) {ảnh ROM\\\texttt{.hex}};
+  \node[blk,above right=4mm and 14mm of hex] (c1) {mạch \sig{main}};
+  \node[blk,below right=4mm and 14mm of hex] (c2) {mạch \sig{Pipeline}};
+  \node[blk,right=of src,yshift=-18mm,xshift=0mm] (sim) {mô phỏng\\tham chiếu};
+  \node[ctl,right=30mm of hex] (cmp) {so sánh 32\\thanh ghi + RAM\\$\Rightarrow$ \textbf{OK} / \textbf{DIFFERENT}};
+  \draw[ar] (src) -- (asm); \draw[ar] (asm) -- (hex);
+  \draw[ar] (hex) -- (c1); \draw[ar] (hex) -- (c2);
+  \draw[ar] (c1) -- (cmp); \draw[ar] (c2) -- (cmp);
+  \draw[ar] (src.south) |- (sim.west);
+  \draw[ar] (sim.east) -| (cmp.south);
+  \end{tikzpicture}
+\caption{Cách chứng minh: cùng một chương trình chạy trên hai mạch và trên bộ mô phỏng độc lập, rồi so sánh.}
+\end{figure}
+
+\begin{thinghiem}Viết \texttt{test1.s} (giai thừa của 5), chạy \texttt{python tools/live\_proof.py test1.s}; sau đó sửa một lệnh và \emph{dự đoán} kết quả trước khi chạy.\end{thinghiem}
+\begin{kiemtra}Vì sao bộ mô phỏng tham chiếu phải độc lập với mạch? Bộ fuzz tìm ra điều gì mà test viết tay không tìm?\end{kiemtra}
+
+\subsection{Lỗi đã tìm thấy và bài học}
+\begin{center}
+\small
+\begin{tabular}{@{}lp{5.2cm}p{4.5cm}@{}}
+\toprule
+\textbf{Ở đâu} & \textbf{Lỗi} & \textbf{Cách sửa}\\
+\midrule
+ALU & \texttt{SLTU} trả \texttt{FFFFFFFF} thay vì 1 (mở rộng dấu) & mở rộng 0\\
+ALUControl & \texttt{SLL} kiểu R chọn mã của \texttt{SRL} & sửa hằng số\\
+MainControl & JALR so với opcode của JAL; LUI chọn hằng số kiểu B & viết lại phần giải mã\\
+ImmGen & kiểu U thiếu $\ll12$; bit 0 kiểu J bằng 1 & đã sửa\\
+Memory & load trả dữ liệu không xác định (RAM đọc đồng bộ) & đọc bất đồng bộ\\
+Datapath & JAL, JALR, LUI, AUIPC chưa có đường dữ liệu & thêm \sig{ASel}, \sig{WBSel}, logic PC\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Cạm bẫy của Logisim:} dây chỉ nối ở \emph{đầu mút} (không nối ở chỗ giao chữ T); mọi thứ phải nằm trên lưới 10 px; \sig{Constant} mặc định bằng 1; RAM mặc định đọc đồng bộ.
+
+% =====================================================================
+\section{Đọc sâu file mạch \texttt{RiscVComputer.circ}}
+\label{sec:circ}
+% =====================================================================
+Phần này lấy trực tiếp từ file \texttt{.circ} (Logisim Evolution 4.1.0): số linh kiện thật, cách các dây và tunnel nối với nhau, và những chi tiết chỉ thấy khi lần từng net. Nên đọc sau giai đoạn 5.
+
+\subsection{Số linh kiện trong từng circuit}
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Circuit} & \textbf{Linh kiện (không kể Pin, Tunnel, Text, Probe)}\\
+\midrule
+\sig{InstructionDecode} & 1 splitter (32 $\rightarrow$ 6 trường)\\
+\sig{MainControl} & 9 bộ so sánh 7 bit + 9 hằng số opcode; 11 cổng OR (8 cổng 3 ngõ vào, 3 cổng 2 ngõ vào); 4 splitter ghép bus\\
+\sig{ImmGen} & 9 splitter; 4 bộ mở rộng bit; 3 hằng số (hai 1 bit, một 12 bit); 1 MUX 8:1\\
+\sig{RegisterFile} & 32 thanh ghi; 1 DEMUX 1:32; 2 MUX 32:1; 1 hằng số 0\\
+\sig{ALUControl} & 19 hằng số 4 bit; 5 MUX (hai 8:1, một 4:1, hai 2:1); 1 splitter tách \sig{funct7[5]}\\
+\sig{ALU} & bộ cộng, bộ trừ, AND/OR/XOR 32 bit, 3 bộ dịch, 2 bộ so sánh, 2 bộ mở rộng 0, 1 MUX 16:1, 1 splitter lấy \sig{B[4:0]}\\
+\sig{BranchUnit} & 2 bộ so sánh 32 bit; 3 NOT; 1 MUX 8:1 một bit; 1 AND; 1 hằng số 0\\
+\sig{Memory} & 1 RAM 256$\times$32 (\sig{asyncread=true}); 1 splitter địa chỉ; \sig{LoadExtract}; \sig{StoreMerge}\\
+\sig{LoadExtract} & 3 splitter; 3 MUX (4:1$\times$8, 2:1$\times$16, 8:1$\times$32); 4 bộ mở rộng bit\\
+\sig{StoreMerge} & 6 splitter; 1 ROM 16$\times$4; 7 MUX (ba 4:1$\times$8 chọn nguồn byte, bốn 2:1$\times$8 chọn byte mới/cũ)\\
+\sig{ForwardingUnit} & 6 bộ so sánh 5 bit; 4 NOT; 8 AND 2 ngõ vào; 2 splitter; 1 hằng số 0\\
+\sig{HazardUnit} & 3 bộ so sánh 5 bit; 1 NOT; 1 OR; 1 AND 3 ngõ vào; 1 hằng số 0\\
+\sig{main} & thanh ghi PC; ROM 256$\times$32; 2 bộ cộng; 5 MUX; 1 AND 32 bit; 1 OR; 4 hằng số; 8 sub-circuit; 5 probe\\
+\sig{Pipeline} & 24 thanh ghi; ROM; 3 bộ cộng; 10 MUX; 2 NOT; 2 OR; 1 AND; 8 hằng số; 8 splitter; 10 sub-circuit; 8 probe\\
+\bottomrule
+\end{tabularx}
+\end{center}
+ROM lệnh của cả hai CPU đang nạp sẵn \texttt{demo.s} (13 từ, từ \texttt{00000513} đến \texttt{00008067}). Muốn chạy \texttt{hazards\_demo.s} phải nạp file \texttt{.hex} khác vào ROM.
+
+\subsection{Phương trình đầy đủ của \texorpdfstring{\texttt{MainControl}}{MainControl}}
+Lần theo dây vào từng cổng OR cho kết quả sau (bảy lớp lệnh ghi \sig{rd} được gom bằng hai cổng OR trung gian \sig{rw_a}, \sig{rw_b}):
+\begin{align*}
+\mathtt{RegWrite} &= \underbrace{(\mathtt{IsR}\lor\mathtt{IsI}\lor\mathtt{IsLoad})}_{\mathtt{rw\_a}}\lor\underbrace{(\mathtt{IsLui}\lor\mathtt{IsAuipc}\lor\mathtt{IsJAL})}_{\mathtt{rw\_b}}\lor\mathtt{IsJALR}\\
+\mathtt{ALUSrc} &= \underbrace{(\mathtt{IsI}\lor\mathtt{IsLoad}\lor\mathtt{IsStore})}_{\mathtt{as\_a}}\lor\underbrace{(\mathtt{IsLui}\lor\mathtt{IsAuipc}\lor\mathtt{IsJALR})}_{\mathtt{as\_b}}\\
+\mathtt{MemRead} &= \mathtt{IsLoad},\qquad \mathtt{MemWrite}=\mathtt{IsStore}\quad(\text{nối thẳng, không qua cổng})
+\end{align*}
+\begin{itemize}
+  \item \textbf{LUI} có $\mathtt{ALUSrc}=1$ và $\mathtt{ASel}=10$: ALU tính $0+\mathtt{imm}$, nên kết quả chính là hằng số đã dịch trái 12 bit.
+  \item \textbf{JAL} có $\mathtt{ALUSrc}=0$: ALU vẫn tính \sig{rs1+rs2} nhưng kết quả bị bỏ, vì \sig{WBSel}=10 ghi PC+4 và đích nhảy lấy từ bộ cộng \sig{PC+imm}.
+  \item Bộ so sánh trong \sig{MainControl} đặt chế độ \emph{unsigned}, nhưng chỉ dùng ngõ ra ``bằng'', nên chế độ không ảnh hưởng.
+\end{itemize}
+
+\subsection{Bảng mã trong \texorpdfstring{\texttt{ALUControl}}{ALUControl}}
+\begin{center}
+\small
+\begin{tabular}{@{}cll@{}}
+\toprule
+\sig{funct3} & \textbf{MUX kiểu R} & \textbf{MUX kiểu I}\\
+\midrule
+000 & MUX ADD/SUB (theo \sig{funct7[5]}) & hằng 0 (ADDI)\\
+001 & 5 (SLL) & 5 (SLLI)\\
+010 & 8 (SLT) & 8 (SLTI)\\
+011 & 9 (SLTU) & 9 (SLTIU)\\
+100 & 4 (XOR) & 4 (XORI)\\
+101 & MUX SRL/SRA (dùng chung) & MUX SRL/SRA (dùng chung)\\
+110 & 3 (OR) & 3 (ORI)\\
+111 & 2 (AND) & 2 (ANDI)\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item MUX SRL/SRA có một ngõ ra nối vào \emph{cả hai} bảng, vì \texttt{srai} và \texttt{sra} đều phân biệt bằng bit 30 của lệnh (\sig{funct7[5]}).
+  \item Kiểu I với \sig{funct3}=000 dùng thẳng hằng số 0, \emph{không} qua MUX ADD/SUB. Ở \texttt{addi} bit 30 là bit 10 của hằng số, nên \texttt{addi x1,x0,-1024} (bit 30 = 1) vẫn là phép cộng. Đây là chỗ dễ sai nhất của bảng này.
+  \item MUX cuối chọn theo \sig{ALUOp}: ngõ 0 hằng 0 (ép ADD), ngõ 1 hằng 1 (ép SUB), ngõ 2 bảng R, ngõ 3 bảng I.
+\end{itemize}
+
+\subsection{Mười multiplexer của \texorpdfstring{\texttt{Pipeline}}{Pipeline}}
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright}p{2.6cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Ra} & \textbf{Chọn theo} & \textbf{Các ngõ vào (0, 1, 2, 3)}\\
+\midrule
+\sig{next_pc} & \sig{pc_src_ex} & \sig{pc_plus4_if}, \sig{target_ex}\\
+\sig{instr_in} & \sig{pc_src_ex} & lệnh từ ROM, 0 (flush lệnh vừa nạp)\\
+\sig{ctrl_in} (13 bit) & \sig{bubble} & \sig{ctrl_id}, 0 (bubble)\\
+\sig{fwd_mem_val} & \sig{WBSel1_mem} & \sig{alu_result_mem}, \sig{pc_plus4_mem}\\
+\sig{opA} & \sig{ForwardA} & \sig{rs1_data_ex}, \sig{wb_data}, \sig{fwd_mem_val}, \sig{rs1_data_ex}\\
+\sig{opB} & \sig{ForwardB} & \sig{rs2_data_ex}, \sig{wb_data}, \sig{fwd_mem_val}, \sig{rs2_data_ex}\\
+\sig{alu_a} & \sig{ASel_ex} & \sig{opA}, \sig{pc_ex}, 0, 0\\
+\sig{alu_b} & \sig{ALUSrc_ex} & \sig{opB}, \sig{imm_ex}\\
+\sig{target_ex} & \sig{IsJALR_ex} & \sig{pc_target} (\sig{pc_ex+imm}), \sig{jalr_target} (ALU AND \texttt{0xFFFFFFFE})\\
+\sig{wb_data} & \sig{WBSel_wb} & \sig{alu_result_wb}, \sig{mem_rdata_wb}, \sig{pc_plus4_wb}, 0\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\begin{itemize}
+  \item \textbf{Mã không dùng vẫn an toàn:} ngõ 3 của MUX forwarding quay về giá trị register file; ngõ 3 của \sig{ASel} và \sig{WBSel} là 0.
+  \item \textbf{Forwarding nằm trước ALUSrc:} \sig{opB} được forward trước rồi mới chọn giữa \sig{opB} và \sig{imm_ex}. Lệnh kiểu I có thể bật \sig{ForwardB} vì trường \sig{rs2} thực chất là bit hằng số, nhưng vô hại vì \sig{ALUSrc}=1 bỏ qua \sig{opB}. Còn \sig{opB} thì đồng thời là \sig{store_data_mem}, nên lệnh store nhận được dữ liệu đã forward.
+  \item \textbf{BranchUnit và JALR dùng toán hạng đã forward:} \sig{BranchUnit} nhận \sig{opA}/\sig{opB}, còn đích JALR lấy từ ALU. Vì vậy \texttt{beq} hay \texttt{ret} đứng ngay sau lệnh ALU ghi thanh ghi nguồn đều không phải stall.
+  \item \textbf{PC+4 được tính lại ở EX:} ID/EX không chứa PC+4. Bộ cộng thứ ba tính \sig{pc_ex+4} rồi đưa vào \sig{pc_plus4_mem} làm địa chỉ trả về của JAL/JALR.
+  \item \textbf{\sig{bubble} = \sig{stall} OR \sig{pc_src_ex}.} Hai tín hiệu không bao giờ cùng bằng 1, vì \sig{stall} cần một lệnh load ở EX còn \sig{pc_src_ex} cần một lệnh nhảy ở EX, mà EX chỉ chứa một lệnh.
+\end{itemize}
+
+\subsection{Đóng gói từ điều khiển}
+Splitter 13 bit ở ID và EX chia từ điều khiển thành 10 trường theo thứ tự bit 0 $\rightarrow$ 12:
+\sig{RegWrite}(0), \sig{ALUSrc}(1), \sig{MemWrite}(2), \sig{MemRead}(3), \sig{IsBranch}(4), \sig{ALUOp}(5--6), \sig{ASel}(7--8), \sig{WBSel}(9--10), \sig{IsJAL}(11), \sig{IsJALR}(12).
+Sang EX/MEM còn 5 bit (\sig{RegWrite}, \sig{MemWrite}, \sig{MemRead}, \sig{WBSel}); sang MEM/WB còn 3 bit (\sig{RegWrite}, \sig{WBSel}).
+
+\subsection{Xung nhịp}
+\begin{itemize}
+  \item PC, 23 thanh ghi pipeline và RAM dữ liệu ghi ở \textbf{sườn lên} của \sig{CLK}.
+  \item \sig{RegisterFile} trong \sig{Pipeline} nhận \sig{CLK_n} (qua cổng NOT) nên ghi ở \textbf{sườn xuống}, giữa chu kỳ.
+  \item Trong \sig{main} chỉ có một miền xung nhịp: register file, PC và RAM cùng ghi ở sườn lên.
+\end{itemize}
+
+\subsection{Những điểm mạch \emph{không} làm (nên biết khi bị hỏi)}
+\begin{itemize}
+  \item \textbf{\sig{MemRead} không điều khiển bộ nhớ.} \sig{Memory} không có chân \sig{MemRead}; RAM luôn đọc bất đồng bộ. Trong \sig{main}, tunnel \sig{MemRead} chỉ có một đầu (không nối đi đâu). Trong \sig{Pipeline}, chỉ \sig{MemRead_ex} được dùng (vào \sig{HazardUnit}); \sig{MemRead_mem} được mang theo nhưng không có nơi nhận.
+  \item \textbf{\sig{HazardUnit} stall thừa.} Mạch so \sig{rd_ex} với \sig{rs1_id} và \sig{rs2_id} mà không xét lệnh có thật sự dùng hai thanh ghi đó không. Ví dụ \texttt{lw x2,0(x0)} rồi \texttt{addi x3,x5,2}: bit 24:20 của \texttt{addi} là hằng số 2, trùng \sig{rd_ex}=2, nên vẫn stall 1 chu kỳ dù không cần. Kết quả vẫn đúng, chỉ chậm hơn. Muốn sửa: thêm tín hiệu ``dùng \sig{rs2}'' (chỉ kiểu R, S, B) và ``dùng \sig{rs1}'' (mọi lệnh trừ LUI, AUIPC, JAL).
+  \item \textbf{Không bẫy truy cập lệch (misaligned).} \texttt{lw} bỏ qua \sig{Address[1:0]} và đọc nguyên từ; \texttt{lh} chỉ xét \sig{Address[1]}. Trong ROM của \sig{StoreMerge} (\texttt{1 2 4 8 3 3 c c f f f f f f f f}), \texttt{sh} ở độ lệch 1 ghi như độ lệch 0, ở độ lệch 3 ghi như độ lệch 2; \sig{funct3} có size 11 được coi như ghi từ.
+  \item \textbf{Địa chỉ bị lặp mỗi 1 KB.} RAM chỉ dùng \sig{Address[9:2]}, bit 31:10 bị bỏ, nên \texttt{0x400} trỏ về cùng từ 0 như \texttt{0x000}. ROM lệnh cũng chỉ dùng \sig{PC[9:2]}: PC vượt \texttt{0x3FC} sẽ quay về đầu chương trình.
+  \item \textbf{Opcode lạ thành NOP.} Mọi cờ lớp lệnh bằng 0 nên không ghi thanh ghi, không ghi bộ nhớ, không nhảy. Mạch không báo lỗi lệnh không hợp lệ.
+\end{itemize}
+
+\begin{kiemtra}
+\begin{itemize}
+  \item Vì sao \texttt{addi x1,x0,-1024} không bị biến thành phép trừ?
+  \item Trong \sig{Pipeline}, \texttt{addi x1,x0,5} rồi ngay sau là \texttt{beq x1,x0,L}: giá trị x1 đến \sig{BranchUnit} bằng đường nào?
+  \item Viết một cặp lệnh làm \sig{HazardUnit} stall dù không có phụ thuộc thật.
+  \item Nếu xoá tunnel \sig{MemRead} trong \sig{main}, mạch có chạy khác đi không?
+\end{itemize}
+\end{kiemtra}
+
+% =====================================================================
+\section{Demo từng bước}
+\label{sec:demo}
+% =====================================================================
+\subsection{Chương trình \texttt{demo.s}}
+\begin{center}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Địa chỉ} & \textbf{Mã máy} & \textbf{Lệnh} & \textbf{Ý nghĩa}\\
+\midrule
+0x00 & \texttt{00000513} & \texttt{li x10,0} & tổng = 0\\
+0x04 & \texttt{00a00593} & \texttt{li x11,10} & biến đếm = 10\\
+0x08 & \texttt{00b50533} & \texttt{loop: add x10,x10,x11} & tổng += biến đếm\\
+0x0c & \texttt{fff58593} & \texttt{addi x11,x11,-1} & biến đếm $-=1$\\
+0x10 & \texttt{fe059ce3} & \texttt{bnez x11,loop} & lặp nếu khác 0\\
+0x14 & \texttt{00a02023} & \texttt{sw x10,0(x0)} & lưu tổng\\
+0x18 & \texttt{00002603} & \texttt{lw x12,0(x0)} & nạp lại vào x12\\
+0x1c & \texttt{010000ef} & \texttt{jal x1,double} & gọi hàm, x1 = 0x20\\
+0x20 & \texttt{40a606b3} & \texttt{sub x13,x12,x10} & $110-55=55$\\
+0x24 & \texttt{0646a713} & \texttt{slti x14,x13,100} & $55<100\Rightarrow1$\\
+0x28 & \texttt{0000006f} & \texttt{halt: j halt} & vòng lặp kết thúc\\
+0x2c & \texttt{00c60633} & \texttt{double: add x12,x12,x12} & x12 = 110\\
+0x30 & \texttt{00008067} & \texttt{ret} & về địa chỉ trong x1\\
+\bottomrule
+\end{tabular}
+\end{center}
+Kết quả: tổng $10+9+\dots+1=55=\mathtt{0x37}$; sau lời gọi $x12=110=\mathtt{0x6e}$; $x13=\mathtt{0x37}$; $x14=1$; từ dữ liệu 0 $=\mathtt{0x37}$; PC cuối $=\mathtt{0x28}$; $x1=\mathtt{0x20}$.
+
+\subsection{Cách đọc một tick}
+\begin{itemize}
+  \item Một lần Ctrl+F9 = một chu kỳ xung nhịp = một lệnh (single-cycle).
+  \item Sau tick, PC đã trỏ tới lệnh \emph{kế tiếp}. Hàng probe hiện lệnh kế tiếp (\sig{instr}) và nó \emph{sẽ} tính ra gì; tab State hiện các thanh ghi mà lệnh \emph{trước} vừa ghi.
+  \item Nhịp độ: nói một câu, bấm một tick, chỉ một thứ, chờ hai giây.
+\end{itemize}
+
+\subsection{Một lệnh đi qua CPU, theo từng nhóm}
+\begin{description}[style=nextline,leftmargin=1.2em,labelindent=0pt]
+  \item[Kiểu R: \texttt{add x10,x10,x11} (tick 3)] ID: $\mathtt{ALUOp}=10$, $\mathtt{ALUSrc}=0$; EX: $\mathtt{ALUCtrl}=0$, kết quả \texttt{0x0a}; WB: ghi vào $x10$.
+  \item[Kiểu I: \texttt{addi x11,x11,-1} (tick 4)] hằng số \texttt{0xffffffff}; $\mathtt{ALUSrc}=1$; $\mathtt{ALUOp}=11$; kết quả \texttt{0x09}.
+  \item[Branch rẽ: \texttt{bnez x11,loop} (tick 5)] hằng số kiểu B $=-8$; \sig{BranchUnit} so $x11=9$ với $x0=0$ bằng $\mathtt{funct3}=001$ (BNE): $\mathtt{branch\_taken}=1$; $\mathtt{pc\_target}=\mathtt{0x10}-8=\mathtt{0x08}$.
+  \item[Store: \texttt{sw x10,0(x0)} (tick 33)] $\mathtt{MemWrite}=1$; địa chỉ $0$; \sig{StoreMerge} bật cả bốn byte; từ 0 của RAM thành \texttt{0x37}.
+  \item[Load: \texttt{lw x12,0(x0)} (tick 34)] \sig{LoadExtract} cho qua nguyên từ; $\mathtt{WBSel}=01$; $x12=\mathtt{0x37}$.
+  \item[JAL: \texttt{jal x1,double} (tick 35)] $\mathtt{pc\_target}=\mathtt{0x1c}+\mathtt{0x10}=\mathtt{0x2c}$; $\mathtt{WBSel}=10$: $x1=\mathtt{0x20}$.
+  \item[JALR: \texttt{ret} (tick 37)] ALU tính $x1+0=\mathtt{0x20}$; xóa bit 0; $\mathtt{next\_pc}=\mathtt{0x20}$; $\mathtt{rd}=x0$ nên không ghi gì.
+  \item[SUB và SLTI (tick 38, 39)] $\mathtt{funct7}=0100000$ chọn SUB: $\mathtt{0x6e}-\mathtt{0x37}=\mathtt{0x37}$; \texttt{slti}: $\mathtt{0x37}<100\Rightarrow x14=1$.
+  \item[Kết thúc: \texttt{halt: j halt}] nhảy về chính nó, PC đứng ở \texttt{0x28}.
+\end{description}
+
+\subsection{Cả 40 tick của \texttt{demo.s} (single-cycle)}
+Tick $n$ thực thi lệnh ở PC \emph{trước} tick; hai cột cuối là trạng thái \emph{sau} tick.
+
+\small
+\begin{longtable}{@{}rllll@{}}
+\toprule
+\textbf{Tick} & \textbf{PC chạy} & \textbf{Lệnh} & \textbf{Thay đổi} & \textbf{PC sau}\\
+\midrule
+\endhead
+1 & 0x00 & \texttt{li x10,0} & (x10 vẫn 0) & 0x04\\
+2 & 0x04 & \texttt{li x11,10} & x11 = 0x0a & 0x08\\
+3 & 0x08 & \texttt{add} & x10 = 0x0a & 0x0c\\
+4 & 0x0c & \texttt{addi} & x11 = 0x09 & 0x10\\
+5 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+6 & 0x08 & \texttt{add} & x10 = 0x13 & 0x0c\\
+7 & 0x0c & \texttt{addi} & x11 = 0x08 & 0x10\\
+8 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+9 & 0x08 & \texttt{add} & x10 = 0x1b & 0x0c\\
+10 & 0x0c & \texttt{addi} & x11 = 0x07 & 0x10\\
+11 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+12 & 0x08 & \texttt{add} & x10 = 0x22 & 0x0c\\
+13 & 0x0c & \texttt{addi} & x11 = 0x06 & 0x10\\
+14 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+15 & 0x08 & \texttt{add} & x10 = 0x28 & 0x0c\\
+16 & 0x0c & \texttt{addi} & x11 = 0x05 & 0x10\\
+17 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+18 & 0x08 & \texttt{add} & x10 = 0x2d & 0x0c\\
+19 & 0x0c & \texttt{addi} & x11 = 0x04 & 0x10\\
+20 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+21 & 0x08 & \texttt{add} & x10 = 0x31 & 0x0c\\
+22 & 0x0c & \texttt{addi} & x11 = 0x03 & 0x10\\
+23 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+24 & 0x08 & \texttt{add} & x10 = 0x34 & 0x0c\\
+25 & 0x0c & \texttt{addi} & x11 = 0x02 & 0x10\\
+26 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+27 & 0x08 & \texttt{add} & x10 = 0x36 & 0x0c\\
+28 & 0x0c & \texttt{addi} & x11 = 0x01 & 0x10\\
+29 & 0x10 & \texttt{bnez} (rẽ) & -- & 0x08\\
+30 & 0x08 & \texttt{add} & x10 = 0x37 (= 55) & 0x0c\\
+31 & 0x0c & \texttt{addi} & x11 = 0x00 & 0x10\\
+32 & 0x10 & \texttt{bnez} (\textbf{không} rẽ) & -- & 0x14\\
+33 & 0x14 & \texttt{sw} & từ 0 = 0x37 & 0x18\\
+34 & 0x18 & \texttt{lw} & x12 = 0x37 & 0x1c\\
+35 & 0x1c & \texttt{jal} & x1 = 0x20 & \textbf{0x2c}\\
+36 & 0x2c & \texttt{add x12,x12,x12} & x12 = 0x6e (= 110) & 0x30\\
+37 & 0x30 & \texttt{ret} & -- & \textbf{0x20}\\
+38 & 0x20 & \texttt{sub} & x13 = 0x37 & 0x24\\
+39 & 0x24 & \texttt{slti} & x14 = 0x01 & 0x28\\
+40 & 0x28 & \texttt{halt} & -- & 0x28 (đứng yên)\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\textbf{Vì sao kết quả ghi 39 chu kỳ chứ không phải 40:} tick 40 chỉ lặp lại lệnh nhảy cuối; lần ghi thanh ghi cuối cùng xảy ra ở tick 39. \textbf{Các điểm nên chỉ:} PC \emph{quay lùi} ở tick 5, 8, 11, \dots{} (vòng lặp); ở tick 32 nó \emph{đi tiếp}; ở tick 35 nó \emph{nhảy tới} \texttt{0x2c}; ở tick 37 nó \emph{trở về} \texttt{0x20}.
+
+\subsection{Các giá trị probe cần xem (single-cycle)}
+Giá trị hiện ở hàng probe \emph{sau} tick, tức của lệnh ở PC mới:
+\begin{center}
+\small
+\begin{tabular}{@{}rlllll@{}}
+\toprule
+\textbf{Sau tick} & \textbf{PC} & \sig{instr} & \sig{alu_result} & \sig{branch_taken} & \sig{wb_data}\\
+\midrule
+1 & 04 & \texttt{00a00593} & 0a & 0 & 0a\\
+2 & 08 & \texttt{00b50533} & 0a & 0 & 0a\\
+3 & 0c & \texttt{fff58593} & 09 & 0 & 09\\
+4 & 10 & \texttt{fe059ce3} & 09 & \textbf{1} & 09\\
+5 & \textbf{08} & \texttt{00b50533} & 13 & 0 & 13\\
+31 & 10 & \texttt{fe059ce3} & 00 & \textbf{0} & 00\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% =====================================================================
+\section{Chia việc cho nhóm ba người}
+\label{sec:chia}
+% =====================================================================
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}c>{\raggedright}p{4.2cm}>{\raggedright}X>{\raggedright\arraybackslash}p{2.4cm}@{}}
+\toprule
+\textbf{Người} & \textbf{Chủ đề} & \textbf{Circuit} & \textbf{Bước demo}\\
+\midrule
+A & front end, giải mã, single-cycle & \sig{main}, \sig{InstructionDecode}, \sig{MainControl}, \sig{ImmGen}, \sig{RegisterFile} & 1--5\\
+B & thực thi và bộ nhớ, kiểm thử & \sig{ALU}, \sig{ALUControl}, \sig{BranchUnit}, \sig{Memory}, \sig{LoadExtract}, \sig{StoreMerge} & 6, 9, 11, 12\\
+C & pipeline và hazard & \sig{Pipeline}, \sig{ForwardingUnit}, \sig{HazardUnit} & 7, 8, 10\\
+\bottomrule
+\end{tabularx}
+\end{center}
+Cả 14 circuit đều có người phụ trách: A có 5, B có 6, C có 3 (nhưng \sig{Pipeline} là circuit lớn nhất).
+
+% =====================================================================
+\section{Tự đánh giá}
+% =====================================================================
+\begin{center}
+\begin{tabular}{@{}cp{11cm}@{}}
+\toprule
+\textbf{Mức} & \textbf{Bạn có thể \dots}\\
+\midrule
+1 & gọi tên mọi circuit và nói nó làm gì trong một câu\\
+2 & liệt kê các linh kiện bên trong mọi circuit và nói vì sao có chúng\\
+3 & lần theo bất kỳ lệnh nào qua \sig{main} với giá trị thật\\
+4 & dự đoán hành vi pipeline (stall, forwarding, flush) của một chương trình ngắn\\
+5 & giải thích dự án được kiểm thử thế nào và vì sao tin được kết quả\\
+\bottomrule
+\end{tabular}
+\end{center}
+Mục tiêu: mức 5 cho phần của riêng bạn và mức 3 cho hai phần còn lại.
+
+\textbf{Bài thi cuối (không xem tài liệu):} (1) vẽ \sig{main} và \sig{Pipeline}; (2) lần theo \texttt{lw} theo sau bởi một \texttt{addi} phụ thuộc qua pipeline; (3) giải thích ba lỗi đã gặp; (4) giải thích vì sao có thể tin phần chứng minh.
+
+\textbf{Thứ tự đọc gợi ý:} \texttt{README.md} $\rightarrow$ \texttt{docs/GUIDE.md} $\rightarrow$ \texttt{docs/REPORT.md} $\rightarrow$ \texttt{docs/COMPONENTS.md} $\rightarrow$ \texttt{docs/DEMO\_EXPLAIN.md} $\rightarrow$ \texttt{docs/PRESENTATION.md} $\rightarrow$ \texttt{docs/TOOLS.md}, \texttt{docs/DESIGN\_LOG.md}.
+
+\end{document}
