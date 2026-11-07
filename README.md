@@ -1,5 +1,7 @@
 # RV32I computer in Logisim Evolution
 
+> Tiếng Việt: [docs/vi/README.md](docs/vi/README.md) (all docs are also available in Vietnamese in `docs/vi/`).
+
 A 32-bit RISC-V (RV32I) computer built in **Logisim Evolution 4.1.0** for the course project
 (assignment: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)).  The project contains **two CPUs** that share the same
 building blocks and run the same programs:

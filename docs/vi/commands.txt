@@ -1,0 +1,51 @@
+MÁY TÍNH RV32I TRONG LOGISIM EVOLUTION - CÁC LỆNH (PowerShell, chạy từ D:\hust\logisim)
+==================================================================================
+
+0. THIẾT LẬP
+   cd D:\hust\logisim
+   java -version                          (cần 21 trở lên; máy này: JDK 21.0.12.1)
+   powershell -File tools\compile.ps1     (một lần: biên dịch các helper Java vào tools\bin; cần javac)
+
+1. MỞ PROJECT
+   java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
+   các mạch: main = CPU đơn chu kỳ, Pipeline = CPU pipeline 5 tầng
+
+2. HỢP DỊCH MỘT CHƯƠNG TRÌNH -> ẢNH ROM (sau đó trong Logisim: nhấp chuột phải vào ROM > Load Image... và nhập đường dẫn .hex)
+   python tools\rv.py asm programs\demo.s -o programs\demo.hex -l
+   python tools\rv.py sim programs\demo.s            (chạy trên mô phỏng tham chiếu, in các thanh ghi)
+
+3. KIỂM THỬ
+   powershell -File tests\run_tests.ps1                    9 tệp test module (test vector của Logisim)
+   python tests\run_cpu_tests.py --circuit all             chương trình test trên cả hai CPU so với mô phỏng tham chiếu
+   python tests\run_cpu_tests.py --circuit Pipeline tests\programs\hazard.s
+   python tests\fuzz.py --count 20 --seed 1                chương trình ngẫu nhiên trên cả hai CPU
+   (đặt JAVA=C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe nếu `java` trong PATH không phải bản 21)
+
+4. CHẠY MỘT CHƯƠNG TRÌNH TRÊN MẠCH KHÔNG CẦN GUI
+   java -cp "logisim-evolution-4.1.0-all.jar;tools\bin" Run RiscVComputer.circ Pipeline programs\demo.hex 70 trace
+   python tools\probe.py RiscVComputer.circ Pipeline programs\demo.s 10 pc_ex alu_result_ex stall    (giá trị của các net có tên)
+
+5. SINH LẠI CÁC MẠCH
+   python tools\build\build_all.py tools\build\base.circ RiscVComputer.circ
+
+6. VẼ MỘT MẠCH RA PNG
+   java -cp "logisim-evolution-4.1.0-all.jar;tools\bin" Render RiscVComputer.circ docs\img Pipeline 0.5
+
+7. TEST HEADLESS MỘT MODULE
+   java -jar .\logisim-evolution-4.1.0-all.jar --test-vector ALU tests\alu.vec .\RiscVComputer.circ
+
+8. MCP SERVER (logisim-mcp; khởi động lại Claude Code để nạp các công cụ của nó)
+   claude mcp list
+   claude mcp remove logisim -s user
+   claude mcp add logisim --scope user --env "LOGISIM_JAR=D:\hust\logisim\logisim-evolution-4.1.0-all.jar" --env "JAVA=C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe" --env "LOGISIM_WORKDIR=D:\hust\logisim" -- "D:\hust\logisim\logisim-mcp\.venv\Scripts\python.exe" -m logisim_mcp
+   (venv phải giữ "mcp<2": D:\hust\logisim\logisim-mcp\.venv\Scripts\python.exe -m pip install "mcp<2")
+
+9. NẾU JAVA QUÁ CŨ
+   Lỗi "UnsupportedClassVersionError ... class file version 65.0" nghĩa là Java < 21.
+   winget bị proxy chặn trên mạng này: tải JDK 21 .msi bằng trình duyệt, hoặc gọi nó bằng đường dẫn đầy đủ:
+   & "C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe" -jar .\logisim-evolution-4.1.0-all.jar
+
+10. SAO LƯU
+   backup\RiscVComputer.orig.circ          tệp gốc
+   backup\RiscVComputer.layout-only.circ   sau lần dọn bố cục đầu tiên
+   backup\RiscVComputer.before-cpus.circ   trước khi xây RV32I đầy đủ / pipeline
