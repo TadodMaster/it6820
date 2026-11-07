@@ -153,6 +153,16 @@ class Circ:
     def text(self, x, y, s, font="Monospaced plain 12"):
         self.texts.append((*self._sp(x, y), s, font))
 
+    def monitor(self, x0, y, dx, items, heading):
+        """Row of labelled probes with a short description above each one.
+        items = [(net, label, radix, (line1, line2))]"""
+        self.title(x0 - 100, y - 150, heading)
+        for k, (net, label, radix, (l1, l2)) in enumerate(items):
+            x = x0 + k * dx
+            self.text(x + 60, y - 70, l1)
+            self.text(x + 60, y - 45, l2)
+            self.add("Probe", (x, y), {"appearance": "NewPins", "radix": radix, "label": label}, {"p": net})
+
     def title(self, x, y, s):
         self.text(x, y, s, "Monospaced bold 16")
 

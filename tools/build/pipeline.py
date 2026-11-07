@@ -205,6 +205,15 @@ def pipeline(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
           {"d0": "alu_result_wb", "d1": "mem_rdata_wb", "d2": "pc_plus4_wb", "d3": "zero32", "sel": "WBSel_wb", "out": "wb_data"})
     c.text(wb + 150, 440, "WBSel: 00 ALU  01 memory  10 PC+4")
     c.text(wb + 150, 700, "wb_data goes to the register file (ID) and is also forwarded to EX")
-    c.add("Probe", (wb + 700, 520), {"appearance": "NewPins", "radix": 16, "label": "wb_data"}, {"p": "wb_data"})
+    c.monitor(1000, 3250, 750, [
+        ("pc_if", "PC", 16, ("PC: địa chỉ đang fetch (đứng yên = stall)", "(nhảy khi pc_src_ex = 1)")),
+        ("instr_id", "instr_id", 16, ("instr_id: lệnh đang ở tầng ID", "(0 = bubble bị flush)")),
+        ("stall", "stall", 2, ("stall = 1: load-use, PC và IF/ID", "đứng yên 1 chu kỳ")),
+        ("pc_src_ex", "pc_src_ex", 2, ("pc_src_ex = 1: rẽ nhánh/JAL/JALR,", "flush 2 lệnh đã fetch")),
+        ("ForwardA", "ForwardA", 2, ("ForwardA: 00 reg, 01 MEM/WB,", "10 EX/MEM (toán hạng A)")),
+        ("ForwardB", "ForwardB", 2, ("ForwardB: 00 reg, 01 MEM/WB,", "10 EX/MEM (toán hạng B)")),
+        ("alu_result_ex", "alu_result_ex", 16, ("alu_result_ex: kết quả ALU", "của lệnh đang ở tầng EX")),
+        ("wb_data", "wb_data", 16, ("wb_data: giá trị ghi vào thanh ghi", "ở tầng WB")),
+    ], "BẢNG THEO DÕI (probe): xem các giá trị này sau mỗi lần bấm Ctrl+F9")
     c.install()
     return c
