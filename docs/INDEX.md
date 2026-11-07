@@ -10,6 +10,7 @@
 | [TOOLS.md](TOOLS.md) | developers | how the assembler, simulator, headless runner, generator and verifier work |
 | [DESIGN_LOG.md](DESIGN_LOG.md) | developers | history of the design and the pitfalls that were found |
 | [DEMO.md](DEMO.md) | the presenter | script and checklist for the demo video / live demo |
+| [DEMO_EXPLAIN.md](DEMO_EXPLAIN.md) | the presenter, teammates | everything that happens in the demo: every instruction, every tick, the pipeline cycle by cycle |
 | [TEAM_SPLIT.md](TEAM_SPLIT.md) | the team of three | who learns which circuits, what to explain, likely questions |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | everyone | the assignment (Vietnamese) with the status of every item |
 | [../commands.txt](../commands.txt) | everyone | copy-paste commands |

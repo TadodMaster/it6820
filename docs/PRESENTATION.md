@@ -88,6 +88,26 @@ The program `programs\demo.s` is already in the ROM of both CPUs.  What it does 
 
 > It adds 10 + 9 + ... + 1 in a loop (result 55), stores the result in memory, loads it back, calls a small function that doubles it (110), and computes a few more values.
 
+> For a complete explanation of **everything that happens in the demo** (every instruction, every signal, all 40 ticks, the pipeline cycle by cycle) see [DEMO_EXPLAIN.md](DEMO_EXPLAIN.md).
+
+### 3.0 How to read the screen (read this once)
+
+Three places show what the CPU is doing.  Always look at them in this order:
+
+| Where | What it shows | When it changes |
+|---|---|---|
+| **State tab** (bottom-left) | `PC` and `x0..x31`: the *committed* state | after a tick, when the instruction has finished |
+| **Monitor row** (bottom of the circuit, yellow probes with a Vietnamese description above each) | the signals of the instruction that is **about to execute** (single-cycle) or is in each stage (pipeline) | immediately, before the next tick |
+| **Wires and register boxes** in the circuit | the values flowing through the datapath (a wire turns bright green = 1, dark green = 0; buses show their hex value) | after each tick |
+
+**Important timing rule for the single-cycle CPU:** after a tick the PC already points to the *next* instruction, and the monitor row shows that instruction (`instr`) and what it *will* compute (`alu_result`, `branch_taken`, `wb_data`).  The register changes only at the **next** tick.  So the sequence for every instruction is:
+1. before the tick: monitor row = `instr` and its result in `wb_data`; State tab still shows the old register value,
+2. press **Ctrl+F9**: the State tab shows the new register value and the PC moves on.
+
+**Rhythm of the demo:** say one sentence, press one tick, point at one thing, wait two seconds.  Never press two ticks while talking about the previous one.  Stop and explain at the ticks marked **STOP** in the tables below; between those, go quickly.
+
+**If a value does not match the table**: do not click around.  Press **Ctrl+R**, start the step again, and tick slowly (see section 5, "If something goes wrong").
+
 ### Step 1 - Show the project (30 s)
 In the left tree: `main` (single-cycle), `Pipeline`, and the blocks (`ALU`, `RegisterFile`, `MainControl`, ...).  "The two CPUs use exactly the same blocks."
 Point at `main`: the headings **IF, ID, EX, MEM, WB**, the clock, the PC register, the ROM with the program.  "Each wire that leaves a block is a named tunnel; the same name means the same wire."
@@ -113,6 +133,24 @@ Press **Simulate > Manual Tick Full Cycle** (shortcut **Ctrl+F9**) once = one cl
 | 12 | 0x0c | **0x22** | 0x07 | 27 + 7 = 34 |
 
 Say while ticking: "x10 is the running sum, x11 the counter. Each tick executes exactly one instruction."  Point at the **monitor row** at the bottom of the circuit (yellow probes, each with a Vietnamese description above it): `PC`, `instr` = the instruction being executed (for example `00b50533` = `add x10,x10,x11`), `alu_result`, `branch_taken`, `wb_data` = the value written to the register (`0000000a`).
+
+**What to watch at each tick (single-cycle, program `demo.s`, values measured on the project).**  "Monitor row" = the value you see *after* the tick, i.e. for the instruction at the new PC:
+
+| After tick | PC (State) | monitor `instr` | `alu_result` | `branch_taken` | `wb_data` | Look at / say |
+|---:|---|---|---|---|---|---|
+| 0 (reset) | 00 | `00000513` | 0 | 0 | 0 | everything is 0 |
+| 1 | 04 | `00a00593` | 0a | 0 | 0a | `li x11,10` is next: its result `0a` is already on `wb_data`, x11 is still 0 in the State tab |
+| 2 | 08 | `00b50533` | 0a | 0 | 0a | `add x10,x10,x11` is next; **x11 = 0a** now in the State tab |
+| 3 | 0c | `fff58593` | 09 | 0 | 09 | **STOP**: x10 became **0a** (first sum); next is `addi x11,x11,-1` (result 09) |
+| 4 | 10 | `fe059ce3` | 09 | **1** | 09 | **STOP**: `branch_taken` = 1 on the probe, the loop branch will be taken |
+| 5 | **08** | `00b50533` | 13 | 0 | 13 | the PC went **back** to 08: the loop; `alu_result` 13 = 10 + 9 |
+| 6 | 0c | `fff58593` | 08 | 0 | 08 | x10 = **13**, x11 = 09 |
+| 7 | 10 | `fe059ce3` | 08 | 1 | 08 | taken again |
+| 8 | 08 | `00b50533` | 1b | 0 | 1b | next sum 27 |
+| 11 | 08 | `00b50533` | 22 | 0 | 22 | next sum 34 |
+
+How to say it: "The probe `branch_taken` turns to 1 exactly when the loop jumps back; the PC then goes from 10 back to 08."  Three ticks make one loop iteration (add, addi, bnez), and it runs 10 times.
+After tick 31 the probe already shows `branch_taken` = 0 (x11 = 0): the last `bnez` will not be taken; tick 32 moves the PC on to 14.  The loop is over, the milestones in step 5 take over.
 
 ### Step 5 - Run to the end (1 min)
 Press **Ctrl+F9** until about tick 40 (or hold it; or `Simulate > Auto-Tick Enabled`, **Ctrl+K**, then switch it off).  Final state:
@@ -154,6 +192,25 @@ Tick with **Ctrl+F9** and watch the **PC** value in the State tab (this is the f
 - Afterwards the PC keeps cycling `0x24, 0x28, 0x2c` in the pipeline: normal, the `halt` jump flushes the instructions after it every time.
 
 "Same program, same results as the single-cycle CPU - but five instructions are in flight at once."
+
+**What to watch at each tick (pipeline, program `hazards_demo.hex`, values measured on the project).**  Values are those shown by the monitor row *after* the tick:
+
+| After tick | `PC` | `instr_id` (instruction in ID) | `stall` | `pc_src_ex` | `ForwardA` | `ForwardB` | `alu_result_ex` | Look at / say |
+|---:|---|---|:-:|:-:|:-:|:-:|---|---|
+| 1 | 04 | `06400093` | 0 | 0 | 00 | 00 | 00 | `li x1,100` enters ID |
+| 2 | 08 | `00102023` | 0 | 0 | 00 | 00 | 64 | `li` is in EX, result 64 |
+| 3 | 0c | `00002103` | 0 | 0 | 00 | **10** | 00 | **STOP** (forwarding): `sw x1` needs x1 which `li` just computed: ForwardB = 10 = taken from EX/MEM |
+| 4 | 10 | `00110193` | **1** | 0 | 00 | 00 | 00 | **STOP** (stall): `lw x2` is in EX, `addi x3,x2,1` in ID needs it: `stall` = 1 |
+| 5 | **10** | `00110193` | 0 | 0 | 10 | 00 | 64 | the **PC did not move** (it held at 10): one bubble went into EX, `instr_id` is still the same `addi` |
+| 6 | 14 | `00218233` | 0 | 0 | **01** | 00 | 65 | **STOP**: ForwardA = 01 = loaded x2 comes from MEM/WB, `alu_result_ex` 65 = 64 + 1 |
+| 7 | 18 | `00420663` | 0 | 0 | **10** | 00 | c9 | `add x4,x3,x2` uses x3 from EX/MEM (ForwardA = 10), result c9 = 65 + 64 |
+| 8 | 1c | `00100293` | 0 | **1** | 10 | 10 | 00 | **STOP** (flush): `beq` is in EX and is taken: `pc_src_ex` = 1 |
+| 9 | 20 | `00000000` | 0 | 0 | 00 | 00 | 64 | `instr_id` = 00000000: the instruction behind the branch was **turned into a bubble** |
+| 10 | 24 | `00700393` | 0 | 0 | 00 | 00 | 00 | `addi x7,x0,7` (the instruction after the skipped ones) |
+| 12 | 2c | `00000000` | 0 | **1** | 00 | 00 | 00 | the final `halt: j halt` is in EX: it flushes again, this is normal forever after |
+
+How to say it: "Three signals tell the whole story: `ForwardA/B` different from 00 means a value was taken from a pipeline register; `stall` = 1 means one bubble for a load; `pc_src_ex` = 1 means a jump and two flushed instructions."  Afterwards check the State tab: `x5 = x6 = 0` proves that the flushed instructions changed nothing.
+Note: the tick numbers above are exact only if you pressed **Ctrl+R** after loading the program and then pressed **Ctrl+F9** once per tick without skipping.
 
 ### Step 9 - The proof (2 min, terminal)
 ```powershell

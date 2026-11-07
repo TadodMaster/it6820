@@ -12,6 +12,7 @@
 | [TOOLS.md](TOOLS.md) | lập trình viên | cách hoạt động của assembler, trình mô phỏng, headless runner, bộ sinh circuit và bộ kiểm tra |
 | [DESIGN_LOG.md](DESIGN_LOG.md) | lập trình viên | lịch sử thiết kế và các cạm bẫy đã gặp |
 | [DEMO.md](DEMO.md) | người thuyết trình | kịch bản và danh sách kiểm tra cho video demo / demo trực tiếp |
+| [DEMO_EXPLAIN.md](DEMO_EXPLAIN.md) | người thuyết trình, đồng đội | mọi thứ xảy ra trong demo: từng lệnh, từng tick, pipeline từng chu kỳ |
 | [TEAM_SPLIT.md](TEAM_SPLIT.md) | nhóm ba người | ai học circuit nào, cần giải thích gì, câu hỏi có thể gặp |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | mọi người | đề bài (tiếng Việt) kèm trạng thái của từng mục |
 | [commands.txt](commands.txt) | mọi người | các lệnh để sao chép và dán |
