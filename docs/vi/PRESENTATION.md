@@ -90,6 +90,8 @@ Chương trình `programs\demo.s` đã nằm sẵn trong ROM của cả hai CPU.
 
 > Nó cộng 10 + 9 + ... + 1 trong một vòng lặp (kết quả 55), lưu kết quả vào bộ nhớ, đọc lại, gọi một hàm nhỏ nhân đôi giá trị đó (110), rồi tính thêm vài giá trị nữa.
 
+> Phần giải thích đầy đủ **mọi thứ xảy ra trong demo** (từng lệnh, từng tín hiệu, cả 40 tick, pipeline từng chu kỳ, và bảng giá trị probe sau mỗi tick) nằm trong [DEMO_EXPLAIN.md](DEMO_EXPLAIN.md), mục 2, 4 và 6.  Quy tắc đọc màn hình: tab State hiện trạng thái đã hoàn tất; hàng probe hiện lệnh **sắp chạy** (single-cycle) hoặc đang ở từng tầng (pipeline); nói một câu, bấm một tick, chỉ một thứ, chờ hai giây.
+
 ### Bước 1 - Giới thiệu dự án (30 giây)
 Ở cây bên trái: `main` (single-cycle), `Pipeline`, và các khối (`ALU`, `RegisterFile`, `MainControl`, ...).  "Hai CPU dùng hoàn toàn các khối giống nhau."
 Chỉ vào `main`: các tiêu đề **IF, ID, EX, MEM, WB**, xung clock, register PC, ROM chứa chương trình.  "Mỗi dây đi ra từ một khối là một tunnel có tên; cùng tên nghĩa là cùng một dây."
