@@ -53,14 +53,14 @@ def pipeline(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
 
     # ================================================================ IF
     c.add("Clock", (150, 300), {"appearance": "NewPins"}, {"out": "CLK"})
-    c.text(120, 330, "Clock: Simulate > Tick")
+    c.text(120, 330, "Clock: Ctrl+F9 = 1 full cycle")
     c.add("Pin", (150, 420), {"appearance": "classic", "label": "RESET"}, {"p": "RESET"})
     c.text(130, 450, "RESET = 1 holds PC at 0")
     c.add("Constant", (150, 540), {}, {"out": "one"})
     c.add("NOT Gate", (150, 640), {}, {"in": "CLK", "out": "CLK_n"})
     c.text(120, 690, "CLK_n: the register file writes on the falling edge,")
     c.text(120, 708, "so WB can write and ID can read in the same cycle")
-    c.add("Register", (X["IF"], 330), {"appearance": "logisim_evolution", "label": "PC", "width": 32},
+    c.add("Register", (X["IF"], 330), {"appearance": "logisim_evolution", "label": "PC", "width": 32, "showInTab": "true"},
           {"q": "pc_if", "d": "next_pc", "clk": "CLK", "r": "RESET", "we": "run"})
     c.text(X["IF"] + 30, 310, "PC register (holds while stalled)")
     c.add("Splitter", (X["IF"] + 450, 360),

@@ -234,7 +234,7 @@ Write-after-write and write-after-read cannot happen because instructions comple
 | `tools/build/` | generates the circuits from netlists and verifies the result |
 | `logisim-mcp/` | MCP server that lets an AI assistant inspect and test the circuits |
 
-Loading a program: *Edit Contents > Open > file.hex* on the ROM, or `python tools/rv.py asm prog.s -o prog.hex`.
+Loading a program: right-click the ROM > *Load Image...* and choose the `.hex` file, or `python tools/rv.py asm prog.s -o prog.hex`.
 
 ## 7. Verification
 
@@ -254,17 +254,17 @@ by the self-checking programs, whose expected values were computed by hand.
 
 ## 8. Results
 
-Cycles until the PC reaches the final `halt: j halt` (so pipeline fill is included):
+Clock cycles until the last register write has completed (pipeline fill and drain included); instructions = executed up to that write:
 
 | program | instructions | single-cycle | pipeline | pipeline CPI | why |
 |---|---|---|---|---|---|
-| alu | 92 | 91 | 91 | 0.99 | no taken branches, forwarding hides all dependencies |
-| mem | 70 | 69 | 70 | 1.00 | |
-| hazard | 68 | 67 | 79 | 1.16 | load-use stalls, 4 taken branches / jumps |
-| jump | 28 | 27 | 35 | 1.25 | 4 jumps |
-| branch | 70 | 69 | 101 | 1.44 | many taken branches |
-| fib | 124 | 123 | 178 | 1.44 | loops: 1 taken branch per 4 instructions |
-| demo | 40 | 39 | 61 | 1.52 | 10-iteration loop + call |
+| alu | 91 | 91 | 94 | 1.03 | no taken branches, forwarding hides all dependencies |
+| mem | 69 | 69 | 73 | 1.06 | |
+| hazard | 67 | 67 | 82 | 1.22 | load-use stalls, 4 taken branches / jumps |
+| jump | 27 | 27 | 38 | 1.41 | 4 jumps |
+| branch | 69 | 69 | 104 | 1.51 | many taken branches |
+| fib | 123 | 123 | 181 | 1.47 | loops: 1 taken branch per 4 instructions |
+| demo | 39 | 39 | 64 | 1.64 | 10-iteration loop + call |
 
 Penalties of the pipeline, measured with tiny programs (extra cycles compared with the same program without the hazard):
 

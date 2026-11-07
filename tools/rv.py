@@ -254,6 +254,7 @@ class Sim:
         self.pc = 0
         self.mem = [0] * 256
         self.steps = 0
+        self.last_change = 0   # number of instructions executed when a register last changed value
 
     def load(self, addr, f3):
         w = self.mem[(addr >> 2) & 0xFF]
@@ -315,6 +316,8 @@ class Sim:
             val = nxt
             nxt = (a + sx(w >> 20, 12)) & MASK & ~1
         if val is not None and rd:
+            if r[rd] != (val & MASK):
+                self.last_change = self.steps + 1
             r[rd] = val & MASK
         self.pc = nxt
         self.steps += 1

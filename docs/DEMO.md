@@ -9,12 +9,12 @@ observed.  This is a script for a 5-8 minute demo of both CPUs.  Prepare: Java 2
 
 ## 1. Single-cycle CPU (2 min)
 1. Open `main`. Point out the stage headings IF, ID, EX, MEM, WB and the named signals (tunnels).
-2. Right-click the ROM > *Edit Contents* to show the program (it is already loaded; or load `programs/demo.hex`).
-3. Poke `RESET` 1 then 0. Use *Simulate > Tick Full Cycle* repeatedly:
+2. The ROM already shows the program; to load a file live: right-click the ROM > *Load Image...* and choose `programs/demo.hex`.
+3. Poke `RESET` 1 then 0. Use *Simulate > Manual Tick Full Cycle* (Ctrl+F9) repeatedly:
    * watch `PC` count up and `instr` change (the probe next to the ROM shows the machine code);
    * open `RegisterFile` with the Poke tool (magnifier icon on the block): `x10` grows 10, 19, 27, ... up to 55;
    * after the `sw` / `lw` open `Memory` the same way: RAM word 0 holds 0x37.
-4. Result after about 40 cycles: `x10 = 55 (0x37)`, `x12 = 110 (0x6E)`, `x13 = 55`, `x14 = 1`, `x1 = 0x20` (return address of the call).
+4. Result after 39 cycles: `x10 = 55 (0x37)`, `x12 = 110 (0x6E)`, `x13 = 55`, `x14 = 1`, `x1 = 0x20` (return address of the call).
 
 ## 2. Instruction by instruction (1 min)
 Pick one instruction, e.g. `add x10,x10,x11`, and follow it: `instr` > `InstructionDecode` fields > `RegisterFile` read ports > ALU A/B
@@ -27,7 +27,7 @@ and for `jal` (`WBSel = 10`, `IsJAL`).
 3. **Forwarding**: run to the `add x10,x10,x11` / `addi x11,x11,-1` pair - the `ForwardingUnit` outputs `ForwardA / ForwardB` change from 00 to 01 / 10.
 4. **Branch flush**: the `bnez x11, loop` loop - when the branch is taken `pc_src_ex = 1`, the two following instructions become bubbles.
 5. **Load-use stall**: load a value and use it immediately (e.g. paste `tests/programs/hazard.s` into the ROM) and show `stall = 1`, PC held for one cycle.
-6. After about 65 cycles the result is identical to the single-cycle CPU (same registers).
+6. After 64 cycles the result is identical to the single-cycle CPU (same registers).
 
 ## 4. Tests (1 min)
 ```powershell

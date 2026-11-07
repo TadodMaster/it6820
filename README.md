@@ -25,19 +25,18 @@ java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
 ```
 
 1. In the project tree open `main` (single-cycle) or `Pipeline`.
-2. **Load a program** into the instruction ROM: right-click the ROM > *Edit Contents...* > *Open...* and choose a
-   `.hex` file (Logisim "v2.0 raw" format), or type the words in. Make one from assembly:
+2. **Load a program** into the instruction ROM: right-click the ROM > **Load Image...**, type the path of a
+   `.hex` file (Logisim "v2.0 raw" format) and press Enter. (*Edit Contents...* opens a hex editor instead.) Make one from assembly:
    ```powershell
    python tools\rv.py asm programs\demo.s -o programs\demo.hex -l
    ```
    The ROM already contains `programs/demo.s` (sum 1..10, store/load, a function call).
 3. Poke `RESET` to 1 and back to 0 (puts PC at 0).
-4. Step: `Simulate > Tick Full Cycle` once per clock cycle (or *Ticks Enabled* to free-run).
-5. Watch `PC`, `instr`, `wb_data` and the registers: open `RegisterFile` with the Poke tool (magnifier on the block);
-   registers are labelled `x0`..`x31`. Do not poke registers by opening the sub-circuit from the project tree - that is a
-   different state.
+4. Step: `Simulate > Manual Tick Full Cycle` (**Ctrl+F9**) once per clock cycle (`Auto-Tick Enabled`, Ctrl+K, free-runs; `Reset Simulation` is Ctrl+R).
+5. Watch the registers live in the **State** tab (bottom-left, next to *Properties*): it lists `PC` and `x0`..`x31` and updates on every tick.
+   `instr` and `wb_data` are shown by the yellow probes in the circuit.
 
-Demo program expected result: `x10 = 55`, `x12 = 110`, `x13 = 55`, `x14 = 1`; the single-cycle CPU is done after about 40 cycles, the pipeline after about 65.
+Demo program expected result: `x10 = 55`, `x12 = 110`, `x13 = 55`, `x14 = 1`; the single-cycle CPU is done after 39 cycles, the pipeline after 64.
 See [docs/DEMO.md](docs/DEMO.md) for a demo script.
 
 ## Files
@@ -129,17 +128,17 @@ python tests\fuzz.py --count 20 --seed 1               # random programs on both
 | `tests/programs/*.s` | `alu` (all R/I ops), `mem` (all loads / stores), `branch` (6 conditions, taken and not), `jump` (jal jalr lui auipc, call / ret), `fib`, `hazard` (dependent instructions, load-use, branch after load, ...). They check themselves: `x31 = 0x600D` when everything was right |
 | `tests/fuzz.py` | random programs (loads, stores, branches, jumps, dense register reuse) compared register-by-register and word-by-word with the reference simulator |
 
-Measured cycles (cycles until the PC reaches the final `halt: j halt`):
+Measured cycles (clock cycles until the last register write has completed; instructions = the instructions executed up to that write):
 
 | program | instructions | single-cycle | pipeline | pipeline CPI |
 |---|---|---|---|---|
-| alu | 92 | 91 | 91 | 0.99 |
-| mem | 70 | 69 | 70 | 1.00 |
-| hazard | 68 | 67 | 79 | 1.16 |
-| jump | 28 | 27 | 35 | 1.25 |
-| branch | 70 | 69 | 101 | 1.44 |
-| fib | 124 | 123 | 178 | 1.44 |
-| demo | 40 | 39 | 61 | 1.52 |
+| alu | 91 | 91 | 94 | 1.03 |
+| mem | 69 | 69 | 73 | 1.06 |
+| hazard | 67 | 67 | 82 | 1.22 |
+| jump | 27 | 27 | 38 | 1.41 |
+| branch | 69 | 69 | 104 | 1.51 |
+| fib | 123 | 123 | 181 | 1.47 |
+| demo | 39 | 39 | 64 | 1.64 |
 
 The pipeline reaches CPI 1.0 on straight-line code; loops with taken branches cost 2 extra cycles each.
 

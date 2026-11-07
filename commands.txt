@@ -1,0 +1,51 @@
+RV32I COMPUTER IN LOGISIM EVOLUTION - COMMANDS (PowerShell, run from D:\hust\logisim)
+==================================================================================
+
+0. SETUP
+   cd D:\hust\logisim
+   java -version                          (needs 21 or newer; this PC: JDK 21.0.12.1)
+   powershell -File tools\compile.ps1     (once: compile the Java helpers into tools\bin; needs javac)
+
+1. OPEN THE PROJECT
+   java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
+   circuits: main = single-cycle CPU, Pipeline = 5-stage pipeline CPU
+
+2. ASSEMBLE A PROGRAM -> ROM IMAGE (then in Logisim: right-click the ROM > Load Image... and type the .hex path)
+   python tools\rv.py asm programs\demo.s -o programs\demo.hex -l
+   python tools\rv.py sim programs\demo.s            (run it on the reference simulator, print registers)
+
+3. TESTS
+   powershell -File tests\run_tests.ps1                    9 module test files (Logisim test vectors)
+   python tests\run_cpu_tests.py --circuit all             test programs on both CPUs vs the reference simulator
+   python tests\run_cpu_tests.py --circuit Pipeline tests\programs\hazard.s
+   python tests\fuzz.py --count 20 --seed 1                random programs on both CPUs
+   (set JAVA=C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe if `java` on the PATH is not 21)
+
+4. RUN A PROGRAM ON A CIRCUIT WITHOUT THE GUI
+   java -cp "logisim-evolution-4.1.0-all.jar;tools\bin" Run RiscVComputer.circ Pipeline programs\demo.hex 70 trace
+   python tools\probe.py RiscVComputer.circ Pipeline programs\demo.s 10 pc_ex alu_result_ex stall    (value of named nets)
+
+5. REGENERATE THE CIRCUITS
+   python tools\build\build_all.py tools\build\base.circ RiscVComputer.circ
+
+6. RENDER A CIRCUIT TO PNG
+   java -cp "logisim-evolution-4.1.0-all.jar;tools\bin" Render RiscVComputer.circ docs\img Pipeline 0.5
+
+7. HEADLESS TEST OF ONE MODULE
+   java -jar .\logisim-evolution-4.1.0-all.jar --test-vector ALU tests\alu.vec .\RiscVComputer.circ
+
+8. MCP SERVER (logisim-mcp; restart Claude Code to load its tools)
+   claude mcp list
+   claude mcp remove logisim -s user
+   claude mcp add logisim --scope user --env "LOGISIM_JAR=D:\hust\logisim\logisim-evolution-4.1.0-all.jar" --env "JAVA=C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe" --env "LOGISIM_WORKDIR=D:\hust\logisim" -- "D:\hust\logisim\logisim-mcp\.venv\Scripts\python.exe" -m logisim_mcp
+   (the venv must keep "mcp<2": D:\hust\logisim\logisim-mcp\.venv\Scripts\python.exe -m pip install "mcp<2")
+
+9. IF JAVA IS TOO OLD
+   Error "UnsupportedClassVersionError ... class file version 65.0" means Java < 21.
+   winget is blocked by the proxy on this network: download the JDK 21 .msi in a browser, or call it by full path:
+   & "C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe" -jar .\logisim-evolution-4.1.0-all.jar
+
+10. BACKUPS
+   backup\RiscVComputer.orig.circ          original file
+   backup\RiscVComputer.layout-only.circ   after the first layout clean-up
+   backup\RiscVComputer.before-cpus.circ   before the full RV32I / pipeline build

@@ -57,7 +57,7 @@ Ví dụ: `add t1, t2, t3`, `add s1, zero, t1`, `addi t1, t2, 10` — assembler 
 **Cơ bản**
 
 * Phải chạy được từ các lệnh nạp vào instruction memory (không chỉnh trực tiếp giá trị các thanh ghi). **Đạt:** chương trình nạp vào ROM
-  (Edit Contents > Open file `.hex`), thanh ghi chỉ thay đổi do CPU thực thi.
+  (chuột phải vào ROM > Load Image... chọn file `.hex`), thanh ghi chỉ thay đổi do CPU thực thi.
 * Nếu có công cụ từ code assembly sang byte code nạp được vào ROM thì càng tốt. **Đạt:** `python tools/rv.py asm prog.s -o prog.hex`.
 
 **Nâng cao (optional):** branch prediction, cache, multiplier/divider, interrupt, GPIO/UART,
