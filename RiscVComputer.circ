@@ -128,12 +128,6 @@
       <a name="dataWidth" val="32"/>
       <a name="labelfont" val="Monospaced plain 12"/>
     </comp>
-    <comp lib="0" loc="(1050,680)" name="Probe">
-      <a name="appearance" val="NewPins"/>
-      <a name="label" val="instr"/>
-      <a name="labelfont" val="Monospaced plain 12"/>
-      <a name="radix" val="16"/>
-    </comp>
     <comp loc="(1480,210)" name="InstructionDecode"/>
     <comp loc="(1480,520)" name="MainControl"/>
     <comp loc="(1480,820)" name="ImmGen"/>
@@ -177,7 +171,31 @@
       <a name="select" val="2"/>
       <a name="width" val="32"/>
     </comp>
-    <comp lib="0" loc="(3980,520)" name="Probe">
+    <comp lib="0" loc="(520,1720)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="PC"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="16"/>
+    </comp>
+    <comp lib="0" loc="(1120,1720)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="instr"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="16"/>
+    </comp>
+    <comp lib="0" loc="(1720,1720)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="alu_result"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="16"/>
+    </comp>
+    <comp lib="0" loc="(2320,1720)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="branch_taken"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="2"/>
+    </comp>
+    <comp lib="0" loc="(2920,1720)" name="Probe">
       <a name="appearance" val="NewPins"/>
       <a name="label" val="wb_data"/>
       <a name="labelfont" val="Monospaced plain 12"/>
@@ -260,12 +278,7 @@
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="8"/>
     </comp>
-    <comp lib="0" loc="(1060,660)" name="Tunnel">
-      <a name="label" val="instr"/>
-      <a name="labelfont" val="Monospaced bold 12"/>
-      <a name="width" val="32"/>
-    </comp>
-    <comp lib="0" loc="(1120,680)" name="Tunnel">
+    <comp lib="0" loc="(1020,660)" name="Tunnel">
       <a name="label" val="instr"/>
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="32"/>
@@ -716,7 +729,26 @@
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="32"/>
     </comp>
-    <comp lib="0" loc="(4010,520)" name="Tunnel">
+    <comp lib="0" loc="(550,1720)" name="Tunnel">
+      <a name="label" val="pc"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="32"/>
+    </comp>
+    <comp lib="0" loc="(1150,1720)" name="Tunnel">
+      <a name="label" val="instr"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="32"/>
+    </comp>
+    <comp lib="0" loc="(1750,1720)" name="Tunnel">
+      <a name="label" val="alu_result"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="32"/>
+    </comp>
+    <comp lib="0" loc="(2350,1720)" name="Tunnel">
+      <a name="label" val="branch_taken"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(2950,1720)" name="Tunnel">
       <a name="label" val="wb_data"/>
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="32"/>
@@ -837,6 +869,50 @@
       <a name="font" val="Monospaced plain 12"/>
       <a name="text" val="WBSel: 00 ALU   01 memory   10 PC+4 (JAL/JALR)"/>
     </comp>
+    <comp lib="9" loc="(450,1610)" name="Text">
+      <a name="font" val="Monospaced bold 16"/>
+      <a name="text" val="BẢNG THEO DÕI (probe): xem các giá trị này sau mỗi lần bấm Ctrl+F9"/>
+    </comp>
+    <comp lib="9" loc="(570,1670)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="PC: địa chỉ lệnh đang được nạp"/>
+    </comp>
+    <comp lib="9" loc="(570,1690)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="(tăng 4 mỗi chu kỳ, nhảy khi rẽ nhánh)"/>
+    </comp>
+    <comp lib="9" loc="(1170,1670)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="instr: mã máy 32-bit của lệnh"/>
+    </comp>
+    <comp lib="9" loc="(1170,1690)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="đang thực thi (đọc từ ROM)"/>
+    </comp>
+    <comp lib="9" loc="(1770,1670)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="alu_result: kết quả ALU"/>
+    </comp>
+    <comp lib="9" loc="(1770,1690)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="(số học, địa chỉ load/store)"/>
+    </comp>
+    <comp lib="9" loc="(2370,1670)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="branch_taken: 1 = lệnh rẽ nhánh"/>
+    </comp>
+    <comp lib="9" loc="(2370,1690)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="được rẽ, PC nhảy tới đích"/>
+    </comp>
+    <comp lib="9" loc="(2970,1670)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="wb_data: giá trị ghi vào thanh ghi rd"/>
+    </comp>
+    <comp lib="9" loc="(2970,1690)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="ở cuối chu kỳ (write-back)"/>
+    </comp>
     <wire from="(110,220)" to="(140,220)"/>
     <wire from="(110,320)" to="(140,320)"/>
     <wire from="(300,350)" to="(430,350)"/>
@@ -852,6 +928,7 @@
     <wire from="(430,340)" to="(430,350)"/>
     <wire from="(460,280)" to="(490,280)"/>
     <wire from="(520,480)" to="(550,480)"/>
+    <wire from="(520,1720)" to="(550,1720)"/>
     <wire from="(650,270)" to="(680,270)"/>
     <wire from="(670,470)" to="(700,470)"/>
     <wire from="(670,500)" to="(700,500)"/>
@@ -861,8 +938,8 @@
     <wire from="(700,490)" to="(710,490)"/>
     <wire from="(720,610)" to="(750,610)"/>
     <wire from="(750,480)" to="(780,480)"/>
-    <wire from="(990,660)" to="(1060,660)"/>
-    <wire from="(1050,680)" to="(1120,680)"/>
+    <wire from="(990,660)" to="(1020,660)"/>
+    <wire from="(1120,1720)" to="(1150,1720)"/>
     <wire from="(1200,1030)" to="(1250,1030)"/>
     <wire from="(1200,1060)" to="(1240,1060)"/>
     <wire from="(1200,1090)" to="(1230,1090)"/>
@@ -942,6 +1019,7 @@
     <wire from="(1530,640)" to="(1530,650)"/>
     <wire from="(1530,650)" to="(1570,650)"/>
     <wire from="(1540,620)" to="(1570,620)"/>
+    <wire from="(1720,1720)" to="(1750,1720)"/>
     <wire from="(2020,250)" to="(2050,250)"/>
     <wire from="(2020,1420)" to="(2050,1420)"/>
     <wire from="(2050,1400)" to="(2240,1400)"/>
@@ -988,6 +1066,7 @@
     <wire from="(2300,1030)" to="(2330,1030)"/>
     <wire from="(2300,1060)" to="(2330,1060)"/>
     <wire from="(2300,1090)" to="(2340,1090)"/>
+    <wire from="(2320,1720)" to="(2350,1720)"/>
     <wire from="(2330,700)" to="(2350,700)"/>
     <wire from="(2330,840)" to="(2350,840)"/>
     <wire from="(2330,1030)" to="(2350,1030)"/>
@@ -1029,6 +1108,7 @@
     <wire from="(2920,340)" to="(2950,340)"/>
     <wire from="(2920,370)" to="(2960,370)"/>
     <wire from="(2920,400)" to="(2970,400)"/>
+    <wire from="(2920,1720)" to="(2950,1720)"/>
     <wire from="(2950,340)" to="(2980,340)"/>
     <wire from="(2960,310)" to="(2960,320)"/>
     <wire from="(2960,320)" to="(2980,320)"/>
@@ -1053,7 +1133,6 @@
     <wire from="(3660,540)" to="(3660,550)"/>
     <wire from="(3660,550)" to="(3690,550)"/>
     <wire from="(3680,520)" to="(3710,520)"/>
-    <wire from="(3980,520)" to="(4010,520)"/>
   </circuit>
   <circuit name="ALU">
     <a name="appearance" val="logisim_evolution"/>
@@ -7814,7 +7893,49 @@
       <a name="select" val="2"/>
       <a name="width" val="32"/>
     </comp>
-    <comp lib="0" loc="(8010,470)" name="Probe">
+    <comp lib="0" loc="(900,2920)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="PC"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="16"/>
+    </comp>
+    <comp lib="0" loc="(1580,2920)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="instr_id"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="16"/>
+    </comp>
+    <comp lib="0" loc="(2250,2920)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="stall"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="2"/>
+    </comp>
+    <comp lib="0" loc="(2920,2920)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="pc_src_ex"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="2"/>
+    </comp>
+    <comp lib="0" loc="(3600,2920)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="ForwardA"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="2"/>
+    </comp>
+    <comp lib="0" loc="(4280,2920)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="ForwardB"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="2"/>
+    </comp>
+    <comp lib="0" loc="(4950,2920)" name="Probe">
+      <a name="appearance" val="NewPins"/>
+      <a name="label" val="alu_result_ex"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+      <a name="radix" val="16"/>
+    </comp>
+    <comp lib="0" loc="(5620,2920)" name="Probe">
       <a name="appearance" val="NewPins"/>
       <a name="label" val="wb_data"/>
       <a name="labelfont" val="Monospaced plain 12"/>
@@ -9304,7 +9425,40 @@
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="32"/>
     </comp>
-    <comp lib="0" loc="(8040,470)" name="Tunnel">
+    <comp lib="0" loc="(930,2920)" name="Tunnel">
+      <a name="label" val="pc_if"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="32"/>
+    </comp>
+    <comp lib="0" loc="(1610,2920)" name="Tunnel">
+      <a name="label" val="instr_id"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="32"/>
+    </comp>
+    <comp lib="0" loc="(2280,2920)" name="Tunnel">
+      <a name="label" val="stall"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(2950,2920)" name="Tunnel">
+      <a name="label" val="pc_src_ex"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(3630,2920)" name="Tunnel">
+      <a name="label" val="ForwardA"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="2"/>
+    </comp>
+    <comp lib="0" loc="(4310,2920)" name="Tunnel">
+      <a name="label" val="ForwardB"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="2"/>
+    </comp>
+    <comp lib="0" loc="(4980,2920)" name="Tunnel">
+      <a name="label" val="alu_result_ex"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+      <a name="width" val="32"/>
+    </comp>
+    <comp lib="0" loc="(5650,2920)" name="Tunnel">
       <a name="label" val="wb_data"/>
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="32"/>
@@ -9513,6 +9667,74 @@
       <a name="font" val="Monospaced plain 12"/>
       <a name="text" val="wb_data goes to the register file (ID) and is also forwarded to EX"/>
     </comp>
+    <comp lib="9" loc="(810,2790)" name="Text">
+      <a name="font" val="Monospaced bold 16"/>
+      <a name="text" val="BẢNG THEO DÕI (probe): xem các giá trị này sau mỗi lần bấm Ctrl+F9"/>
+    </comp>
+    <comp lib="9" loc="(950,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="PC: địa chỉ đang fetch (đứng yên = stall)"/>
+    </comp>
+    <comp lib="9" loc="(950,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="(nhảy khi pc_src_ex = 1)"/>
+    </comp>
+    <comp lib="9" loc="(1630,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="instr_id: lệnh đang ở tầng ID"/>
+    </comp>
+    <comp lib="9" loc="(1630,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="(0 = bubble bị flush)"/>
+    </comp>
+    <comp lib="9" loc="(2300,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="stall = 1: load-use, PC và IF/ID"/>
+    </comp>
+    <comp lib="9" loc="(2300,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="đứng yên 1 chu kỳ"/>
+    </comp>
+    <comp lib="9" loc="(2980,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="pc_src_ex = 1: rẽ nhánh/JAL/JALR,"/>
+    </comp>
+    <comp lib="9" loc="(2980,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="flush 2 lệnh đã fetch"/>
+    </comp>
+    <comp lib="9" loc="(3650,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="ForwardA: 00 reg, 01 MEM/WB,"/>
+    </comp>
+    <comp lib="9" loc="(3650,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="10 EX/MEM (toán hạng A)"/>
+    </comp>
+    <comp lib="9" loc="(4330,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="ForwardB: 00 reg, 01 MEM/WB,"/>
+    </comp>
+    <comp lib="9" loc="(4330,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="10 EX/MEM (toán hạng B)"/>
+    </comp>
+    <comp lib="9" loc="(5000,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="alu_result_ex: kết quả ALU"/>
+    </comp>
+    <comp lib="9" loc="(5000,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="của lệnh đang ở tầng EX"/>
+    </comp>
+    <comp lib="9" loc="(5680,2860)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="wb_data: giá trị ghi vào thanh ghi"/>
+    </comp>
+    <comp lib="9" loc="(5680,2880)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="ở tầng WB"/>
+    </comp>
     <wire from="(80,580)" to="(110,580)"/>
     <wire from="(140,270)" to="(170,270)"/>
     <wire from="(140,380)" to="(170,380)"/>
@@ -9531,6 +9753,7 @@
     <wire from="(780,330)" to="(810,330)"/>
     <wire from="(810,580)" to="(840,580)"/>
     <wire from="(810,1300)" to="(840,1300)"/>
+    <wire from="(900,2920)" to="(930,2920)"/>
     <wire from="(1040,570)" to="(1070,570)"/>
     <wire from="(1040,600)" to="(1070,600)"/>
     <wire from="(1050,1110)" to="(1080,1110)"/>
@@ -9575,6 +9798,7 @@
     <wire from="(1570,480)" to="(1580,480)"/>
     <wire from="(1570,520)" to="(1570,530)"/>
     <wire from="(1570,520)" to="(1580,520)"/>
+    <wire from="(1580,2920)" to="(1610,2920)"/>
     <wire from="(1640,330)" to="(1670,330)"/>
     <wire from="(1640,480)" to="(1670,480)"/>
     <wire from="(1980,2520)" to="(2010,2520)"/>
@@ -9613,6 +9837,7 @@
     <wire from="(2170,1580)" to="(2180,1580)"/>
     <wire from="(2170,1640)" to="(2170,1660)"/>
     <wire from="(2170,1640)" to="(2180,1640)"/>
+    <wire from="(2250,2920)" to="(2280,2920)"/>
     <wire from="(2300,2230)" to="(2330,2230)"/>
     <wire from="(2300,2270)" to="(2330,2270)"/>
     <wire from="(2310,2420)" to="(2340,2420)"/>
@@ -9691,6 +9916,7 @@
     <wire from="(2450,730)" to="(2450,740)"/>
     <wire from="(2450,740)" to="(2490,740)"/>
     <wire from="(2460,710)" to="(2490,710)"/>
+    <wire from="(2920,2920)" to="(2950,2920)"/>
     <wire from="(3010,320)" to="(3050,320)"/>
     <wire from="(3010,350)" to="(3040,350)"/>
     <wire from="(3010,380)" to="(3050,380)"/>
@@ -9781,6 +10007,7 @@
     <wire from="(3120,1400)" to="(3150,1400)"/>
     <wire from="(3120,1550)" to="(3150,1550)"/>
     <wire from="(3120,1700)" to="(3150,1700)"/>
+    <wire from="(3600,2920)" to="(3630,2920)"/>
     <wire from="(3630,1080)" to="(3670,1080)"/>
     <wire from="(3630,1110)" to="(3660,1110)"/>
     <wire from="(3630,1140)" to="(3660,1140)"/>
@@ -9869,6 +10096,7 @@
     <wire from="(4090,340)" to="(4100,340)"/>
     <wire from="(4090,440)" to="(4090,470)"/>
     <wire from="(4090,440)" to="(4100,440)"/>
+    <wire from="(4280,2920)" to="(4310,2920)"/>
     <wire from="(4320,340)" to="(4330,340)"/>
     <wire from="(4320,360)" to="(4330,360)"/>
     <wire from="(4330,340)" to="(4360,340)"/>
@@ -9905,6 +10133,7 @@
     <wire from="(4710,860)" to="(4740,860)"/>
     <wire from="(4710,1120)" to="(4740,1120)"/>
     <wire from="(4710,1370)" to="(4740,1370)"/>
+    <wire from="(4950,2920)" to="(4980,2920)"/>
     <wire from="(5120,830)" to="(5160,830)"/>
     <wire from="(5120,860)" to="(5150,860)"/>
     <wire from="(5120,890)" to="(5160,890)"/>
@@ -9997,6 +10226,7 @@
     <wire from="(5600,790)" to="(5630,790)"/>
     <wire from="(5600,940)" to="(5630,940)"/>
     <wire from="(5600,1090)" to="(5630,1090)"/>
+    <wire from="(5620,2920)" to="(5650,2920)"/>
     <wire from="(6160,450)" to="(6190,450)"/>
     <wire from="(6160,630)" to="(6190,630)"/>
     <wire from="(6210,350)" to="(6240,350)"/>
@@ -10086,6 +10316,5 @@
     <wire from="(7630,490)" to="(7630,500)"/>
     <wire from="(7630,500)" to="(7660,500)"/>
     <wire from="(7650,470)" to="(7680,470)"/>
-    <wire from="(8010,470)" to="(8040,470)"/>
   </circuit>
 </project>

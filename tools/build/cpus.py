@@ -44,7 +44,6 @@ def single_cycle(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
     c.add("ROM", (1000, 800), {"addrWidth": 8, "dataWidth": 32, "contents": rom_contents, "appearance": "classic"},
           {"addr": "pc_word", "dout": "instr"})
     c.text(1120, 780, "Instruction ROM 256 x 32")
-    c.add("Probe", (1400, 900), {"appearance": "NewPins", "radix": 16, "label": "instr"}, {"p": "instr"})
 
     # ---------------------------------------------------------------- ID
     sub(c, "InstructionDecode", (1980, 280), {"Instruction": "instr", "funct7": "funct7", "rs2": "rs2", "rs1": "rs1",
@@ -98,7 +97,14 @@ def single_cycle(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
     c.add("Multiplexer", (4900, 700), {"select": 2, "width": 32},
           {"d0": "alu_result", "d1": "mem_rdata", "d2": "pc_plus4", "d3": "zero32", "sel": "WBSel", "out": "wb_data"})
     c.text(4650, 620, "WBSel: 00 ALU   01 memory   10 PC+4 (JAL/JALR)")
-    c.add("Probe", (5300, 700), {"appearance": "NewPins", "radix": 16, "label": "wb_data"}, {"p": "wb_data"})
+
+    c.monitor(700, 2300, 800, [
+        ("pc", "PC", 16, ("PC: địa chỉ lệnh đang được nạp", "(tăng 4 mỗi chu kỳ, nhảy khi rẽ nhánh)")),
+        ("instr", "instr", 16, ("instr: mã máy 32-bit của lệnh", "đang thực thi (đọc từ ROM)")),
+        ("alu_result", "alu_result", 16, ("alu_result: kết quả ALU", "(số học, địa chỉ load/store)")),
+        ("branch_taken", "branch_taken", 2, ("branch_taken: 1 = lệnh rẽ nhánh", "được rẽ, PC nhảy tới đích")),
+        ("wb_data", "wb_data", 16, ("wb_data: giá trị ghi vào thanh ghi rd", "ở cuối chu kỳ (write-back)")),
+    ], "BẢNG THEO DÕI (probe): xem các giá trị này sau mỗi lần bấm Ctrl+F9")
 
     c.install(before="ALU")
     return c

@@ -112,7 +112,7 @@ Press **Simulate > Manual Tick Full Cycle** (shortcut **Ctrl+F9**) once = one cl
 | 9 | 0x0c | **0x1b** | 0x08 | 19 + 8 = 27 |
 | 12 | 0x0c | **0x22** | 0x07 | 27 + 7 = 34 |
 
-Say while ticking: "x10 is the running sum, x11 the counter. Each tick executes exactly one instruction."  Point at the yellow probes: `instr` = the instruction being executed (for example `00b50533` = `add x10,x10,x11`), `wb_data` = the value written to the register (`0000000a`).
+Say while ticking: "x10 is the running sum, x11 the counter. Each tick executes exactly one instruction."  Point at the **monitor row** at the bottom of the circuit (yellow probes, each with a Vietnamese description above it): `PC`, `instr` = the instruction being executed (for example `00b50533` = `add x10,x10,x11`), `alu_result`, `branch_taken`, `wb_data` = the value written to the register (`0000000a`).
 
 ### Step 5 - Run to the end (1 min)
 Press **Ctrl+F9** until about tick 40 (or hold it; or `Simulate > Auto-Tick Enabled`, **Ctrl+K**, then switch it off).  Final state:
@@ -141,7 +141,7 @@ Tip: the report picture `docs\img\Pipeline.png` is a good overview slide.
 
 ### Step 8 - Run the pipeline and show hazards (2 min)
 `Pipeline` has its own ROM, with `demo.s`.  Load the hazard program the same way (right-click its ROM, near the left of the circuit, **Load Image...** > `D:\hust\logisim\programs\hazards_demo.hex`), then **Ctrl+R**.
-Tick with **Ctrl+F9** and watch the **PC** value in the State tab (this is the fetch address):
+Tick with **Ctrl+F9** and watch the **PC** value in the State tab (this is the fetch address).  The monitor row at the bottom of the `Pipeline` circuit shows the same thing live: `PC`, `instr_id`, `stall` (1 at tick 5), `pc_src_ex` (1 when the branch is taken), `ForwardA` / `ForwardB` (`10` = taken from EX/MEM), `alu_result_ex`, `wb_data`:
 
 | Tick | 1 | 2 | 3 | 4 | **5** | 6 | 7 | 8 | 9 | 10 |
 |---|---|---|---|---|---|---|---|---|---|---|

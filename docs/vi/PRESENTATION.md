@@ -114,7 +114,7 @@ Nhấn **Simulate > Manual Tick Full Cycle** (phím tắt **Ctrl+F9**) một l�
 | 9 | 0x0c | **0x1b** | 0x08 | 19 + 8 = 27 |
 | 12 | 0x0c | **0x22** | 0x07 | 27 + 7 = 34 |
 
-Vừa bấm tick vừa nói: "x10 là tổng đang cộng dồn, x11 là biến đếm. Mỗi tick thực thi đúng một lệnh."  Chỉ vào các probe màu vàng: `instr` = lệnh đang được thực thi (ví dụ `00b50533` = `add x10,x10,x11`), `wb_data` = giá trị được ghi vào register (`0000000a`).
+Vừa bấm tick vừa nói: "x10 là tổng đang cộng dồn, x11 là biến đếm. Mỗi tick thực thi đúng một lệnh."  Chỉ vào **hàng theo dõi** ở cuối mạch (các probe màu vàng, mỗi probe có mô tả tiếng Việt phía trên): `PC`, `instr` = lệnh đang được thực thi (ví dụ `00b50533` = `add x10,x10,x11`), `alu_result`, `branch_taken`, `wb_data` = giá trị được ghi vào register (`0000000a`).
 
 ### Bước 5 - Chạy đến hết (1 phút)
 Nhấn **Ctrl+F9** đến khoảng tick 40 (hoặc giữ phím; hoặc `Simulate > Auto-Tick Enabled`, **Ctrl+K**, rồi tắt đi).  Trạng thái cuối:
@@ -143,7 +143,7 @@ Mẹo: hình `docs\img\Pipeline.png` trong báo cáo là một slide tổng quan
 
 ### Bước 8 - Chạy pipeline và cho xem hazard (2 phút)
 `Pipeline` có ROM riêng, chứa `demo.s`.  Nạp chương trình hazard theo cách tương tự (nhấp chuột phải vào ROM của nó, gần phía bên trái của circuit, **Load Image...** > `D:\hust\logisim\programs\hazards_demo.hex`), rồi **Ctrl+R**.
-Bấm tick bằng **Ctrl+F9** và quan sát giá trị **PC** trong tab State (đây là địa chỉ fetch):
+Bấm tick bằng **Ctrl+F9** và quan sát giá trị **PC** trong tab State (đây là địa chỉ fetch).  Hàng theo dõi ở cuối mạch `Pipeline` cho xem trực tiếp cùng thông tin đó: `PC`, `instr_id`, `stall` (bằng 1 ở tick 5), `pc_src_ex` (bằng 1 khi branch được rẽ), `ForwardA` / `ForwardB` (`10` = lấy từ EX/MEM), `alu_result_ex`, `wb_data`:
 
 | Tick | 1 | 2 | 3 | 4 | **5** | 6 | 7 | 8 | 9 | 10 |
 |---|---|---|---|---|---|---|---|---|---|---|
