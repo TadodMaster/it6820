@@ -28,11 +28,11 @@ def single_cycle(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
 
     # ---------------------------------------------------------------- IF
     c.add("Clock", (150, 300), {"appearance": "NewPins"}, {"out": "CLK"})
-    c.text(130, 330, "Clock: Simulate > Tick")
+    c.text(130, 330, "Clock: Ctrl+F9 = 1 full cycle")
     c.add("Pin", (150, 420), {"appearance": "classic", "label": "RESET"}, {"p": "RESET"})
     c.text(150, 450, "RESET = 1 holds PC at 0")
     c.add("Constant", (420, 500), {}, {"out": "one"})
-    pc = c.add("Register", (540, 330), {"appearance": "logisim_evolution", "label": "PC", "width": 32},
+    pc = c.add("Register", (540, 330), {"appearance": "logisim_evolution", "label": "PC", "width": 32, "showInTab": "true"},
                {"q": "pc", "d": "next_pc", "clk": "CLK", "r": "RESET", "we": "one"})
     c.text(570, 310, "PC register")
     c.add("Splitter", (900, 360), splitter(3, 32, {**{0: 0, 1: 0}, **{k: 1 for k in range(2, 10)}, **{k: 2 for k in range(10, 32)}}),

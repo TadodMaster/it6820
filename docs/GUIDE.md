@@ -123,11 +123,11 @@ Instructions cannot be fetched from the data RAM and a program cannot overwrite 
 1. Start: `java -jar logisim-evolution-4.1.0-all.jar RiscVComputer.circ` (Java **21** or newer).
 2. Double-click `main` in the left tree.  The toolbar's hand icon is the **Poke tool** (click values to change them), the arrow is the Edit tool.
 3. **Load a program.**  The instruction ROM already holds `programs/demo.s`.  To load another: `python tools\rv.py asm myprog.s -o myprog.hex`, then
-   right-click the ROM, *Edit Contents...*, *Open...*, choose the `.hex` file.  (File format: first line `v2.0 raw`, then hex words.)
+   right-click the ROM, **Load Image...**, type the path of the `.hex` file and press Enter.  (File format: first line `v2.0 raw`, then hex words.)
 4. **Reset.**  Poke the `RESET` pin to 1 and back to 0.  RESET clears the PC register (it is the register's asynchronous clear input).  A freshly
    loaded project already starts with PC = 0 and all registers = 0.
-5. **Step.**  `Simulate > Tick Full Cycle` = one complete clock cycle (rising edge + falling edge) = one instruction in the single-cycle CPU.
-   `Ticks Enabled` free-runs the clock; `Simulate > Reset Simulation` (Ctrl+R) clears all registers and memories.
+5. **Step.**  `Simulate > Manual Tick Full Cycle` (**Ctrl+F9**) = one complete clock cycle (rising edge + falling edge) = one instruction in the single-cycle CPU.
+   `Auto-Tick Enabled` (Ctrl+K) free-runs the clock; `Manual Tick Half Cycle` is Ctrl+T; `Simulate > Reset Simulation` (Ctrl+R) clears all registers and memories.
 6. **Look at values.**  The PC register shows its value in its box.  Yellow ovals are probes (`instr`, `wb_data`).  To see the register file, use
    the Poke tool and click the **magnifier** on the `RegisterFile` box: registers are labelled `x0`..`x31` and show their value.  The same works for
    `Memory` (the RAM shows its contents when you click it, then *Edit contents* shows the table).
@@ -410,19 +410,19 @@ How to read it:
 * **CPI** (cycles per instruction) = cycles / instructions.  Single-cycle: exactly 1.  Pipeline: 1 + the average stalls and flushes.
 * **Execution time** = instructions x CPI x clock period.  The pipeline has a higher CPI but a shorter clock period, so in a real implementation it is faster.  Logisim simulates in "ticks", not nanoseconds, so only the CPI is visible here.
 
-Measured (cycles until the PC reaches the final `halt: j halt`):
+Measured cycles (clock cycles until the last register write has completed; instructions = the instructions executed up to that write):
 
 | program | instructions | single-cycle | pipeline | pipeline CPI |
 |---|---|---|---|---|
-| alu | 92 | 91 | 91 | 0.99 |
-| mem | 70 | 69 | 70 | 1.00 |
-| hazard | 68 | 67 | 79 | 1.16 |
-| jump | 28 | 27 | 35 | 1.25 |
-| branch | 70 | 69 | 101 | 1.44 |
-| fib | 124 | 123 | 178 | 1.44 |
-| demo | 40 | 39 | 61 | 1.52 |
+| alu | 91 | 91 | 94 | 1.03 |
+| mem | 69 | 69 | 73 | 1.06 |
+| hazard | 67 | 67 | 82 | 1.22 |
+| jump | 27 | 27 | 38 | 1.41 |
+| branch | 69 | 69 | 104 | 1.51 |
+| fib | 123 | 123 | 181 | 1.47 |
+| demo | 39 | 39 | 64 | 1.64 |
 
-(The numbers count to the point where the halt instruction is *fetched*, so they are 1 below the instruction count for straight-line code.)
+(The single-cycle CPU needs exactly one cycle per instruction.  The pipeline needs 4 more cycles to fill and drain, plus the penalties below; the figures are measured by `tests/run_cpu_tests.py`, which snapshots the registers after every cycle.)
 Measured penalties: forwarding 0, load-use 1, taken branch / jal / jalr 2, not-taken branch 0.
 Why loops are expensive: `demo` has a 3-instruction loop with one taken branch per iteration: 3 instructions cost 5 cycles.
 How to improve: resolve `jal` in ID (penalty 1), add a branch predictor / branch target buffer, or compute branches in ID with extra forwarding.
@@ -506,7 +506,7 @@ What the tests do **not** cover: timing (Logisim has no gate delays), misaligned
 |---|---|
 | Logisim does not start; `UnsupportedClassVersionError ... 65.0` | Java older than 21.  Install JDK 21 and use its `java.exe`. |
 | PC or registers show `xxxxxxxx` / red `E` after loading | a value is undefined: press Ctrl+R (reset simulation); make sure `RESET` is 0 while running |
-| nothing happens when ticking | `Simulate > Ticks Enabled` is off and you did not use *Tick Full Cycle*; or the clock tool is not the poke tool |
+| nothing happens when ticking | you did not use *Manual Tick Full Cycle* (Ctrl+F9) and `Auto-Tick Enabled` is off; or the clock tool is not the poke tool |
 | registers do not change | you opened `RegisterFile` from the project tree; use the magnifier inside `main` / `Pipeline` |
 | program runs but results are wrong | assemble with `-l` and compare with `python tools\rv.py sim`; check that the ROM really holds your program (*Edit Contents*) |
 | ROM is empty after *Open* | the file must start with the line `v2.0 raw`; `rv.py asm` writes it |

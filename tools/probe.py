@@ -42,7 +42,7 @@ if trace:
     print(f"{'cycle':>5}  {'PC':>8}  " + "  ".join(f"{l:>12}" for l in labels))
     for line in p.stdout.splitlines():
         if line.startswith("T "):
-            parts = line.split()
+            parts = [x for x in line.split() if not x.startswith("R=")]
             print(f"{parts[1]:>5}  {parts[2][3:]:>8}  " + "  ".join(f"{v:>12}" for v in parts[3:]))
 else:
     vals = [l for l in p.stdout.splitlines() if l.startswith("PROBE")]

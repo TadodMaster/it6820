@@ -111,6 +111,18 @@ public class Run {
         StringBuilder sb = new StringBuilder("T " + i + " PC=" + ((Value) call(cs.getData(pc), "getValue")).toHexString());
         for (int k = 5; k < a.length; k++)
           if (a[k].startsWith("@")) sb.append(" ").append(probe(cs, a[k]));
+        // snapshot of x1..x31 after this cycle (lets the tools find the cycle in which the last register write happened)
+        CircuitState rfs = findSub(cs, "RegisterFile");
+        if (rfs != null) {
+          long[] snap = new long[32];
+          for (Component c : rfs.getCircuit().getNonWires()) {
+            String l = label(c);
+            if (c.getFactory().getName().equals("Register") && l.matches("x\\d+"))
+              snap[Integer.parseInt(l.substring(1))] = val(rfs.getData(c));
+          }
+          sb.append(" R=");
+          for (int r = 1; r < 32; r++) sb.append(r > 1 ? "," : "").append(Long.toHexString(snap[r] & 0xFFFFFFFFL));
+        }
         System.out.println(sb);
       }
     }

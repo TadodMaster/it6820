@@ -71,6 +71,7 @@
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="PC"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="0" loc="(680,270)" name="Splitter">
@@ -750,7 +751,7 @@
     </comp>
     <comp lib="9" loc="(100,250)" name="Text">
       <a name="font" val="Monospaced plain 12"/>
-      <a name="text" val="Clock: Simulate &gt; Tick"/>
+      <a name="text" val="Clock: Ctrl+F9 = 1 full cycle"/>
     </comp>
     <comp lib="9" loc="(110,360)" name="Text">
       <a name="font" val="Monospaced plain 12"/>
@@ -2482,192 +2483,224 @@
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x12"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1260,420)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x13"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1260,530)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x14"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1260,640)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x15"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1540,340)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x16"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1540,450)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x17"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1540,560)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x18"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1540,670)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x19"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1800,340)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x20"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1800,450)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x21"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1800,560)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x22"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(1800,670)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x23"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2110,340)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x24"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2110,450)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x25"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2110,560)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x26"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2110,670)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x27"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2410,340)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x28"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2410,450)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x29"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2410,560)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x30"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(2410,670)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x31"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(390,310)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x0"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(390,420)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x1"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(390,530)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x2"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(390,640)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x3"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(650,310)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x4"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(650,420)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x5"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(650,530)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x6"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(650,640)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x7"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(960,310)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x8"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(960,530)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x10"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(960,640)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x11"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="5" loc="(970,420)" name="Register">
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="x9"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="9" loc="(1300,170)" name="Text">
@@ -7389,6 +7422,7 @@
       <a name="labelfont" val="Monospaced plain 11"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="PC"/>
+      <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
     <comp lib="0" loc="(1120,320)" name="Splitter">
@@ -9325,7 +9359,7 @@
     </comp>
     <comp lib="9" loc="(110,300)" name="Text">
       <a name="font" val="Monospaced plain 12"/>
-      <a name="text" val="Clock: Simulate &gt; Tick"/>
+      <a name="text" val="Clock: Ctrl+F9 = 1 full cycle"/>
     </comp>
     <comp lib="9" loc="(120,420)" name="Text">
       <a name="font" val="Monospaced plain 12"/>

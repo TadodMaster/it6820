@@ -24,7 +24,7 @@ Contents: [0 Project-wide settings](#0-project-wide-settings) - [1 State](#1-sta
 | Noise on component delays (`simrand`) | 0 (off) | same | the simulation must be deterministic so that tests are repeatable |
 | Grid | 10 px | fixed by Logisim | all components and wires must sit on it; off-grid items are *moved* when the file is loaded and the wires then miss the pins |
 | Font | `Monospaced` | every text and label | requested for the documentation / demo; applied by `tools/build/fonts.py` |
-| Clock | one `Clock` per CPU, high 1 tick / low 1 tick (defaults) | `main`, `Pipeline` | a full cycle = 2 ticks (rising edge + falling edge); `Simulate > Tick Full Cycle` does both.  The clock is stepped by hand, so its frequency is irrelevant |
+| Clock | one `Clock` per CPU, high 1 tick / low 1 tick (defaults) | `main`, `Pipeline` | a full cycle = 2 ticks (rising edge + falling edge); `Simulate > Manual Tick Full Cycle` (Ctrl+F9) does both.  The clock is stepped by hand, so its frequency is irrelevant |
 | Libraries in use | Wiring, Gates, Plexers, Arithmetic, Memory, Base | project tree | the other libraries in the file (I/O, TTL, FP, ...) are just Logisim's default template and are not used |
 | Data width | 32 bits everywhere in the datapath; 5 bits for register numbers, 3 for `funct3`, 7 for `opcode` / `funct7` | | RV32I |
 | Reset | pin `RESET` (default 0) drives the *clear* input of the PC register | `main`, `Pipeline` | puts PC at 0 without resetting the whole simulation |
@@ -318,4 +318,4 @@ Use these if you want to change a block in Logisim instead of in the generator.
 
 **A constant 0 of 32 bits** - Wiring > Constant: Data Bits 32, Value 0x0 (remember the default is 1).
 
-**Loading a program** - right-click the ROM > Edit Contents > Open (a file starting with `v2.0 raw`).
+**Loading a program** - right-click the ROM > Load Image... and choose a file starting with `v2.0 raw` (Edit Contents... opens a hex editor).

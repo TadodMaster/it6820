@@ -37,13 +37,14 @@ def label_registers(proj):
     def lab(mo):
         nonlocal n
         x, y, body = int(mo.group(1)), int(mo.group(2)), mo.group(3)
-        if 'name="label"' in body:
-            return mo.group(0)
-        cand = [t for t in tunnels if t[1] == y + 30 and t[0] >= x + 60]
-        num = min(cand)[2][1:]
-        n += 1
-        return (f'<comp lib="5" loc="({x},{y})" name="Register">'
-                + body.replace('      <a name="width"', f'      <a name="label" val="x{num}"/>\n      <a name="width"', 1) + "</comp>")
+        if 'name="label"' not in body:
+            cand = [t for t in tunnels if t[1] == y + 30 and t[0] >= x + 60]
+            num = min(cand)[2][1:]
+            body = body.replace('      <a name="width"', f'      <a name="label" val="x{num}"/>\n      <a name="width"', 1)
+            n += 1
+        if 'name="showInTab"' not in body:   # list the register in the live "Registers" tab of the GUI
+            body = body.replace('      <a name="width"', '      <a name="showInTab" val="true"/>\n      <a name="width"', 1)
+        return f'<comp lib="5" loc="({x},{y})" name="Register">' + body + "</comp>"
 
     new = re.sub(r'<comp lib="5" loc="\((\d+),(\d+)\)" name="Register">(.*?)</comp>', lab, blk, flags=re.S)
     proj.set("RegisterFile", new)
