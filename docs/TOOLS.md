@@ -149,6 +149,9 @@ The build exits with an error code if any circuit fails.
 * Do **not** hand-edit the generated circuits in Logisim: the next build overwrites them.  Change the Python description.
 * Hand-drawn blocks: open `tools/build/base.circ` in Logisim, edit, save, rebuild.
 * New Logisim component types need an entry in `LIB` (library number) and `pin_names()` in `circgen.py`.
+* **Captions.**  `tools/build/captions_vi.py` holds the Vietnamese caption of every component (what it does at that place and why), keyed by circuit and output net; `circgen.py` places each caption at the nearest free spot beside its component (a layout where a caption finds no spot is rejected, so the search takes a larger spread).  The five hand-drawn circuits get theirs in `annotate_vi.annotate_components()`; the block under each circuit comes from `annotate_vi.NOTES`.  Probe rows are made with `Circ.monitor()` and their texts are fixed.
+* Do not give a probe radix 10: `Ends` (and Logisim) hang on it; use 16.
+* The layout search shrinks x and y independently (`cpus.tightest`), so a rebuild takes about 6 minutes.
 
 ---
 

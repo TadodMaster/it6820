@@ -18,7 +18,7 @@ NOTES = {
     "rd = bit 11..7 (5 bit): số thanh ghi sẽ được ghi kết quả (x0..x31).   funct3 = bit 14..12 (3 bit): chọn biến thể trong nhóm (vd beq/bne/blt).",
     "rs1 = bit 19..15, rs2 = bit 24..20 (5 bit mỗi trường): số thanh ghi cần đọc.   funct7 = bit 31..25 (7 bit): phân biệt ADD/SUB, SRL/SRA.",
     "Các trường hợp: lệnh kiểu U (lui, auipc) và J (jal) không có rs1/rs2/funct3 thật; các bit đó vẫn được cắt ra nhưng các khối sau bỏ qua.",
-    "Vì sao không có cổng logic: RISC-V đặt các trường ở vị trí cố định, nên giải mã chỉ là đi dây (một splitter), rất nhanh và rẻ.",
+    "Không có cổng logic: RISC-V đặt các trường ở vị trí cố định, nên giải mã chỉ là đi dây (một splitter), rất nhanh và rẻ.",
 ],
 "MainControl": [
     "# ĐIỀU KHIỂN CHÍNH (MainControl) - từ opcode sinh mọi tín hiệu điều khiển",
@@ -28,7 +28,7 @@ NOTES = {
     "WBSel (2 bit) = giá trị ghi vào rd: 00 kết quả ALU, 01 dữ liệu RAM (load), 10 PC+4 (jal, jalr = địa chỉ trả về).",
     "Cách làm: 9 bộ so sánh 7 bit (mỗi opcode một cái) cho ra cờ của từng nhóm lệnh; cổng OR gộp cờ thành tín hiệu: vd RegWrite = R hoặc I hoặc load hoặc lui hoặc auipc hoặc jal hoặc jalr.",
     "Các trường hợp: opcode lạ (không thuộc 9 nhóm) -> mọi tín hiệu = 0, lệnh không làm gì (NOP an toàn). store/branch không ghi thanh ghi (RegWrite = 0).",
-    "Vì sao so sánh từng opcode: mỗi dòng của bảng opcode hiện ra thành một bộ so sánh, dễ đọc và dễ kiểm tra (tests/maincontrol.vec).",
+    "So sánh từng opcode: mỗi dòng của bảng opcode hiện ra thành một bộ so sánh, dễ đọc và dễ kiểm tra (tests/maincontrol.vec).",
 ],
 "ImmGen": [
     "# SINH HẰNG SỐ (ImmGen = Immediate Generator) - dựng hằng số tức thời 32 bit",
@@ -37,7 +37,7 @@ NOTES = {
     "ImmSel chọn kiểu: 000 I (addi, load, jalr: 12 bit), 001 S (store: 12 bit), 010 B (branch: 13 bit, bit 0 = 0), 011 U (lui, auipc: imm << 12), 100 J (jal: 21 bit, bit 0 = 0).",
     "Mở rộng dấu (sign extension): bit cao nhất của hằng số được chép vào các bit trên, nên số âm vẫn âm (vd -8 = 0xFFFFFFF8).",
     "Các trường hợp: B và J luôn chẵn (bit 0 = 0) vì lệnh dài 4 byte; U không mở rộng dấu mà chèn 12 bit 0 vào cuối.",
-    "Vì sao xáo bit: để bit dấu luôn ở bit 31 của lệnh và nhiều bit nằm cùng vị trí giữa các kiểu, nên mạch giải mã đơn giản hơn.",
+    "Xáo bit: để bit dấu luôn ở bit 31 của lệnh và nhiều bit nằm cùng vị trí giữa các kiểu, nên mạch giải mã đơn giản hơn.",
 ],
 "RegisterFile": [
     "# TẬP THANH GHI (RegisterFile) - 32 thanh ghi x0..x31, mỗi thanh ghi 32 bit",
@@ -46,7 +46,7 @@ NOTES = {
     "Ghi: nếu write = 1 thì ở cạnh xung nhịp, write_data được ghi vào thanh ghi số rd (bộ DEMUX bật tín hiệu cho phép ghi của đúng một thanh ghi).",
     "Các trường hợp: write = 0 -> không thanh ghi nào đổi (store, branch). rd = 0 -> x0 không đổi, luôn bằng 0 (hằng số 0). Đọc và ghi cùng thanh ghi trong một chu kỳ -> đọc giá trị cũ.",
     "Trong pipeline: khối này nhận xung nhịp ĐẢO (CLK_n) nên ghi ở cạnh xuống: lệnh ở WB ghi nửa đầu chu kỳ, lệnh ở ID đọc nửa sau -> thấy giá trị mới.",
-    "Vì sao 32 thanh ghi riêng + mux: mỗi thanh ghi là một hộp có nhãn, nhìn thấy được trong tab State của Logisim.",
+    "32 thanh ghi riêng + mux: mỗi thanh ghi là một hộp có nhãn, nhìn thấy được trong tab State của Logisim.",
 ],
 "ALUControl": [
     "# ĐIỀU KHIỂN ALU (ALUControl) - đổi ALUOp, funct3, funct7 thành mã ALUCtrl 4 bit",
@@ -54,7 +54,7 @@ NOTES = {
     "Mã ALUCtrl: 0 ADD (cộng), 1 SUB (trừ), 2 AND, 3 OR, 4 XOR, 5 SLL (dịch trái), 6 SRL (dịch phải logic), 7 SRA (dịch phải số học), 8 SLT (so sánh có dấu), 9 SLTU (không dấu).",
     "ALUOp = 00 -> luôn ADD (tính địa chỉ load/store, lui, auipc, jalr). ALUOp = 01 -> luôn SUB (so sánh cho branch). ALUOp = 10 -> tra bảng kiểu R. ALUOp = 11 -> tra bảng kiểu I.",
     "Kiểu R: funct3 chọn phép; funct7 bit 5 = 1 biến ADD thành SUB và SRL thành SRA. Kiểu I: chỉ lệnh dịch (slli, srli, srai) xét funct7 bit 5; addi bỏ qua funct7.",
-    "Vì sao hai tầng điều khiển (MainControl -> ALUOp -> ALUControl): mỗi bảng nhỏ, kiểm thử riêng được (tests/alucontrol.vec).",
+    "Hai tầng điều khiển (MainControl -> ALUOp -> ALUControl): mỗi bảng nhỏ, kiểm thử riêng được (tests/alucontrol.vec).",
 ],
 "ALU": [
     "# ALU (Arithmetic Logic Unit = khối số học - logic) - tính kết quả theo mã ALUCtrl",
@@ -63,7 +63,7 @@ NOTES = {
     "SLT/SLTU = Set Less Than (đặt 1 nếu A < B, ngược lại 0): SLT so sánh có dấu (-1 < 1), SLTU không dấu (0xFFFFFFFF > 1). Kết quả 1 bit được mở rộng 0 thành 32 bit.",
     "Các lệnh dịch chỉ dùng 5 bit thấp của B (B[4:0], tối đa dịch 31). SRA giữ nguyên bit dấu, SRL chèn bit 0.",
     "Các trường hợp: tràn số khi cộng/trừ bị bỏ qua (kết quả quấn vòng 32 bit, đúng theo RISC-V). Mã ALU_Ctrl không dùng (10..15) -> kết quả không xác định, không xảy ra vì ALUControl chỉ sinh 0..9.",
-    "Vì sao tính song song rồi chọn: đơn giản, dễ đọc; tốc độ không quan trọng trong Logisim (không mô phỏng độ trễ cổng).",
+    "Tính song song rồi chọn: đơn giản, dễ đọc; tốc độ không quan trọng trong Logisim (không mô phỏng độ trễ cổng).",
 ],
 "BranchUnit": [
     "# ĐƠN VỊ RẼ NHÁNH (BranchUnit) - quyết định lệnh rẽ nhánh có được rẽ không",
@@ -79,7 +79,7 @@ NOTES = {
     "Vào: dữ liệu cả từ đọc từ RAM, Address[1:0] (byte nào trong từ), funct3 (loại lệnh load). Ra: giá trị 32 bit đưa về thanh ghi.",
     "funct3: 000 lb, 001 lh, 010 lw, 100 lbu, 101 lhu. Byte được chọn bằng Address[1:0], nửa từ bằng Address[1].",
     "Các trường hợp: lb với byte 0x80 -> 0xFFFFFF80 (mở rộng dấu), lbu cùng byte -> 0x00000080. lw lấy nguyên từ, không cần mở rộng.",
-    "Vì sao cần khối này: RAM của dự án đọc nguyên từ 32 bit, nên việc cắt byte/nửa từ phải làm riêng.",
+    "Cần khối này: RAM của dự án đọc nguyên từ 32 bit, nên việc cắt byte/nửa từ phải làm riêng.",
 ],
 "StoreMerge": [
     "# GHÉP DỮ LIỆU STORE (StoreMerge) - tạo từ mới để ghi vào RAM (đọc - sửa - ghi)",
@@ -95,7 +95,7 @@ NOTES = {
     "Vào: Address (địa chỉ từ ALU), write_data (dữ liệu của lệnh store), MemWrite (cho phép ghi), CLK (xung nhịp), funct3 (loại load/store). Ra: read_data (dữ liệu cho lệnh load).",
     "Đọc: bất đồng bộ - địa chỉ vừa đổi là dữ liệu ra ngay trong cùng chu kỳ (lệnh load cần vậy). Ghi: chỉ khi MemWrite = 1, ở cạnh lên của xung nhịp.",
     "Các trường hợp: lệnh không phải load/store -> MemWrite = 0 nên RAM không đổi; read_data vẫn có giá trị nhưng bị bỏ qua. Địa chỉ >= 1 KiB quấn vòng (chỉ dùng Address[9:2]).",
-    "Vì sao RAM đọc bất đồng bộ: RAM đọc đồng bộ chỉ trả dữ liệu sau cạnh xung kế tiếp; khi đó load trả dữ liệu không xác định (lỗi đã gặp và sửa).",
+    "RAM đọc bất đồng bộ: RAM đọc đồng bộ chỉ trả dữ liệu sau cạnh xung kế tiếp; khi đó load trả dữ liệu không xác định (lỗi đã gặp và sửa).",
 ],
 "ForwardingUnit": [
     "# ĐƠN VỊ CHUYỂN TIẾP (ForwardingUnit) - lấy toán hạng mới nhất cho tầng EX",
@@ -123,7 +123,7 @@ NOTES = {
     "PC kế tiếp: lệnh thường -> PC + 4. branch được rẽ hoặc jal -> PC + hằng số (PC + imm). jalr -> (rs1 + imm) với bit 0 bị xóa (AND 0xFFFFFFFE).",
     "Các trường hợp theo lệnh: R (add...) ghi ALU vào rd. I (addi...) dùng imm. load: ALU tính địa chỉ, ghi dữ liệu RAM vào rd. store: ghi rs2 vào RAM. branch: so rs1, rs2. lui/auipc/jal/jalr dùng ASel và WBSel.",
     "RESET = 1 giữ PC ở 0. Ctrl+F9 = một chu kỳ = một lệnh. Các probe ở trên cho thấy lệnh sắp chạy và kết quả của nó; tab State cho thấy giá trị thanh ghi sau khi lệnh xong.",
-    "Vì sao có mạch này: là CPU đơn giản nhất để hiểu; mạch pipeline dùng lại cùng các khối.",
+    "Có mạch này: là CPU đơn giản nhất để hiểu; mạch pipeline dùng lại cùng các khối.",
 ],
 "Pipeline": [
     "# CPU PIPELINE 5 TẦNG (Pipeline) - năm lệnh được xử lý cùng lúc, mỗi lệnh ở một tầng",
@@ -135,7 +135,7 @@ NOTES = {
     "Từ điều khiển (control word): các tín hiệu điều khiển sinh một lần ở ID, đóng gói rồi đi cùng lệnh qua các thanh ghi pipeline; mỗi tầng tách phần mình cần (13 bit ở ID/EX, 5 bit ở EX/MEM, 3 bit ở MEM/WB).",
     "CLK_n = xung nhịp đảo: register file ghi ở cạnh xuống, nên lệnh ở WB ghi và lệnh ở ID đọc trong cùng chu kỳ vẫn thấy giá trị mới.",
     "Xem hiệu quả: bấm Ctrl+F9; các hàng probe ở dưới cho thấy stall, pc_src_ex, ForwardA/B và dữ liệu đi qua từng tầng. Chương trình thử hazard: programs/hazards_demo.hex.",
-    "Vì sao pipeline: chu kỳ xung nhịp có thể ngắn hơn (mỗi tầng chỉ làm một việc); trong Logisim không mô phỏng độ trễ nên số chu kỳ trông không giảm.",
+    "Pipeline: chu kỳ xung nhịp có thể ngắn hơn (mỗi tầng chỉ làm một việc); trong Logisim không mô phỏng độ trễ nên số chu kỳ trông không giảm.",
 ],
 }
 
@@ -174,4 +174,76 @@ def annotate(proj):
         i = blk.rindex("  </circuit>")
         proj.set(name, blk[:i] + body + blk[i:])
         done.append(name)
+    return done
+
+
+def annotate_components(proj):
+    """Captions next to the components of the hand-drawn circuits (the generated ones get theirs in circgen)."""
+    import os
+    import subprocess
+    import tempfile
+    import circgen
+    import captions_vi
+    fd, path = tempfile.mkstemp(suffix=".circ")
+    os.close(fd)
+    try:
+        proj.save(path)
+        p = subprocess.run([circgen.JAVA, "-cp", f"{circgen.JAR};{circgen.BIN}", "Ends", path],
+                           capture_output=True, text=True, timeout=300)
+    finally:
+        os.remove(path)
+    bounds, cur = {}, None
+    for line in p.stdout.splitlines():
+        if line.startswith("== "):
+            cur = line[3:].strip()
+            continue
+        m = re.match(r"(.+?) @\((-?\d+),(-?\d+)\) bounds=\((-?\d+),(-?\d+)\): (\d+)x(\d+)", line)
+        if m and cur:
+            bounds.setdefault(cur, {})[(m.group(1), int(m.group(2)), int(m.group(3)))] = tuple(int(m.group(i)) for i in (4, 5, 6, 7))
+    done = {}
+    for name in sorted(captions_vi.HAND):
+        blk = proj.block(name)
+        if blk is None or name not in bounds:
+            continue
+        occ = [(x - 2, y - 2, x + w + 2, y + h + 2) for (x, y, w, h) in bounds[name].values()]
+        for m in re.finditer(r'<wire from="\((-?\d+),(-?\d+)\)" to="\((-?\d+),(-?\d+)\)"', blk):
+            a, b, c, d = (int(m.group(i)) for i in range(1, 5))
+            occ.append((min(a, c) - 2, min(b, d) - 2, max(a, c) + 2, max(b, d) + 2))
+        placed, body, count = [], "", 0
+        for m in re.finditer(r'<comp lib="\d+" loc="\((-?\d+),(-?\d+)\)" name="([^"]+)"(?:/>|>(.*?)</comp>)', blk, re.S):
+            x, y, cname, inner = int(m.group(1)), int(m.group(2)), m.group(3), m.group(4) or ""
+            attrs = dict(re.findall(r'<a name="([^"]+)" val="([^"]*)"', inner))
+            ls = captions_vi.lines(name, cname, attrs, None)
+            bb = bounds[name].get((cname, x, y))
+            if not ls or bb is None:
+                continue
+            bx, by, bw, bh = bb
+            n = len(ls)
+            w = max(len(l) for l in ls) * 6 + 8
+            cx = bx + bw // 2
+            spot = None
+            bases = [by - 6 - 12 * (n - 1), by + bh + 22]
+            offs = [(0, 0)] + [(dx, sy * d) for d in range(0, 300, 20) for dx in (0, 40, -40, 80, -80, 120, -120)
+                               for sy in (-1, 1) if d or dx]
+            for dx, dy in offs:
+                for y0 in bases:
+                    r = (cx + dx - w // 2, y0 + dy - 16, cx + dx + w // 2, y0 + dy + 12 * (n - 1) + 4)
+                    if any(r[0] < q[2] and r[2] > q[0] and r[1] < q[3] and r[3] > q[1] for q in occ + placed):
+                        continue
+                    spot = (cx + dx, y0 + dy, r)
+                    break
+                if spot:
+                    break
+            if spot is None:
+                continue
+            placed.append(spot[2])
+            for k, l in enumerate(ls):
+                body += (f'    <comp lib="9" loc="({spot[0]},{spot[1] + 12 * k})" name="Text">\n'
+                         f'      <a name="font" val="Monospaced plain 10"/>\n'
+                         f'      <a name="text" val={quoteattr(l)}/>\n    </comp>\n')
+            count += 1
+        if body:
+            i = blk.rindex("  </circuit>")
+            proj.set(name, blk[:i] + body + blk[i:])
+        done[name] = count
     return done
