@@ -54,6 +54,7 @@ Result: `x1 = 0x64`, `x2 = 0x64`, `x3 = 0x65`, `x4 = 0xc9`, `x7 = 7`, and **`x5 
 * One **Ctrl+F9** = one full clock cycle (clock 0 > 1 > 0).  On the single-cycle CPU this executes exactly one instruction.
 * The PC register and the data RAM update on the **rising** edge; on the pipeline the register file updates on the **falling** edge (`CLK_n`).
 * After a tick the PC already points to the **next** instruction.  The monitor row (probes) shows that next instruction (`instr`) and what it will compute; the State tab shows the registers that the **previous** instruction has just written.  So every instruction is seen twice: first as "about to run" (probe), then as "done" (State tab) one tick later.
+* Probes: `main` shows the monitor row (`PC`, `instr`, `alu_result`, `branch_taken`, `wb_data`), a control row (`RegWrite`, `MemWrite`, `ALUSrc`, `ALUCtrl`, `WBSel`) and a data row (`rs1_data`, `rs2_data`, `imm`, `mem_rdata`, `next_pc`).  `Pipeline` shows the monitor row (`PC`, `instr_id`, `stall`, `pc_src_ex`, `ForwardA`, `ForwardB`, `alu_result_ex`, `wb_data`), an ID/EX row (`pc_id`, `rs1_data_id`, `rs2_data_id`, `imm_id`, `pc_ex`, `rd_ex`, `MemRead_ex`, `run`, `bubble`) and an EX/MEM/WB row (`opA`, `opB`, `alu_a`, `alu_b`, `target_ex`, `alu_result_mem`, `rd_mem`, `mem_rdata_wb`, `rd_wb`, `RegWrite_wb`).  Register numbers are shown in hex (`0a` = x10).
 * Wire colours: bright green = 1, dark green = 0 (single bits); buses show their value in hex.
 
 ---

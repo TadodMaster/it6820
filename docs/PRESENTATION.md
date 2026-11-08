@@ -100,6 +100,8 @@ Three places show what the CPU is doing.  Always look at them in this order:
 | **Monitor row** (bottom of the circuit, yellow probes with a Vietnamese description above each) | the signals of the instruction that is **about to execute** (single-cycle) or is in each stage (pipeline) | immediately, before the next tick |
 | **Wires and register boxes** in the circuit | the values flowing through the datapath (a wire turns bright green = 1, dark green = 0; buses show their hex value) | after each tick |
 
+**Probe rows.** `main` has three rows under the circuit (monitor, control, data); `Pipeline` has three rows too (monitor, ID/EX inputs, EX/MEM/WB data), each probe with a Vietnamese description above it.  Below the rows every circuit carries a Vietnamese explanation block (what the abbreviations mean, what the signals mean, the cases that can happen, why).  Scroll down once to show it.
+
 **Important timing rule for the single-cycle CPU:** after a tick the PC already points to the *next* instruction, and the monitor row shows that instruction (`instr`) and what it *will* compute (`alu_result`, `branch_taken`, `wb_data`).  The register changes only at the **next** tick.  So the sequence for every instruction is:
 1. before the tick: monitor row = `instr` and its result in `wb_data`; State tab still shows the old register value,
 2. press **Ctrl+F9**: the State tab shows the new register value and the PC moves on.

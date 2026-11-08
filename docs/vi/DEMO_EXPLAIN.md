@@ -56,6 +56,7 @@ Kết quả: `x1 = 0x64`, `x2 = 0x64`, `x3 = 0x65`, `x4 = 0xc9`, `x7 = 7`, và *
 * Một lần **Ctrl+F9** = một chu kỳ xung nhịp đầy đủ (clock 0 > 1 > 0).  Trên CPU single-cycle, việc này thực thi đúng một lệnh.
 * Thanh ghi PC và RAM dữ liệu cập nhật ở sườn **lên**; trên pipeline, register file cập nhật ở sườn **xuống** (`CLK_n`).
 * Sau một tick, PC đã trỏ tới lệnh **kế tiếp**.  Hàng theo dõi (probe) hiện lệnh kế tiếp đó (`instr`) và nó sẽ tính ra gì; tab State hiện các thanh ghi mà lệnh **trước** vừa ghi.  Vì vậy mỗi lệnh được thấy hai lần: trước hết là "sắp chạy" (probe), rồi "đã xong" (tab State) sau một tick.
+* Probe: `main` có hàng theo dõi (`PC`, `instr`, `alu_result`, `branch_taken`, `wb_data`), hàng điều khiển (`RegWrite`, `MemWrite`, `ALUSrc`, `ALUCtrl`, `WBSel`) và hàng dữ liệu (`rs1_data`, `rs2_data`, `imm`, `mem_rdata`, `next_pc`).  `Pipeline` có hàng theo dõi (`PC`, `instr_id`, `stall`, `pc_src_ex`, `ForwardA`, `ForwardB`, `alu_result_ex`, `wb_data`), hàng ID/EX (`pc_id`, `rs1_data_id`, `rs2_data_id`, `imm_id`, `pc_ex`, `rd_ex`, `MemRead_ex`, `run`, `bubble`) và hàng EX/MEM/WB (`opA`, `opB`, `alu_a`, `alu_b`, `target_ex`, `alu_result_mem`, `rd_mem`, `mem_rdata_wb`, `rd_wb`, `RegWrite_wb`).  Số thanh ghi hiện dạng hex (`0a` = x10).
 * Màu dây: xanh sáng = 1, xanh tối = 0 (tín hiệu 1 bit); các bus hiện giá trị dạng hex.
 
 ---

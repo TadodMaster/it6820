@@ -65,7 +65,9 @@ def main():
                      ("Memory", blocks.memory), ("ForwardingUnit", blocks.forwarding_unit),
                      ("HazardUnit", blocks.hazard_unit)):
         print("generating", name)
-        fn(proj)
+        import cpus
+        cpus.tightest(lambda pr, rom, sp, fn=fn: fn(pr, spread=sp), proj, None, name,
+                      [(0.6, 0.6), (0.7, 0.7), (0.8, 0.8), (0.9, 0.9), (1.0, 1.0), (1.1, 1.1), (1.2, 1.2), (1.3, 1.3)], grid=4)
     if a.stage == "all":
         import cpus
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -73,6 +75,8 @@ def main():
         demo = os.path.join(os.path.dirname(__file__), "..", "..", "programs", "demo.s")
         words, _, _ = rv.assemble(open(demo, encoding="utf-8").read())
         cpus.build(proj, cpus.rom_text(words))
+    import annotate_vi
+    print("Vietnamese notes added to:", ", ".join(annotate_vi.annotate(proj)))
     import fonts
     proj.text = fonts.monospace(proj.text)
     proj.save(a.dst)
