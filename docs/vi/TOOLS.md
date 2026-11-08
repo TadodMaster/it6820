@@ -154,6 +154,10 @@ Quá trình build thoát với mã lỗi nếu có mạch nào không đạt.
 
 ---
 
+**Chú thích tiếng Việt.**  `tools/build/captions_vi.py` chứa chú thích của từng linh kiện (nó làm gì ở đúng chỗ đó và vì sao), tra theo circuit và net đầu ra; `circgen.py` đặt mỗi chú thích ở chỗ trống gần nhất cạnh linh kiện (bố cục nào có chú thích không tìm được chỗ sẽ bị loại, nên bộ tìm chọn hệ số giãn lớn hơn).  Năm circuit vẽ tay được chú thích bằng `annotate_vi.annotate_components()`; khối giải thích dưới mỗi circuit lấy từ `annotate_vi.NOTES`.  Hàng probe tạo bằng `Circ.monitor()`, chữ của chúng cố định.  Không đặt radix 10 cho probe (`Ends` và Logisim bị treo): dùng 16.  Bộ tìm bố cục thu nhỏ x và y độc lập (`cpus.tightest`), nên một lần dựng lại mất khoảng 6 phút.
+
+---
+
 ## 6. Các trình chạy kiểm thử
 
 * `tests/run_tests.ps1 [file.circ]` - với mỗi module chạy `java -jar logisim.jar --test-vector <circuit> tests/<module>.vec <file>` và in `passed N, failed M`.

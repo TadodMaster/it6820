@@ -133,6 +133,7 @@ class Circ:
     def __init__(self, proj, name, stub=30, spread=(1.0, 1.0)):
         self.proj, self.name, self.stub, self.spread = proj, name, stub, spread
         self.comps, self.texts, self.notes, self.links = [], [], [], []
+        self.ftexts = []   # texts that must stay where they are (probe rows)
         self.sub_pins = proj.sub_pins()
         self.warnings = []
 
@@ -154,13 +155,12 @@ class Circ:
         self.texts.append((*self._sp(x, y), s, font))
 
     def monitor(self, x0, y, dx, items, heading):
-        """Row of labelled probes with a short description above each one.
-        items = [(net, label, radix, (line1, line2))]"""
-        self.title(x0 - 100, y - 150, heading)
+        """Row of labelled probes with a short description above each one (the texts are not moved by the layout)."""
+        self.ftexts.append((*self._sp(x0 - 100, y - 150), heading, "Monospaced bold 16"))
         for k, (net, label, radix, (l1, l2)) in enumerate(items):
             x = x0 + k * dx
-            self.text(x + 60, y - 70, l1)
-            self.text(x + 60, y - 45, l2)
+            self.ftexts.append((*self._sp(x + 60, y - 70), l1, "Monospaced plain 12"))
+            self.ftexts.append((*self._sp(x + 60, y - 45), l2, "Monospaced plain 12"))
             self.add("Probe", (x, y), {"appearance": "NewPins", "radix": radix, "label": label}, {"p": net})
 
     def title(self, x, y, s):
@@ -428,7 +428,37 @@ class Circ:
                 self.notes.append(f"text '{t[:30]}...' overlaps something and could not be moved")
             placed_t.append(cand[2])
             moved.append((cand[0], cand[1], t, font))
-        self.texts = moved
+        self.texts = moved + list(self.ftexts)
+        for (x, y, t, font) in self.ftexts:
+            placed_t.append(trect(x, y, t, font))
+        # captions next to the components: what the component does here and why (Vietnamese, 2-3 lines each)
+        import captions_vi
+        for c in self.comps:
+            ls = captions_vi.lines(self.name, c.name, c.attrs, c.pins)
+            if not ls:
+                continue
+            bx, by, bw, bh = c.bounds
+            n = len(ls)
+            w = max(len(l) for l in ls) * 6 + 8
+            cx = bx + bw // 2
+            spot = None
+            bases = [by - 6 - 12 * (n - 1), by + bh + 22]
+            offs = [(0, 0)] + [(dx, sy * d) for d in range(0, 500, 20) for dx in (0, 40, -40, 80, -80, 120, -120, 200, -200, 300, -300, 420, -420) for sy in (-1, 1)
+                               if d or dx]
+            for dx, dy in offs:
+                for y0 in bases:
+                    r = (cx + dx - w // 2, y0 + dy - 16, cx + dx + w // 2, y0 + dy + 12 * (n - 1) + 4)
+                    if rect_hit(r) or any(r[0] < q[2] and r[2] > q[0] and r[1] < q[3] and r[3] > q[1] for q in placed_t):
+                        continue
+                    spot = (cx + dx, y0 + dy, r)
+                    break
+                if spot:
+                    break
+            if spot is None:
+                raise ValueError(f"caption of {c.name} at {c.loc} found no free place")
+            placed_t.append(spot[2])
+            for k, l in enumerate(ls):
+                self.texts.append((spot[0], spot[1] + 12 * k, l, "Monospaced plain 10"))
         # lint
         for net, mem in nets.items():
             widths = {w for _, _, w, _ in mem}
