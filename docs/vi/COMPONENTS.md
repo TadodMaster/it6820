@@ -231,7 +231,7 @@ Vì sao dùng tunnel thay vì dây: một CPU có hàng trăm kết nối; dây 
 Dự án có khoảng 900 tunnel.  Bộ sinh đặt một tunnel trên mọi pin cần kết nối.
 
 ### Probe
-`radix` = 16 và `label` = `instr`, `wb_data` (và một cái bên trong ALU).  Hiển thị một giá trị mà không là một phần của logic (hình oval màu vàng).  Không cần cho chức năng, hữu ích cho demo.
+`radix` = 16 (2 cho tín hiệu 1 bit) và `label` = tên net.  `main` có 15 probe, `Pipeline` có 27, xếp thành các hàng dưới mạch, mỗi probe có mô tả tiếng Việt.  Hiển thị một giá trị mà không là một phần của logic (hình oval màu vàng).  Không cần cho chức năng, hữu ích cho demo.  **Không** dùng radix 10 (`Ends` / Logisim bị treo): dùng 16.
 
 ### Clock
 `High Duration` = `Low Duration` = 1 tick, `Phase Offset` 0 (tất cả đều mặc định).  Mỗi CPU một cái; đầu ra của nó là tunnel `CLK` cấp cho PC, các register pipeline, RAM và (đảo) register file.

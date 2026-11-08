@@ -231,7 +231,7 @@ Why tunnels instead of wires: a CPU has hundreds of connections; long wires cros
 There are about 900 tunnels in the project.  The generator puts one tunnel on every pin that needs a connection.
 
 ### Probe
-`radix` = 16 and `label` = `instr`, `wb_data` (and one inside the ALU).  Shows a value without being part of the logic (yellow oval).  Not needed for function, useful for demos.
+`radix` = 16 (2 for single-bit signals) and `label` = the net name.  `main` has 15 probes and `Pipeline` has 27, in rows below the circuit, each with a Vietnamese description.  Shows a value without being part of the logic (yellow oval).  Not needed for function, useful for demos.  Do **not** use radix 10 (`Ends` / Logisim hangs on it): use 16.
 
 ### Clock
 `High Duration` = `Low Duration` = 1 tick, `Phase Offset` 0 (all defaults).  One per CPU; its output is the `CLK` tunnel that feeds PC, pipeline registers, RAM and (inverted) the register file.

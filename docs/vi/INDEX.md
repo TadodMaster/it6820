@@ -13,6 +13,7 @@
 | [DESIGN_LOG.md](DESIGN_LOG.md) | lập trình viên | lịch sử thiết kế và các cạm bẫy đã gặp |
 | [DEMO.md](DEMO.md) | người thuyết trình | kịch bản và danh sách kiểm tra cho video demo / demo trực tiếp |
 | [DEMO_EXPLAIN.md](DEMO_EXPLAIN.md) | người thuyết trình, đồng đội | mọi thứ xảy ra trong demo: từng lệnh, từng tick, pipeline từng chu kỳ |
+| [../latex/KienTruc_RV32I.tex](../latex/KienTruc_RV32I.tex) | người học | tài liệu \LaTeX{} tiếng Việt học từng bước từng khối, có hình TikZ (biên dịch bằng pdfLaTeX); kế hoạch tiếng Anh: [../LEARNING_PLAN.md](../LEARNING_PLAN.md) |
 | [TEAM_SPLIT.md](TEAM_SPLIT.md) | nhóm ba người | ai học circuit nào, cần giải thích gì, câu hỏi có thể gặp |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | mọi người | đề bài (tiếng Việt) kèm trạng thái của từng mục |
 | [commands.txt](commands.txt) | mọi người | các lệnh để sao chép và dán |

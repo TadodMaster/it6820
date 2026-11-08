@@ -25,8 +25,8 @@ def sp_even(fanout, incoming, facing=None):
 
 
 # ------------------------------------------------------------------------------------------------
-def main_control(proj):
-    c = Circ(proj, "MainControl", spread=(1.2, 1.1))
+def main_control(proj, spread=(1.2, 1.1)):
+    c = Circ(proj, "MainControl", spread=spread)
     c.title(520, 30, "MainControl")
     c.text(520, 50, "Compares opcode with each instruction class (left) and combines the flags into control signals (right).")
     c.pin_in("opcode", 7, (120, 120), radix=None)
@@ -82,8 +82,8 @@ def main_control(proj):
 
 
 # ------------------------------------------------------------------------------------------------
-def branch_unit(proj):
-    c = Circ(proj, "BranchUnit", spread=(1.2, 1.1))
+def branch_unit(proj, spread=(1.2, 1.1)):
+    c = Circ(proj, "BranchUnit", spread=spread)
     c.title(520, 30, "BranchUnit")
     c.text(520, 50, "Decides whether a conditional branch is taken: funct3 picks the comparison, IsBranch enables it.")
     c.pin_in("rs1_data", 32, (120, 140), radix=16)
@@ -110,8 +110,8 @@ def branch_unit(proj):
 
 
 # ------------------------------------------------------------------------------------------------
-def load_extract(proj):
-    c = Circ(proj, "LoadExtract", spread=(1.3, 1.2))
+def load_extract(proj, spread=(1.3, 1.2)):
+    c = Circ(proj, "LoadExtract", spread=spread)
     c.title(700, 30, "LoadExtract")
     c.text(700, 50, "Picks the loaded byte / halfword out of the 32-bit word and extends it: lb lh lw lbu lhu.")
     c.pin_in("word", 32, (120, 160), radix=16)
@@ -137,8 +137,8 @@ def load_extract(proj):
     return c
 
 
-def store_merge(proj):
-    c = Circ(proj, "StoreMerge", spread=(1.3, 1.2))
+def store_merge(proj, spread=(1.3, 1.2)):
+    c = Circ(proj, "StoreMerge", spread=spread)
     c.title(900, 30, "StoreMerge")
     c.text(900, 50, "A store writes a whole RAM word, so keep the old bytes that are not written: sb, sh, sw.")
     c.pin_in("old_word", 32, (120, 160), radix=16)
@@ -170,8 +170,8 @@ def store_merge(proj):
     return c
 
 
-def memory(proj):
-    c = Circ(proj, "Memory", spread=(1.2, 1.2))
+def memory(proj, spread=(1.2, 1.2)):
+    c = Circ(proj, "Memory", spread=spread)
     c.title(900, 30, "Memory")
     c.text(900, 50, "Data RAM 256 x 32 with asynchronous read.  Loads: lb lh lw lbu lhu.  Stores: sb sh sw (read-modify-write of one word).")
     c.pin_in("Address", 32, (120, 160), radix=16)
@@ -195,8 +195,8 @@ def memory(proj):
     return c
 
 
-def forwarding_unit(proj):
-    c = Circ(proj, "ForwardingUnit", spread=(1.5, 1.3))
+def forwarding_unit(proj, spread=(1.5, 1.3)):
+    c = Circ(proj, "ForwardingUnit", spread=spread)
     c.title(600, 30, "ForwardingUnit")
     c.text(600, 50, "Pipeline data hazards: take an operand of the EX stage from a later stage instead of the register file.")
     c.pin_in("rs1_ex", 5, (120, 140))
@@ -230,8 +230,8 @@ def forwarding_unit(proj):
     return c
 
 
-def hazard_unit(proj):
-    c = Circ(proj, "HazardUnit", spread=(1.5, 1.3))
+def hazard_unit(proj, spread=(1.5, 1.3)):
+    c = Circ(proj, "HazardUnit", spread=spread)
     c.title(600, 30, "HazardUnit")
     c.text(600, 50, "Load-use hazard: the instruction in ID needs a value that the load in EX has not read from memory yet -> stall 1 cycle.")
     c.pin_in("MemRead_ex", 1, (120, 140))

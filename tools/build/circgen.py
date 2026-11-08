@@ -455,6 +455,16 @@ class Circ:
                 f'    <a name="circuit" val="{self.name}"/>\n'
                 '    <a name="circuitnamedboxfixedsize" val="true"/>\n'
                 '    <a name="simulationFrequency" val="1.0"/>\n')
+        # two texts must not overlap (a tight spread would otherwise stack lines on top of each other)
+        boxes = []
+        for x, y, s, font in self.texts:
+            size = int(font.split()[-1])
+            boxes.append((x, y, int(0.6 * size * len(s)) // 2, int(size * 1.3) // 2, s))
+        for i in range(len(boxes)):
+            for j in range(i + 1, len(boxes)):
+                a, b = boxes[i], boxes[j]
+                if abs(a[0] - b[0]) < a[2] + b[2] and abs(a[1] - b[1]) < a[3] + b[3]:
+                    raise ValueError(f"texts overlap: {a[4][:30]!r} / {b[4][:30]!r}")
         body = "".join(self._comp_xml(c) for c in self.comps + tunnels)
         for x, y, s, font in self.texts:
             body += (f'    <comp lib="9" loc="({x},{y})" name="Text">\n'

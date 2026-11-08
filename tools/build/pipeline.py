@@ -215,5 +215,28 @@ def pipeline(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
         ("alu_result_ex", "alu_result_ex", 16, ("alu_result_ex: kết quả ALU", "của lệnh đang ở tầng EX")),
         ("wb_data", "wb_data", 16, ("wb_data: giá trị ghi vào thanh ghi", "ở tầng WB")),
     ], "BẢNG THEO DÕI (probe): xem các giá trị này sau mỗi lần bấm Ctrl+F9")
+    c.monitor(1000, 3510, 750, [
+        ("pc_id", "pc_id", 16, ("pc_id: địa chỉ của lệnh", "đang ở tầng ID")),
+        ("rs1_data_id", "rs1_data_id", 16, ("rs1_data_id: giá trị rs1", "đọc ở tầng ID")),
+        ("rs2_data_id", "rs2_data_id", 16, ("rs2_data_id: giá trị rs2", "đọc ở tầng ID")),
+        ("imm_id", "imm_id", 16, ("imm_id: hằng số tức thời", "của lệnh ở tầng ID")),
+        ("pc_ex", "pc_ex", 16, ("pc_ex: địa chỉ của lệnh", "đang ở tầng EX")),
+        ("rd_ex", "rd_ex", 16, ("rd_ex: số thanh ghi đích", "của lệnh ở tầng EX")),
+        ("MemRead_ex", "MemRead_ex", 2, ("MemRead_ex = 1: lệnh ở EX là", "load (nguồn của stall)")),
+        ("run", "run", 2, ("run = not stall: 0 thì PC", "và IF/ID đứng yên")),
+        ("bubble", "bubble", 2, ("bubble = stall hoặc flush:", "từ điều khiển vào ID/EX bị xóa")),
+    ], "PROBE TẦNG ID VÀ EX (vào): lệnh nào đang ở đâu và nó mang theo gì")
+    c.monitor(1000, 3770, 750, [
+        ("opA", "opA", 16, ("opA: toán hạng A sau forwarding", "(đã chọn theo ForwardA)")),
+        ("opB", "opB", 16, ("opB: toán hạng B sau forwarding", "(đã chọn theo ForwardB)")),
+        ("alu_a", "alu_a", 16, ("alu_a: đầu vào A của ALU", "(rs1, PC hoặc 0)")),
+        ("alu_b", "alu_b", 16, ("alu_b: đầu vào B của ALU", "(rs2 hoặc imm)")),
+        ("target_ex", "target_ex", 16, ("target_ex: đích nhảy tính ở EX", "(branch/JAL hoặc JALR)")),
+        ("alu_result_mem", "alu_result_mem", 16, ("alu_result_mem: kết quả ALU", "của lệnh ở tầng MEM")),
+        ("rd_mem", "rd_mem", 16, ("rd_mem: thanh ghi đích", "của lệnh ở tầng MEM")),
+        ("mem_rdata_wb", "mem_rdata_wb", 16, ("mem_rdata_wb: dữ liệu RAM", "của lệnh load ở tầng WB")),
+        ("rd_wb", "rd_wb", 16, ("rd_wb: thanh ghi đích", "của lệnh ở tầng WB")),
+        ("RegWrite_wb", "RegWrite_wb", 2, ("RegWrite_wb = 1: lệnh ở WB", "sẽ ghi thanh ghi")),
+    ], "PROBE TẦNG EX, MEM VÀ WB: dữ liệu đi qua các tầng sau")
     c.install()
     return c

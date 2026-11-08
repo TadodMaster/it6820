@@ -105,6 +105,20 @@ def single_cycle(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
         ("branch_taken", "branch_taken", 2, ("branch_taken: 1 = lệnh rẽ nhánh", "được rẽ, PC nhảy tới đích")),
         ("wb_data", "wb_data", 16, ("wb_data: giá trị ghi vào thanh ghi rd", "ở cuối chu kỳ (write-back)")),
     ], "BẢNG THEO DÕI (probe): xem các giá trị này sau mỗi lần bấm Ctrl+F9")
+    c.monitor(700, 2560, 800, [
+        ("RegWrite", "RegWrite", 2, ("RegWrite = 1: lệnh sẽ ghi", "vào thanh ghi rd")),
+        ("MemWrite", "MemWrite", 2, ("MemWrite = 1: lệnh store,", "ghi vào RAM dữ liệu")),
+        ("ALUSrc", "ALUSrc", 2, ("ALUSrc: 0 = toán hạng B là rs2,", "1 = là hằng số imm")),
+        ("ALUCtrl", "ALUCtrl", 16, ("ALUCtrl: mã phép ALU (0 ADD, 1 SUB,", "2 AND, 3 OR, 4 XOR, 5 SLL, 6 SRL, 7 SRA...)")),
+        ("WBSel", "WBSel", 2, ("WBSel: 00 ALU, 01 bộ nhớ,", "10 PC+4 (JAL/JALR)")),
+    ], "PROBE ĐIỀU KHIỂN (MainControl): lệnh đang chạy bật những tín hiệu nào")
+    c.monitor(700, 2820, 800, [
+        ("rs1_data", "rs1_data", 16, ("rs1_data: giá trị thanh ghi rs1", "đọc từ register file")),
+        ("rs2_data", "rs2_data", 16, ("rs2_data: giá trị thanh ghi rs2", "(cũng là dữ liệu của lệnh store)")),
+        ("imm", "imm", 16, ("imm: hằng số tức thời đã", "mở rộng dấu (ImmGen)")),
+        ("mem_rdata", "mem_rdata", 16, ("mem_rdata: dữ liệu đọc từ RAM", "(chỉ có nghĩa với lệnh load)")),
+        ("next_pc", "next_pc", 16, ("next_pc: địa chỉ lệnh kế tiếp", "(PC+4, đích rẽ nhánh hoặc JALR)")),
+    ], "PROBE DỮ LIỆU: các giá trị chạy trong datapath")
 
     c.install(before="ALU")
     return c
@@ -118,17 +132,38 @@ def rom_text(words):
     return "addr/data: 8 32" + nl + nl.join(" ".join(ws[k:k + 8]) for k in range(0, len(ws), 8)) + nl
 
 
-def tightest(fn, proj, rom, name, candidates):
-    """Build `fn` with the smallest spread factor for which the router finds room for every tunnel."""
+def tightest(fn, proj, rom, name, candidates, grid=7):
+    """Build `fn` with the smallest layout for which the router finds room for every tunnel.
+
+    First the smallest uniform spread factor, then x and y are reduced independently (smallest area first)."""
+    import circgen
+    start = len(circgen.BUILT)
     last = None
+    found = None
     for sp in candidates:
         try:
             c = fn(proj, rom, sp)
-            print(f"  {name}: layout spread {sp}")
-            return c
+            found = (sp, c)
+            break
         except ValueError as e:
             last = e
-    raise last
+    if found is None:
+        raise last
+    (bx, by), best = found[0], found[1]
+    trials = sorted(((round(bx - i * 0.05, 2), round(by - j * 0.05, 2)) for i in range(0, grid) for j in range(0, grid)
+                     if (i or j) and bx - i * 0.05 >= 0.4 and by - j * 0.05 >= 0.4), key=lambda t: (t[0] * t[1], t))
+    for sp in trials:
+        try:
+            c = fn(proj, rom, sp)
+        except ValueError:
+            continue
+        best, bx, by = c, sp[0], sp[1]
+        break
+    print(f"  {name}: layout spread ({bx}, {by})")
+    if best is not found[1]:
+        best = fn(proj, rom, (bx, by))   # rebuild so that the project holds the winning layout
+    del circgen.BUILT[start:-1]          # only the final layout is verified
+    return best
 
 
 SPREADS = [(0.5, 0.5), (0.55, 0.55), (0.6, 0.6), (0.65, 0.65), (0.7, 0.7), (0.75, 0.75), (0.8, 0.8), (0.9, 0.9), (1.0, 1.0), (1.15, 1.15)]
