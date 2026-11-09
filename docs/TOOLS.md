@@ -155,6 +155,17 @@ The build exits with an error code if any circuit fails.
 
 ---
 
+## 5b. `tools/web/` and `tools/build_web.py` - the web visualisation
+
+* `tools/web/engine.js` is a JavaScript model of both CPUs (single-cycle `main` and 5-stage `Pipeline`) with the same block and signal names as the circuits.  `tools/web/template.html` is the page; `python tools/build_web.py` inlines the engine, the assembled programs (`tools/web/dump_programs.py`) and `docs/FLOWCHARTS.md` / `docs/vi/FLOWCHARTS.md` into the single file `docs/web/index.html`.
+* The pipeline tab starts with an animated **conveyor** (`tools/web/pipeline_conveyor.js`): one card per instruction moving through the five stages, a pulsing card for a stall, red cards for flushed instructions, animated arrows for forwarding and for the PC redirect, plus buttons that jump to the first forwarding / stall / flush and a back-one-tick button (the page replays the program from reset).  In the single-cycle tab the datapath lights up stage by stage after each manual tick (checkbox to turn it off).
+* Below the conveyor comes a detailed datapath of circuit `Pipeline` (`tools/web/pipeline_detail.js`, inlined by the build): the four pipeline registers with their fields, HazardUnit, ForwardingUnit with the forwarding muxes and paths, ALU, BranchUnit, jump target logic, Memory and write-back, all with live values; a table below shows the control word that travels with the instruction through ID, EX, MEM and WB.
+* The page has five tabs: introduction, single-cycle, pipeline, performance charts (all 8 programs measured live in the browser: cycles, CPI, cost breakdown) and flowcharts.  The charts are plain SVG drawn by a small library inside the template (no external chart library).
+* `node tools/web/test_engine.js` checks the engine: the final registers and memory of 8 programs on both CPUs against the Python reference simulator, the single-cycle probe trace of `demo.s`, the pipeline probe trace of `hazards_demo.s` and the state of the pipeline after 20 ticks of `demo.s` (all measured on the Logisim circuits).
+* The page accepts `?prog=<name>&t=<ticks>#single|#pipe|#flow` to start in a given state; the flowchart diagrams are drawn by Mermaid loaded from a CDN (network needed for them only).
+
+---
+
 ## 6. Test runners
 
 * `tests/run_tests.ps1 [file.circ]` - for each module runs `java -jar logisim.jar --test-vector <circuit> tests/<module>.vec <file>` and prints `passed N, failed M`.

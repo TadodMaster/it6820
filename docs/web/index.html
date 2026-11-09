@@ -1,0 +1,1496 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RV32I - mô phỏng trực quan</title>
+<style>
+:root{
+  --bg:#f3f5f9; --panel:#ffffff; --ink:#18202c; --muted:#5f6c7e; --line:#dde3ec; --accent:#2f6df6; --accent2:#e8870c;
+  --box:#f4f7fd; --boxon:#dbe8ff; --ctl:#fff3de; --mem:#e4f7ea; --reg:#fff9d6; --good:#178a3e; --bad:#d63a3a; --wire:#a3afc0; --code:#eef1f6;
+  --if:#3b82f6; --id:#10b981; --ex:#f59e0b; --mm:#ef4444; --wb:#8b5cf6;
+  --shadow:0 1px 2px rgba(20,30,50,.06),0 4px 14px rgba(20,30,50,.06);
+  --hero1:#1d4ed8; --hero2:#7c3aed;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1218; --panel:#161d27; --ink:#e8edf4; --muted:#93a1b4; --line:#273140; --accent:#6aa7ff; --accent2:#ffb454;
+    --box:#1c2736; --boxon:#25477a; --ctl:#3a2e1a; --mem:#17301f; --reg:#38340f; --good:#56d364; --bad:#ff7b72; --wire:#526074; --code:#212c3a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1218; --panel:#161d27; --ink:#e8edf4; --muted:#93a1b4; --line:#273140; --accent:#6aa7ff; --accent2:#ffb454;
+  --box:#1c2736; --boxon:#25477a; --ctl:#3a2e1a; --mem:#17301f; --reg:#38340f; --good:#56d364; --bad:#ff7b72; --wire:#526074; --code:#212c3a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.hero{background:linear-gradient(120deg,var(--hero1),var(--hero2));color:#fff;padding:20px 16px 0}
+.hero .in{max-width:1500px;margin:0 auto}
+.hero h1{font-size:23px;margin:0 0 2px;letter-spacing:-.01em}
+.hero p{margin:0 0 14px;opacity:.9;font-size:13.5px}
+.hero code{background:rgba(255,255,255,.18);color:#fff;border-radius:4px;padding:0 5px}
+nav{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end}
+nav button{background:rgba(255,255,255,.14);border:0;border-radius:10px 10px 0 0;color:#fff;padding:9px 16px;font:inherit;cursor:pointer;opacity:.85;transition:background .15s,opacity .15s}
+nav button:hover{background:rgba(255,255,255,.24);opacity:1}
+nav button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1;font-weight:650}
+nav .sp{flex:1}
+nav button.theme{border-radius:8px;margin-bottom:6px;font-size:12.5px;padding:5px 10px}
+main{max-width:1500px;margin:0 auto;padding:14px 16px 50px}
+section[hidden]{display:none}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 12px}
+.bar label{font-size:13px;color:var(--muted)}
+.bar select,.bar button,.bar input[type=range]{font:inherit;color:var(--ink)}
+.bar select,.bar button{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 11px;box-shadow:var(--shadow)}
+.bar button{cursor:pointer;transition:transform .08s}
+.bar button:active{transform:scale(.97)}
+.bar button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:650}
+.bar .tk{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;box-shadow:var(--shadow)}
+.kpi b{display:block;font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.if b{color:var(--if)}.kpi.id b{color:var(--id)}.kpi.ex b{color:var(--ex)}.kpi.mm b{color:var(--mm)}.kpi.wb b{color:var(--wb)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}}
+.stack>*+*{margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 8px;font-size:12.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+svg{width:100%;height:auto;display:block}
+svg text{font:11px "Inter",system-ui,"Segoe UI",sans-serif;fill:var(--ink)}
+svg .band{opacity:.09}
+svg .bandlab{font-weight:800;font-size:12px;letter-spacing:.04em}
+svg .box{fill:var(--box);stroke:var(--line);stroke-width:1.3;transition:fill .25s,stroke .25s}
+svg .box.on{fill:var(--boxon);stroke:var(--accent);stroke-width:2.2;filter:drop-shadow(0 2px 6px rgba(47,109,246,.28))}
+svg .box.ctl{fill:var(--ctl)} svg .box.mem{fill:var(--mem)} svg .box.reg{fill:var(--reg)}
+svg .box.ctl.on{fill:var(--ctl);stroke:var(--accent2);stroke-width:2.4;filter:drop-shadow(0 2px 6px rgba(232,135,12,.3))}
+svg .box.mem.on{fill:var(--mem);stroke:var(--good);stroke-width:2.4;filter:drop-shadow(0 2px 6px rgba(23,138,62,.3))}
+svg .box.reg.on{fill:var(--reg);stroke:var(--accent2);stroke-width:2.4;filter:drop-shadow(0 2px 6px rgba(232,135,12,.3))}
+svg .box.bad{stroke:var(--bad);stroke-width:2.4}
+svg .title{font-weight:750;font-size:11.5px}
+svg .val{font:10.5px ui-monospace,"Cascadia Mono",Consolas,monospace;fill:var(--muted)}
+svg .val.hot{fill:var(--ink);font-weight:700}
+svg .wire{fill:none;stroke:var(--wire);stroke-width:1.5;opacity:.5}
+svg .wire.on{stroke:var(--accent);stroke-width:3;opacity:1;stroke-dasharray:9 6;animation:flow .7s linear infinite}
+svg .wire.ctl.on{stroke:var(--accent2)}
+svg .wire.ctl{stroke-dasharray:4 4}
+@keyframes flow{to{stroke-dashoffset:-15}}
+@media (prefers-reduced-motion: reduce){svg .wire.on{animation:none}}
+svg .tag{font:10px ui-monospace,Consolas,monospace;fill:var(--muted)}
+svg .tag.on{fill:var(--accent);font-weight:800}
+svg .wire.hide{visibility:hidden}
+svg .wire.fwd.on{stroke:var(--good)}
+svg .wire.fwd{stroke:var(--good);opacity:.25;stroke-dasharray:3 4}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--accent);vertical-align:middle;margin-right:4px}
+.legend i.c{border-top:3px dashed var(--accent2)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left}
+th{color:var(--muted);font-weight:650}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+code,.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
+.listing{font:12px/1.55 ui-monospace,"Cascadia Mono",Consolas,monospace;max-height:262px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.listing div{padding:1px 10px;white-space:pre}
+.listing div.cur{background:var(--boxon);font-weight:700;box-shadow:inset 3px 0 var(--accent)}
+.listing div.cur2{background:var(--ctl);box-shadow:inset 3px 0 var(--accent2)}
+.regs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 8px;font:12px ui-monospace,Consolas,monospace}
+.regs span.ch{background:var(--boxon);border-radius:4px;font-weight:700}
+.regs span.z{color:var(--muted)}
+.explain{font-size:14px;line-height:1.6}
+.explain b{color:var(--accent)}
+.badge{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;color:#fff;margin:0 4px 3px 0}
+.badge.stall{background:#c47f00}.badge.flush{background:var(--bad)}.badge.fwd{background:var(--accent)}.badge.ok{background:var(--good)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;font:12.5px ui-monospace,Consolas,monospace}
+.kv span:nth-child(odd){color:var(--muted)}
+.gantt{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+.gantt table{width:auto;font:11.5px ui-monospace,Consolas,monospace}
+.gantt td{text-align:center;min-width:34px;border:1px solid var(--line);padding:2px 4px}
+.gantt td.lab{text-align:left;min-width:210px;position:sticky;left:0;background:var(--panel)}
+.gantt td.IF{background:#cfe0ff;color:#14305f}.gantt td.ID{background:#c9f0dc;color:#0b4a30}.gantt td.EX{background:#ffe9b8;color:#5c3b00}.gantt td.MEM{background:#ffd3d3;color:#6a1414}.gantt td.WB{background:#e0d4ff;color:#3a1a7a}
+.gantt td.X{background:var(--bad);color:#fff;font-weight:800}.gantt td.st{background:#f0b94a;color:#3b2500;font-weight:800}
+.chartgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px}
+.chart svg text{font-size:10.5px}
+.chart .ctitle{font-weight:750;font-size:12.5px}
+.chart .axis{stroke:var(--line);stroke-width:1}
+.chart .gridl{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3;opacity:.7}
+.chart .lg{font-size:11px}
+.prose h2{font-size:19px;margin:22px 0 6px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.prose h3{font-size:16px;margin:14px 0 4px}
+.prose p,.prose li{max-width:95ch}
+.prose pre{background:var(--code);padding:8px 10px;border-radius:8px;overflow:auto}
+.prose code{background:var(--code);padding:0 4px;border-radius:4px;font-size:.92em}
+.prose pre.mermaid{background:var(--panel);border:1px solid var(--line);text-align:center;padding:10px}
+.prose table{margin:8px 0;display:block;overflow:auto}
+.prose blockquote{margin:6px 0;padding:2px 12px;border-left:3px solid var(--line);color:var(--muted)}
+.flowwrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px}
+@media (max-width:900px){.flowwrap{grid-template-columns:1fr}}
+.toc{position:sticky;top:8px;align-self:start;max-height:90vh;overflow:auto}
+.toc button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:5px 9px;font:inherit;color:var(--ink);cursor:pointer}
+.toc button:hover{background:var(--code)}
+.toc button[aria-current="true"]{background:var(--boxon);font-weight:650}
+.tip{color:var(--muted);font-size:12.5px}
+.tabs-mini{display:flex;gap:6px;margin-bottom:8px}
+.tabs-mini button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:3px 12px;cursor:pointer;font:inherit}
+.tabs-mini button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cv{position:relative}
+.cvtrack{position:relative;height:172px;border-radius:12px;background:var(--code);overflow:hidden}
+.cvcol{position:absolute;top:0;bottom:0;width:20%;border-left:1px dashed var(--line);padding:6px 8px;color:var(--c);display:flex;align-items:flex-end}
+.cvcol:first-of-type{border-left:0}
+.cvcol::before{content:"";position:absolute;inset:0;background:var(--c);opacity:.07}
+.cvcol b{position:relative;font-size:12px}
+.cvcard{position:absolute;top:58px;width:18%;margin-left:1%;height:92px;border-radius:12px;padding:6px 10px 6px 14px;background:var(--panel);border:2px solid var(--c);box-shadow:var(--shadow);transition:left .6s cubic-bezier(.4,0,.2,1),opacity .45s,transform .4s;font-family:ui-monospace,Consolas,monospace;overflow:hidden}
+.cvcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
+.cvcard b{display:block;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvcard i{display:block;font-style:normal;font-size:11px;color:var(--muted)}
+.cvcard u{display:block;text-decoration:none;font-size:11.5px;margin-top:8px;color:var(--c);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvcard.stall{animation:pulse 1s infinite;border-color:#d99a1c}
+.cvcard.held{border-style:dashed}
+.cvcard.doomed,.cvcard.flush{border-color:var(--bad);background:rgba(214,58,58,.14)}
+.cvcard.flush b{color:var(--bad)}
+.cvcard.dead{transform:scale(.6)}
+.cvcard.redirect{box-shadow:0 0 0 3px rgba(47,109,246,.4)}
+@keyframes pulse{50%{box-shadow:0 0 0 4px rgba(217,154,28,.45)}}
+.cvbub{position:absolute;top:58px;width:18%;margin-left:1%;height:92px;border-radius:12px;border:2px dashed var(--line);color:var(--muted);padding:8px;opacity:0;transition:opacity .4s;text-align:center;font:12px ui-monospace,Consolas,monospace}
+.cvbub b{display:block;margin-top:20px}
+.cvbub u{text-decoration:none;font-size:11px}
+.cvfwdsvg{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none}
+.cvarrow{fill:none;stroke-width:3;stroke-dasharray:9 6;animation:flow .7s linear infinite}
+.cvarrow.fwd{stroke:var(--good)}.cvarrow.flushA{stroke:var(--bad)}.cvarrow.stallA{stroke:#d99a1c}
+.cvlab{font:700 12px ui-monospace,Consolas,monospace;paint-order:stroke;stroke:var(--code);stroke-width:5px;stroke-linejoin:round}
+.cvlab.fwd{fill:var(--good)}.cvlab.flushA{fill:var(--bad)}.cvlab.stallA{fill:#d99a1c}
+@media (prefers-reduced-motion: reduce){.cvcard,.cvbub{transition:none}.cvarrow,.cvcard.stall{animation:none}}
+.legendrow{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="hero"><div class="in">
+  <h1>Máy tính RISC-V 32-bit (RV32I) - mô phỏng trực quan</h1>
+  <p>Cùng chương trình, cùng khối và tên tín hiệu như mạch Logisim (<code>main</code> và <code>Pipeline</code>). Bấm <b>Tick</b> để chạy từng chu kỳ và xem dữ liệu chạy qua từng khối.</p>
+  <nav role="tablist" id="tabs">
+    <button role="tab" data-tab="intro" aria-selected="true">Giới thiệu</button>
+    <button role="tab" data-tab="single">Single-cycle</button>
+    <button role="tab" data-tab="pipe">Pipeline</button>
+    <button role="tab" data-tab="perf">Biểu đồ hiệu năng</button>
+    <button role="tab" data-tab="flow">Sơ đồ luồng</button>
+    <span class="sp"></span>
+    <button class="theme" id="themeBtn" title="Đổi giao diện sáng / tối">Sáng / tối</button>
+  </nav>
+</div></div>
+<main>
+
+<!-- ============================================================ intro -->
+<section id="intro">
+  <div class="card prose">
+    <h2 style="margin-top:0">Trang này là gì?</h2>
+    <p>Đây là bản <b>chạy trên web</b> của dự án máy tính RV32I trong Logisim Evolution. Bộ mô phỏng viết lại đúng hành vi của hai CPU (single-cycle và pipeline 5 tầng), khối nào ra khối đó, và đã được đối chiếu với bộ mô phỏng tham chiếu Python cùng các vết đo trên mạch thật. Dùng nó để <b>nhìn thấy</b> dữ liệu chạy qua từng khối, rồi mở Logisim để xem chính mạch đó.</p>
+    <h3>Cách dùng nhanh</h3>
+    <ol>
+      <li><b>Single-cycle:</b> chọn chương trình (<code>demo.s</code> là chương trình chính), bấm <b>Tick</b> hoặc <b>Chạy</b>. Khối và dây đang dùng sáng lên lần lượt theo tầng IF, ID, EX, MEM, WB (có thể tắt hoạt ảnh), có dòng chảy; bảng bên phải giải thích lệnh; các biểu đồ bên dưới vẽ PC, thanh ghi và loại lệnh theo từng tick.</li>
+      <li><b>Pipeline:</b> chọn <code>hazards_demo.s</code>, bấm <b>Tick</b> từng bước (có nút <b>Lùi 1 tick</b> và các nút nhảy thẳng tới sự kiện forwarding, stall, flush). Băng chuyền ở đầu tab cho thấy mỗi lệnh là một thẻ tiến qua năm tầng: thẻ đứng yên khi stall, thẻ đỏ bị hủy khi flush, mũi tên xanh là forwarding. Sơ đồ chi tiết ở đầu tab vẽ từng khối của mạch <code>Pipeline</code> (bốn thanh ghi pipeline, HazardUnit, ForwardingUnit, các mux forwarding, ALU, BranchUnit, bộ nhớ, write-back) với giá trị thật và các đường đang dùng; bảng bên dưới cho thấy từ điều khiển đi cùng lệnh qua từng tầng. Xem <span class="badge stall">stall</span>, <span class="badge fwd">forward</span>, <span class="badge flush">flush</span>; biểu đồ thời gian cho thấy mỗi lệnh đang ở tầng nào.</li>
+      <li><b>Biểu đồ hiệu năng:</b> so sánh số chu kỳ và CPI của hai CPU trên cả 8 chương trình, và phân tích chi phí của pipeline.</li>
+      <li><b>Sơ đồ luồng:</b> flowchart và lời giải thích của cả 14 circuit.</li>
+    </ol>
+    <h3>Các từ viết tắt</h3>
+    <table>
+      <tr><th>Từ</th><th>Đầy đủ</th><th>Nghĩa</th></tr>
+      <tr><td><span class="dot" style="background:var(--if)"></span>IF</td><td>Instruction Fetch</td><td>nạp lệnh từ ROM</td></tr>
+      <tr><td><span class="dot" style="background:var(--id)"></span>ID</td><td>Instruction Decode</td><td>giải mã lệnh, đọc thanh ghi, dựng hằng số</td></tr>
+      <tr><td><span class="dot" style="background:var(--ex)"></span>EX</td><td>Execute</td><td>thực thi ở ALU, quyết định rẽ nhánh</td></tr>
+      <tr><td><span class="dot" style="background:var(--mm)"></span>MEM</td><td>Memory access</td><td>truy cập RAM dữ liệu (load / store)</td></tr>
+      <tr><td><span class="dot" style="background:var(--wb)"></span>WB</td><td>Write Back</td><td>ghi kết quả vào thanh ghi <code>rd</code></td></tr>
+      <tr><td>PC</td><td>Program Counter</td><td>bộ đếm chương trình: địa chỉ lệnh đang chạy</td></tr>
+      <tr><td>ALU</td><td>Arithmetic Logic Unit</td><td>khối số học - logic</td></tr>
+      <tr><td>imm</td><td>immediate</td><td>hằng số nằm trong lệnh</td></tr>
+      <tr><td>rd, rs1, rs2</td><td>destination / source register</td><td>thanh ghi đích / nguồn 1 / nguồn 2</td></tr>
+      <tr><td>CPI</td><td>Cycles Per Instruction</td><td>số chu kỳ trung bình cho một lệnh</td></tr>
+      <tr><td>hazard</td><td>-</td><td>xung đột giữa các lệnh chạy chồng nhau trong pipeline</td></tr>
+      <tr><td>forwarding</td><td>-</td><td>chuyển kết quả từ tầng sau về EX mà không chờ ghi vào thanh ghi</td></tr>
+      <tr><td>stall / bubble</td><td>-</td><td>dừng một chu kỳ / lệnh rỗng (NOP) chèn vào</td></tr>
+      <tr><td>flush</td><td>-</td><td>hủy các lệnh đã nạp nhầm sau một lệnh rẽ nhánh</td></tr>
+    </table>
+    <p class="tip">Tính chính xác: engine JavaScript của trang này được kiểm bằng <code>node tools/web/test_engine.js</code>: cùng kết quả với bộ mô phỏng Python trên 8 chương trình (cả hai CPU) và khớp các giá trị probe đo trên mạch Logisim.</p>
+  </div>
+</section>
+
+<!-- ============================================================ single-cycle -->
+<section id="single" hidden>
+  <div class="bar">
+    <label>Chương trình <select id="scProg"></select></label>
+    <button id="scBack">Lùi 1 tick</button>
+    <button id="scReset">Đặt lại</button>
+    <button id="scTick" class="primary">Tick (Ctrl+F9)</button>
+    <button id="scRun">Chạy</button>
+    <label>Tốc độ <input type="range" id="scSpeed" min="1" max="12" value="4"></label>
+    <label><input type="checkbox" id="scAnim" checked> hoạt ảnh từng tầng</label>
+    <span class="tk" id="scInfo"></span>
+  </div>
+  <div class="kpis" id="scKpis"></div>
+  <div class="grid">
+    <div class="stack">
+      <div class="card">
+        <h3>Đường dữ liệu single-cycle - một lệnh trong một chu kỳ</h3>
+        <svg id="scSvg" viewBox="0 0 1120 600" role="img" aria-label="Sơ đồ khối CPU single-cycle"></svg>
+        <div class="legend"><span><i></i>dữ liệu đang chạy</span><span><i class="c"></i>tín hiệu điều khiển</span><span>nét mờ = không dùng trong lệnh này</span></div>
+      </div>
+      <div class="card"><h3>Giải thích lệnh sắp chạy</h3><div class="explain" id="scExplain"></div></div>
+      <div class="chartgrid">
+        <div class="card chart" id="scChartPc"></div>
+        <div class="card chart" id="scChartReg"></div>
+        <div class="card chart" id="scChartMix"></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Chương trình (ROM)</h3><div class="listing" id="scListing"></div></div>
+      <div class="card"><h3>Probe (như hàng probe trong Logisim)</h3><div class="kv" id="scProbes"></div></div>
+      <div class="card"><h3>Thanh ghi x0..x31</h3><div class="regs" id="scRegs"></div>
+        <p class="tip" style="margin:6px 0 0">Ô sáng = vừa đổi ở tick trước. Bộ nhớ dữ liệu khác 0: <span class="mono" id="scMem">-</span></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ pipeline -->
+<section id="pipe" hidden>
+  <div class="bar">
+    <label>Chương trình <select id="plProg"></select></label>
+    <button id="plBack">Lùi 1 tick</button>
+    <button id="plReset">Đặt lại</button>
+    <button id="plTick" class="primary">Tick</button>
+    <button id="plRun">Chạy</button>
+    <label>Tốc độ <input type="range" id="plSpeed" min="1" max="12" value="4"></label>
+    <span class="tk" id="plInfo"></span>
+  </div>
+  <div class="kpis" id="plKpis"></div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>Băng chuyền lệnh - mỗi thẻ là một lệnh, mỗi tick thẻ tiến một tầng</h3>
+    <div class="cv">
+      <div class="cvtrack" id="cvTrack"><svg class="cvfwdsvg" id="cvFwd" viewBox="0 -70 1400 100" aria-hidden="true"></svg></div>
+    </div>
+    <div class="explain" id="cvStatus" style="margin-top:8px"></div>
+    <div class="bar" id="cvJump" style="margin:8px 0 0"></div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>Chi tiết datapath pipeline - từng khối, từng thanh ghi pipeline, hazard unit và forwarding</h3>
+    <svg id="pdSvg" viewBox="0 0 1500 630" role="img" aria-label="Sơ đồ chi tiết datapath pipeline"></svg>
+    <div class="legend"><span><i></i>dữ liệu đang chạy</span><span><i class="c"></i>tín hiệu điều khiển</span><span><i style="border-color:var(--good)"></i>forwarding</span><span>hộp đỏ = stall / flush ở khối đó</span><span>dòng chữ trên cùng = lệnh đang ở từng tầng</span></div>
+    <div id="pdCtrl" style="margin-top:10px;overflow:auto"></div>
+  </div>
+  <div class="grid">
+    <div class="stack">
+      <div class="card">
+        <h3>Năm tầng, bốn thanh ghi pipeline</h3>
+        <svg id="plSvg" viewBox="0 -30 1000 372" role="img" aria-label="Sơ đồ pipeline 5 tầng"></svg>
+        <div class="legend"><span>mỗi tầng hiện lệnh đang ở đó</span><span>mũi tên xanh = forwarding</span><span>X đỏ = lệnh bị flush</span></div>
+      </div>
+      <div class="card"><h3>Điều gì sẽ xảy ra ở tick kế tiếp</h3><div class="explain" id="plExplain"></div></div>
+      <div class="card">
+        <h3>Biểu đồ thời gian: mỗi hàng là một lệnh, mỗi cột là một trạng thái sau tick</h3>
+        <div class="gantt" id="plGantt"></div>
+        <div class="legendrow"><span><span class="dot" style="background:var(--if)"></span>IF</span><span><span class="dot" style="background:var(--id)"></span>ID</span><span><span class="dot" style="background:var(--ex)"></span>EX</span><span><span class="dot" style="background:var(--mm)"></span>MEM</span><span><span class="dot" style="background:var(--wb)"></span>WB</span><span><span class="dot" style="background:#f0b94a"></span>stall (ID lặp)</span><span><span class="dot" style="background:var(--bad)"></span>X = flush</span></div>
+      </div>
+      <div class="chartgrid">
+        <div class="card chart" id="plChartCpi"></div>
+        <div class="card chart" id="plChartEv"></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Chương trình (ROM)</h3><div class="listing" id="plListing"></div></div>
+      <div class="card"><h3>Probe (như hàng probe trong Logisim)</h3><div class="kv" id="plProbes"></div></div>
+      <div class="card"><h3>Thanh ghi x0..x31</h3><div class="regs" id="plRegs"></div>
+        <p class="tip" style="margin:6px 0 0">Bộ nhớ dữ liệu khác 0: <span class="mono" id="plMem">-</span></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ performance -->
+<section id="perf" hidden>
+  <div class="kpis" id="pfKpis"></div>
+  <div class="chartgrid">
+    <div class="card chart" id="pfCycles"></div>
+    <div class="card chart" id="pfCpi"></div>
+    <div class="card chart" id="pfBreak"></div>
+    <div class="card chart" id="pfRatio"></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Số liệu chi tiết (tính trực tiếp bằng engine trong trình duyệt)</h3><div id="pfTable"></div>
+    <p class="tip" style="margin:8px 0 0">Biểu đồ chi phí: lệnh + 2 chu kỳ cho mỗi lần flush + 1 chu kỳ cho mỗi stall + phần còn lại là làm đầy/xả pipeline (vài chu kỳ; lần nhảy của vòng <code>halt</code> ở cuối cũng được tính là một lần flush). Số chu kỳ = số chu kỳ cho đến khi lần ghi thanh ghi cuối cùng hoàn tất (cùng cách đo với <code>tests/run_cpu_tests.py</code> và bảng trong báo cáo). Pipeline không nhanh hơn trong mô phỏng vì Logisim không có độ trễ cổng; lợi ích thật là chu kỳ xung nhịp ngắn hơn (mỗi tầng chỉ làm một việc).</p></div>
+</section>
+
+<!-- ============================================================ flowcharts -->
+<section id="flow" hidden>
+  <div class="tabs-mini"><button id="flVi" aria-pressed="true">Tiếng Việt</button><button id="flEn" aria-pressed="false">English</button></div>
+  <div class="flowwrap">
+    <div class="card toc" id="flToc"></div>
+    <div class="card prose" id="flBody"></div>
+  </div>
+  <p class="tip">Các sơ đồ do Mermaid vẽ (cần kết nối mạng để tải thư viện). Nếu không hiện hình, xem mã nguồn Mermaid ngay trong trang hoặc dán vào mermaid.live.</p>
+</section>
+
+</main>
+
+<script>
+/* RV32I engine for the web visualisation: single-cycle CPU and 5-stage pipeline.
+ * It mirrors the Logisim circuits block by block (same signal names), so the page shows what the circuits do.
+ * Pure JavaScript, no dependencies: used by the page and by tools/web/test_engine.js (node). */
+(function (root) {
+  "use strict";
+
+  const u32 = (v) => v >>> 0;
+  const sx = (v, bits) => (v << (32 - bits)) >> (32 - bits);
+  const hex = (v, n) => "0x" + u32(v).toString(16).padStart(n === undefined ? 8 : n, "0");
+
+  // ---------------------------------------------------------------- InstructionDecode
+  function decode(w) {
+    return { opcode: w & 0x7f, rd: (w >>> 7) & 31, f3: (w >>> 12) & 7, rs1: (w >>> 15) & 31, rs2: (w >>> 20) & 31, f7: (w >>> 25) & 0x7f };
+  }
+
+  // ---------------------------------------------------------------- MainControl
+  function control(opcode) {
+    const R = opcode === 0x33, I = opcode === 0x13, L = opcode === 0x03, S = opcode === 0x23, B = opcode === 0x63;
+    const LUI = opcode === 0x37, AU = opcode === 0x17, J = opcode === 0x6f, JR = opcode === 0x67;
+    const n = (b) => (b ? 1 : 0);
+    return {
+      RegWrite: n(R || I || L || LUI || AU || J || JR),
+      ALUSrc: n(I || L || S || LUI || AU || JR),
+      MemWrite: n(S), MemRead: n(L), IsBranch: n(B), IsJAL: n(J), IsJALR: n(JR),
+      ALUOp: (n(R || I) << 1) | n(I || B),
+      ImmSel: (n(J) << 2) | (n(B || LUI || AU) << 1) | n(S || LUI || AU),
+      ASel: (n(LUI) << 1) | n(AU),
+      WBSel: (n(J || JR) << 1) | n(L),
+    };
+  }
+  const NOCTRL = control(0);
+
+  // ---------------------------------------------------------------- ImmGen
+  function immgen(w, sel) {
+    switch (sel) {
+      case 0: return u32(sx(w >>> 20, 12));
+      case 1: return u32(sx(((w >>> 25) << 5) | ((w >>> 7) & 31), 12));
+      case 2: return u32(sx(((w >>> 31) << 12) | (((w >>> 7) & 1) << 11) | (((w >>> 25) & 63) << 5) | (((w >>> 8) & 15) << 1), 13));
+      case 3: return u32(w & 0xfffff000);
+      case 4: return u32(sx(((w >>> 31) << 20) | (((w >>> 12) & 255) << 12) | (((w >>> 20) & 1) << 11) | (((w >>> 21) & 1023) << 1), 21));
+      default: return 0;
+    }
+  }
+
+  // ---------------------------------------------------------------- ALUControl and ALU
+  const ALU_NAMES = ["ADD", "SUB", "AND", "OR", "XOR", "SLL", "SRL", "SRA", "SLT", "SLTU"];
+  function aluctrl(aluop, f3, f7) {
+    if (aluop === 0) return 0;
+    if (aluop === 1) return 1;
+    const b5 = (f7 >>> 5) & 1;
+    switch (f3) {
+      case 0: return aluop === 2 ? (b5 ? 1 : 0) : 0;
+      case 1: return 5;
+      case 2: return 8;
+      case 3: return 9;
+      case 4: return 4;
+      case 5: return b5 ? 7 : 6;
+      case 6: return 3;
+      default: return 2;
+    }
+  }
+  function alu(a, b, c) {
+    a = u32(a); b = u32(b);
+    switch (c) {
+      case 0: return u32(a + b);
+      case 1: return u32(a - b);
+      case 2: return u32(a & b);
+      case 3: return u32(a | b);
+      case 4: return u32(a ^ b);
+      case 5: return u32(a << (b & 31));
+      case 6: return u32(a >>> (b & 31));
+      case 7: return u32((a | 0) >> (b & 31));
+      case 8: return (a | 0) < (b | 0) ? 1 : 0;
+      case 9: return a < b ? 1 : 0;
+      default: return 0;
+    }
+  }
+
+  // ---------------------------------------------------------------- BranchUnit
+  function branch(a, b, f3, isBranch) {
+    a = u32(a); b = u32(b);
+    let cond = 0;
+    switch (f3) {
+      case 0: cond = a === b; break;
+      case 1: cond = a !== b; break;
+      case 4: cond = (a | 0) < (b | 0); break;
+      case 5: cond = (a | 0) >= (b | 0); break;
+      case 6: cond = a < b; break;
+      case 7: cond = a >= b; break;
+      default: cond = 0;
+    }
+    return isBranch && cond ? 1 : 0;
+  }
+
+  // ---------------------------------------------------------------- Memory: RAM + LoadExtract + StoreMerge
+  function loadExtract(word, addr, f3) {
+    const boff = addr & 3;
+    const byte = (word >>> (8 * boff)) & 0xff;
+    const half = (word >>> (16 * ((addr >>> 1) & 1))) & 0xffff;
+    switch (f3) {
+      case 0: return u32(sx(byte, 8));
+      case 1: return u32(sx(half, 16));
+      case 4: return byte;
+      case 5: return half;
+      default: return u32(word);
+    }
+  }
+  // 16-row ROM {size, boff} -> 4 byte enables, exactly as in the circuit
+  const EN_ROM = [1, 2, 4, 8, 3, 3, 12, 12, 15, 15, 15, 15, 15, 15, 15, 15];
+  function storeMerge(oldWord, wdata, f3, addr) {
+    const size = f3 & 3, boff = addr & 3;
+    const en = EN_ROM[(size << 2) | boff];
+    const wd = [0, 1, 2, 3].map((i) => (wdata >>> (8 * i)) & 0xff);
+    const src = [wd[0], [wd[0], wd[1], wd[1], wd[1]][size], [wd[0], wd[0], wd[2], wd[2]][size], [wd[0], wd[1], wd[3], wd[3]][size]];
+    let out = 0;
+    for (let i = 0; i < 4; i++) {
+      const old = (oldWord >>> (8 * i)) & 0xff;
+      out |= ((en >> i) & 1 ? src[i] : old) << (8 * i);
+    }
+    return { word: u32(out), en };
+  }
+
+  function makeRam() { return new Array(256).fill(0); }
+  const widx = (addr) => (addr >>> 2) & 255;
+
+  function fresh(rom) {
+    const r = new Array(256).fill(0);
+    rom.forEach((w, i) => { r[i] = u32(w); });
+    return r;
+  }
+
+  // ================================================================ single-cycle CPU (circuit `main`)
+  class SingleCycle {
+    constructor(rom) { this.rom = fresh(rom); this.reset(); }
+    reset() { this.pc = 0; this.regs = new Array(32).fill(0); this.ram = makeRam(); this.tick = 0; this.last = null; }
+    /** Combinational view of the instruction at the current PC (what the probes show before the tick). */
+    peek() {
+      const pc = this.pc, w = this.rom[(pc >>> 2) & 255];
+      const d = decode(w), c = control(d.opcode);
+      const imm = immgen(w, c.ImmSel);
+      const rs1d = d.rs1 ? this.regs[d.rs1] : 0, rs2d = d.rs2 ? this.regs[d.rs2] : 0;
+      const alu_a = [rs1d, pc, 0, 0][c.ASel], alu_b = c.ALUSrc ? imm : rs2d;
+      const ctrl = aluctrl(c.ALUOp, d.f3, d.f7);
+      const alu_result = alu(alu_a, alu_b, ctrl);
+      const branch_taken = branch(rs1d, rs2d, d.f3, c.IsBranch);
+      const word = this.ram[widx(alu_result)];
+      const mem_rdata = loadExtract(word, alu_result, d.f3);
+      const pc_plus4 = u32(pc + 4), pc_target = u32(pc + imm), jalr_target = u32(alu_result & 0xfffffffe);
+      const take_target = branch_taken || c.IsJAL ? 1 : 0;
+      const pc_a = take_target ? pc_target : pc_plus4;
+      const next_pc = c.IsJALR ? jalr_target : pc_a;
+      const wb_data = [alu_result, mem_rdata, pc_plus4, 0][c.WBSel];
+      const sm = storeMerge(word, rs2d, d.f3, alu_result);
+      return Object.assign({ pc, instr: w }, d, c, { imm, rs1_data: rs1d, rs2_data: rs2d, alu_a, alu_b, ALUCtrl: ctrl,
+        alu_result, branch_taken, mem_rdata, pc_plus4, pc_target, jalr_target, take_target, next_pc, wb_data,
+        new_word: sm.word, byte_en: sm.en, ram_word: word });
+    }
+    step() {
+      const s = this.peek();
+      const before = this.regs.slice();
+      if (s.MemWrite) this.ram[widx(s.alu_result)] = s.new_word;
+      if (s.RegWrite && s.rd !== 0) this.regs[s.rd] = s.wb_data;
+      this.pc = s.next_pc;
+      this.tick++;
+      s.reg_written = s.RegWrite && s.rd !== 0 ? s.rd : -1;
+      s.reg_changed = s.reg_written >= 0 && before[s.rd] !== this.regs[s.rd];
+      s.mem_written = s.MemWrite ? widx(s.alu_result) : -1;
+      this.last = s;
+      return s;
+    }
+  }
+
+  // ================================================================ 5-stage pipeline (circuit `Pipeline`)
+  const ZERO_EX = () => ({ ctrl: Object.assign({}, NOCTRL), pc: 0, rs1d: 0, rs2d: 0, imm: 0, rs1: 0, rs2: 0, rd: 0, f3: 0, f7: 0, id: -1, flush: false, instr: 0 });
+  class Pipeline {
+    constructor(rom, text) {
+      this.rom = fresh(rom);
+      this.text = text || {};          // pc -> source text, for the display only
+      this.reset();
+    }
+    reset() {
+      this.pc = 0; this.regs = new Array(32).fill(0); this.ram = makeRam(); this.tick = 0;
+      this.ifid = { pc: 0, instr: 0, id: -1, flush: false };
+      this.idex = ZERO_EX();
+      this.exmem = { alu_result: 0, store_data: 0, pc4: 0, rd: 0, f3: 0, RegWrite: 0, MemWrite: 0, MemRead: 0, WBSel: 0, id: -1, instr: 0 };
+      this.memwb = { alu_result: 0, mem_rdata: 0, pc4: 0, rd: 0, RegWrite: 0, WBSel: 0, id: -1, instr: 0 };
+      this.fid = 0; this.seq = 1;       // id of the instruction at the IF stage; next free id
+      this.fetched = { 0: { pc: 0 } };  // id -> {pc}
+      this.history = [];
+      this.snap();
+    }
+    /** All combinational signals of the current state (what the probes of circuit Pipeline show). */
+    comb() {
+      const S = this, ie = S.idex, em = S.exmem, mw = S.memwb, fi = S.ifid;
+      const dID = decode(fi.instr), cID = control(dID.opcode);
+      const stall = ie.ctrl.MemRead && ie.rd !== 0 && (ie.rd === dID.rs1 || ie.rd === dID.rs2) ? 1 : 0;
+      const run = stall ? 0 : 1;
+      // EX stage
+      const memValid = em.RegWrite && em.rd !== 0, wbValid = mw.RegWrite && mw.rd !== 0;
+      const fwd = (rs) => {
+        const fromMem = memValid && em.rd === rs, fromWb = wbValid && mw.rd === rs && !fromMem;
+        return fromMem ? 2 : fromWb ? 1 : 0;
+      };
+      const ForwardA = fwd(ie.rs1), ForwardB = fwd(ie.rs2);
+      const wb_data = [mw.alu_result, mw.mem_rdata, mw.pc4, 0][mw.WBSel];
+      const fwd_mem_val = (em.WBSel >> 1) & 1 ? em.pc4 : em.alu_result;
+      const opA = [ie.rs1d, wb_data, fwd_mem_val, ie.rs1d][ForwardA];
+      const opB = [ie.rs2d, wb_data, fwd_mem_val, ie.rs2d][ForwardB];
+      const c = ie.ctrl;
+      const alu_a = [opA, ie.pc, 0, 0][c.ASel], alu_b = c.ALUSrc ? ie.imm : opB;
+      const ALUCtrl = aluctrl(c.ALUOp, ie.f3, ie.f7);
+      const alu_result_ex = alu(alu_a, alu_b, ALUCtrl);
+      const branch_taken = branch(opA, opB, ie.f3, c.IsBranch);
+      const pc_target = u32(ie.pc + ie.imm), jalr_target = u32(alu_result_ex & 0xfffffffe);
+      const target_ex = c.IsJALR ? jalr_target : pc_target;
+      const pc_src_ex = branch_taken || c.IsJAL || c.IsJALR ? 1 : 0;
+      const pc_plus4_ex = u32(ie.pc + 4);
+      // MEM stage
+      const mem_word = S.ram[widx(em.alu_result)];
+      const mem_rdata_mem = loadExtract(mem_word, em.alu_result, em.f3);
+      const sm = storeMerge(mem_word, em.store_data, em.f3, em.alu_result);
+      // ID stage
+      const imm_id = immgen(fi.instr, cID.ImmSel);
+      const rs1_data_id = dID.rs1 ? S.regs[dID.rs1] : 0, rs2_data_id = dID.rs2 ? S.regs[dID.rs2] : 0;
+      const bubble = stall || pc_src_ex ? 1 : 0;
+      // IF stage
+      const instr_if = S.rom[(S.pc >>> 2) & 255];
+      const instr_in = pc_src_ex ? 0 : instr_if;
+      const next_pc = pc_src_ex ? target_ex : u32(S.pc + 4);
+      return { stall, run, ForwardA, ForwardB, wb_data, fwd_mem_val, opA, opB, alu_a, alu_b, ALUCtrl, alu_result_ex, branch_taken,
+        pc_target, jalr_target, target_ex, pc_src_ex, pc_plus4_ex, mem_rdata_mem, new_word: sm.word, mem_word,
+        dID, cID, imm_id, rs1_data_id, rs2_data_id, bubble, instr_if, instr_in, next_pc, pc_if: S.pc };
+    }
+    snap() {
+      const k = this.comb();
+      const cell = (id, flush) => ({ id, flush: !!flush });
+      this.history.push({
+        tick: this.tick, IF: this.fid, ID: this.ifid.id, IDflush: this.ifid.flush, EX: this.idex.id, EXflush: this.idex.flush,
+        MEM: this.exmem.id, WB: this.memwb.id, stall: k.stall, pc_src_ex: k.pc_src_ex, ForwardA: k.ForwardA, ForwardB: k.ForwardB, pc: this.pc,
+      });
+      return cell;
+    }
+    step() {
+      const S = this, k = S.comb(), ie = S.idex, em = S.exmem, mw = S.memwb, fi = S.ifid;
+      // ---- rising edge: every register loads the value computed from the current state
+      const nPC = k.run ? k.next_pc : S.pc;
+      const nIFID = k.run ? { pc: S.pc, instr: k.instr_in, id: S.fid, flush: !!k.pc_src_ex } : fi;
+      const d = k.dID;
+      const nIDEX = {
+        ctrl: k.bubble ? Object.assign({}, NOCTRL) : k.cID, pc: fi.pc, rs1d: k.rs1_data_id, rs2d: k.rs2_data_id, imm: k.imm_id,
+        rs1: d.rs1, rs2: d.rs2, rd: d.rd, f3: d.f3, f7: d.f7,
+        id: k.stall ? -1 : fi.flush ? -1 : fi.id, flush: !k.stall && !!k.pc_src_ex && !fi.flush && fi.id >= 0, instr: k.bubble ? 0 : fi.instr,
+      };
+      const nEXMEM = {
+        alu_result: k.alu_result_ex, store_data: k.opB, pc4: k.pc_plus4_ex, rd: ie.rd, f3: ie.f3,
+        RegWrite: ie.ctrl.RegWrite, MemWrite: ie.ctrl.MemWrite, MemRead: ie.ctrl.MemRead, WBSel: ie.ctrl.WBSel, id: ie.flush ? -1 : ie.id, instr: ie.instr,
+      };
+      const nMEMWB = { alu_result: em.alu_result, mem_rdata: k.mem_rdata_mem, pc4: em.pc4, rd: em.rd, RegWrite: em.RegWrite, WBSel: em.WBSel, id: em.id, instr: em.instr };
+      if (em.MemWrite) S.ram[widx(em.alu_result)] = k.new_word;
+      // ids of the fetched instructions
+      let nfid = S.fid;
+      if (k.run) { nfid = S.seq++; S.fetched[nfid] = { pc: nPC }; }
+      S.pc = nPC; S.ifid = nIFID; S.idex = nIDEX; S.exmem = nEXMEM; S.memwb = nMEMWB; S.fid = nfid;
+      // ---- falling edge: the register file writes what the MEM/WB register now holds
+      const w = S.comb();
+      S.wbWritten = -1;
+      if (nMEMWB.RegWrite && nMEMWB.rd !== 0) { S.regs[nMEMWB.rd] = w.wb_data; S.wbWritten = nMEMWB.rd; }
+      S.tick++;
+      S.snap();
+      return k;
+    }
+  }
+
+  const api = { u32, sx, hex, decode, control, immgen, aluctrl, alu, branch, loadExtract, storeMerge, SingleCycle, Pipeline, ALU_NAMES, EN_ROM };
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.RV = api;
+})(typeof self !== "undefined" ? self : this);
+
+</script>
+<script>
+const PROGRAMS = {"demo": {"title": "demo.s - tổng 10+9+...+1, store/load, gọi hàm", "file": "programs/demo.s", "words": [1299, 10487187, 11863347, 4294280595, 4261780707, 10493987, 9731, 16777455, 1084622515, 105293587, 111, 12977715, 32871], "listing": [[0, 1299, "li   x10, 0"], [4, 10487187, "li   x11, 10"], [8, 11863347, "loop:   add  x10, x10, x11"], [12, 4294280595, "addi x11, x11, -1"], [16, 4261780707, "bnez x11, loop"], [20, 10493987, "sw   x10, 0(x0)"], [24, 9731, "lw   x12, 0(x0)"], [28, 16777455, "jal  x1, double"], [32, 1084622515, "sub  x13, x12, x10"], [36, 105293587, "slti x14, x13, 100"], [40, 111, "halt:   j    halt"], [44, 12977715, "double: add  x12, x12, x12"], [48, 32871, "ret"]], "halts": true, "steps": 40, "regs": [0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 55, 0, 110, 55, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "mem": {"0": 55}}, "hazards_demo": {"title": "hazards_demo.s - forwarding, stall load-use, flush", "file": "programs/hazards_demo.s", "words": [104857747, 1056803, 8451, 1114515, 2196019, 4327011, 1049235, 2097939, 7340947, 111], "listing": [[0, 104857747, "li   x1, 100"], [4, 1056803, "sw   x1, 0(x0)"], [8, 8451, "lw   x2, 0(x0)"], [12, 1114515, "addi x3, x2, 1"], [16, 2196019, "add  x4, x3, x2"], [20, 4327011, "beq  x4, x4, skip"], [24, 1049235, "addi x5, x0, 1"], [28, 2097939, "addi x6, x0, 2"], [32, 7340947, "skip:   addi x7, x0, 7"], [36, 111, "halt:   j    halt"]], "halts": true, "steps": 8, "regs": [0, 100, 100, 101, 201, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "mem": {"0": 100}}, "alu": {"title": "alu.s - chương trình thử trong tests/programs", "file": "tests/programs/alu.s", "words": [5243027, 7340307, 2130355, 12586771, 400658531, 1075872179, 4292874003, 367106659, 2159027, 5246739, 367105123, 2154931, 7343891, 333553251, 2146739, 2101011, 333551715, 2147484215, 1049235, 2265523, 134221587, 299998819, 5394867, 1073745719, 299997283, 1079136691, 3221229367, 299995747, 4293919507, 5448115, 1052435, 266443363, 5452211, 3859, 266441827, 6463923, 3859, 232889955, 6468019, 1052435, 232888419, 10518931, 15732499, 232886883, 4284514707, 4289728275, 199335011, 3240339, 3149587, 199333475, 8446355, 13635347, 199331939, 267436435, 262147859, 165780067, 4231571, 83889939, 165778531, 32657811, 1052435, 132226659, 1106399635, 4293922579, 132225123, 205203, 1052435, 132223587, 209299, 3859, 98671715, 4294095251, 1052435, 98670179, 5242899, 3859, 98570339, 305419191, 1736672147, 305422135, 1737428755, 65246819, 2882397239, 2882400055, 65278051, 5271, 1299, 3859, 31791203, 28599, 14651283, 111, 61367, 3940519827, 4288671855], "listing": [[0, 5243027, "li   x1, 5"], [4, 7340307, "li   x2, 7"], [8, 2130355, "add  x3, x1, x2"], [12, 12586771, "chk  x3, 12"], [16, 400658531, "chk  x3, 12"], [20, 1075872179, "sub  x3, x1, x2"], [24, 4292874003, "chk  x3, -2"], [28, 367106659, "chk  x3, -2"], [32, 2159027, "and  x3, x1, x2"], [36, 5246739, "chk  x3, 5"], [40, 367105123, "chk  x3, 5"], [44, 2154931, "or   x3, x1, x2"], [48, 7343891, "chk  x3, 7"], [52, 333553251, "chk  x3, 7"], [56, 2146739, "xor  x3, x1, x2"], [60, 2101011, "chk  x3, 2"], [64, 333551715, "chk  x3, 2"], [68, 2147484215, "li   x4, 0x80000000"], [72, 1049235, "li   x5, 1"], [76, 2265523, "sll  x3, x5, x2"], [80, 134221587, "chk  x3, 128"], [84, 299998819, "chk  x3, 128"], [88, 5394867, "srl  x3, x4, x5"], [92, 1073745719, "chk  x3, 0x40000000"], [96, 299997283, "chk  x3, 0x40000000"], [100, 1079136691, "sra  x3, x4, x5"], [104, 3221229367, "chk  x3, 0xC0000000"], [108, 299995747, "chk  x3, 0xC0000000"], [112, 4293919507, "li   x6, -1"], [116, 5448115, "slt  x3, x6, x5"], [120, 1052435, "chk  x3, 1"], [124, 266443363, "chk  x3, 1"], [128, 5452211, "sltu x3, x6, x5"], [132, 3859, "chk  x3, 0"], [136, 266441827, "chk  x3, 0"], [140, 6463923, "slt  x3, x5, x6"], [144, 3859, "chk  x3, 0"], [148, 232889955, "chk  x3, 0"], [152, 6468019, "sltu x3, x5, x6"], [156, 1052435, "chk  x3, 1"], [160, 232888419, "chk  x3, 1"], [164, 10518931, "addi x3, x1, 10"], [168, 15732499, "chk  x3, 15"], [172, 232886883, "chk  x3, 15"], [176, 4284514707, "addi x3, x1, -10"], [180, 4289728275, "chk  x3, -5"], [184, 199335011, "chk  x3, -5"], [188, 3240339, "andi x3, x2, 3"], [192, 3149587, "chk  x3, 3"], [196, 199333475, "chk  x3, 3"], [200, 8446355, "ori  x3, x1, 8"], [204, 13635347, "chk  x3, 13"], [208, 199331939, "chk  x3, 13"], [212, 267436435, "xori x3, x1, 0xFF"], [216, 262147859, "chk  x3, 0xFA"], [220, 165780067, "chk  x3, 0xFA"], [224, 4231571, "slli x3, x1, 4"], [228, 83889939, "chk  x3, 80"], [232, 165778531, "chk  x3, 80"], [236, 32657811, "srli x3, x4, 31"], [240, 1052435, "chk  x3, 1"], [244, 132226659, "chk  x3, 1"], [248, 1106399635, "srai x3, x4, 31"], [252, 4293922579, "chk  x3, -1"], [256, 132225123, "chk  x3, -1"], [260, 205203, "slti x3, x6, 0"], [264, 1052435, "chk  x3, 1"], [268, 132223587, "chk  x3, 1"], [272, 209299, "sltiu x3, x6, 0"], [276, 3859, "chk  x3, 0"], [280, 98671715, "chk  x3, 0"], [284, 4294095251, "sltiu x3, x5, -1"], [288, 1052435, "chk  x3, 1"], [292, 98670179, "chk  x3, 1"], [296, 5242899, "addi x0, x0, 5"], [300, 3859, "chk  x0, 0"], [304, 98570339, "chk  x0, 0"], [308, 305419191, "li   x7, 0x12345678"], [312, 1736672147, "li   x7, 0x12345678"], [316, 305422135, "chk  x7, 0x12345678"], [320, 1737428755, "chk  x7, 0x12345678"], [324, 65246819, "chk  x7, 0x12345678"], [328, 2882397239, "lui  x8, 0xABCDE"], [332, 2882400055, "chk  x8, 0xABCDE000"], [336, 65278051, "chk  x8, 0xABCDE000"], [340, 5271, "auipc x9, 1"], [344, 1299, "li   x10, 0"], [348, 3859, "chk  x10, 0"], [352, 31791203, "chk  x10, 0"], [356, 28599, "li   x31, 0x600D"], [360, 14651283, "li   x31, 0x600D"], [364, 111, "halt:   j    halt"], [368, 61367, "fail:   li   x31, 0xDEAD"], [372, 3940519827, "fail:   li   x31, 0xDEAD"], [376, 4288671855, "j    fail"]], "halts": true, "steps": 92, "regs": [0, 5, 7, 1, 2147483648, 1, 4294967295, 305419896, 2882396160, 4436, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24589], "mem": {}}, "branch": {"title": "branch.s - chương trình thử trong tests/programs", "file": "tests/programs/branch.s", "words": [5243027, 5243155, 4293919123, 1049107, 1299, 2131043, 184549487, 1377555, 172000355, 1377555, 4232291, 163577967, 1377555, 136354403, 1377555, 4310115, 142606447, 1377555, 137511011, 1377555, 3298403, 121634927, 1377555, 104978019, 1377555, 3302499, 100663407, 1377555, 71429219, 1377555, 4322403, 79691887, 1377555, 70414947, 1377555, 2151523, 58720367, 1377555, 13635347, 65345123, 10486419, 787, 5440307, 4294083219, 4261584099, 57675539, 31660131, 28599, 14651283, 111, 61367, 3940519827, 4288671855], "listing": [[0, 5243027, "li   x1, 5"], [4, 5243155, "li   x2, 5"], [8, 4293919123, "li   x3, -1"], [12, 1049107, "li   x4, 1"], [16, 1299, "li   x10, 0"], [20, 2131043, "beq  x1, x2, b1"], [24, 184549487, "j    fail"], [28, 1377555, "b1:     addi x10, x10, 1"], [32, 172000355, "beq  x1, x4, fail"], [36, 1377555, "addi x10, x10, 1"], [40, 4232291, "bne  x1, x4, b2"], [44, 163577967, "j    fail"], [48, 1377555, "b2:     addi x10, x10, 1"], [52, 136354403, "bne  x1, x2, fail"], [56, 1377555, "addi x10, x10, 1"], [60, 4310115, "blt  x3, x4, b3"], [64, 142606447, "j    fail"], [68, 1377555, "b3:     addi x10, x10, 1"], [72, 137511011, "blt  x4, x3, fail"], [76, 1377555, "addi x10, x10, 1"], [80, 3298403, "bge  x4, x3, b4"], [84, 121634927, "j    fail"], [88, 1377555, "b4:     addi x10, x10, 1"], [92, 104978019, "bge  x3, x4, fail"], [96, 1377555, "addi x10, x10, 1"], [100, 3302499, "bltu x4, x3, b5"], [104, 100663407, "j    fail"], [108, 1377555, "b5:     addi x10, x10, 1"], [112, 71429219, "bltu x3, x4, fail"], [116, 1377555, "addi x10, x10, 1"], [120, 4322403, "bgeu x3, x4, b6"], [124, 79691887, "j    fail"], [128, 1377555, "b6:     addi x10, x10, 1"], [132, 70414947, "bgeu x4, x3, fail"], [136, 1377555, "addi x10, x10, 1"], [140, 2151523, "bge  x1, x2, b7"], [144, 58720367, "j    fail"], [148, 1377555, "b7:     addi x10, x10, 1"], [152, 13635347, "chk  x10, 13"], [156, 65345123, "chk  x10, 13"], [160, 10486419, "li   x5, 10"], [164, 787, "li   x6, 0"], [168, 5440307, "loop:   add  x6, x6, x5"], [172, 4294083219, "addi x5, x5, -1"], [176, 4261584099, "bnez x5, loop"], [180, 57675539, "chk  x6, 55"], [184, 31660131, "chk  x6, 55"], [188, 28599, "li   x31, 0x600D"], [192, 14651283, "li   x31, 0x600D"], [196, 111, "halt:   j    halt"], [200, 61367, "fail:   li   x31, 0xDEAD"], [204, 3940519827, "fail:   li   x31, 0xDEAD"], [208, 4288671855, "j    fail"]], "halts": true, "steps": 70, "regs": [0, 5, 5, 4294967295, 1, 0, 55, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 24589], "mem": {}}, "fib": {"title": "fib.s - chương trình thử trong tests/programs", "file": "tests/programs/fib.s", "words": [147, 1048851, 9437587, 2130483, 65683, 131347, 4294017427, 4261517539, 57675539, 98636899, 2105379, 20972179, 787, 5440307, 4294083219, 4266675427, 220204819, 65213539, 6300195, 9091, 4203523, 8619187, 277876499, 31758435, 28599, 14651283, 111, 61367, 3940519827, 4288671855], "listing": [[0, 147, "li   x1, 0"], [4, 1048851, "li   x2, 1"], [8, 9437587, "li   x3, 9"], [12, 2130483, "fibl:   add  x4, x1, x2"], [16, 65683, "mv   x1, x2"], [20, 131347, "mv   x2, x4"], [24, 4294017427, "addi x3, x3, -1"], [28, 4261517539, "bnez x3, fibl"], [32, 57675539, "chk  x2, 55"], [36, 98636899, "chk  x2, 55"], [40, 2105379, "sw   x2, 0(x0)"], [44, 20972179, "li   x5, 20"], [48, 787, "li   x6, 0"], [52, 5440307, "suml:   add  x6, x6, x5"], [56, 4294083219, "addi x5, x5, -1"], [60, 4266675427, "bgtz x5, suml"], [64, 220204819, "chk  x6, 210"], [68, 65213539, "chk  x6, 210"], [72, 6300195, "sw   x6, 4(x0)"], [76, 9091, "lw   x7, 0(x0)"], [80, 4203523, "lw   x8, 4(x0)"], [84, 8619187, "add  x9, x7, x8"], [88, 277876499, "chk  x9, 265"], [92, 31758435, "chk  x9, 265"], [96, 28599, "li   x31, 0x600D"], [100, 14651283, "li   x31, 0x600D"], [104, 111, "halt:   j    halt"], [108, 61367, "fail:   li   x31, 0xDEAD"], [112, 3940519827, "fail:   li   x31, 0xDEAD"], [116, 4288671855, "j    fail"]], "halts": true, "steps": 124, "regs": [0, 34, 55, 0, 55, 0, 210, 55, 210, 265, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 265, 24589], "mem": {"0": 55, "4": 210}}, "hazard": {"title": "hazard.s - chương trình thử trong tests/programs", "file": "tests/programs/hazard.s", "words": [1048723, 1081619, 1114515, 2196019, 5246739, 300030051, 1074922163, 4198163, 300061283, 9437971, 19, 19, 6489011, 18878227, 266573411, 80741395, 8398883, 16786563, 1344787, 81792787, 233118307, 16786819, 11545123, 20981251, 80744211, 233181283, 25167507, 13642787, 25175811, 468867, 25169683, 199726179, 5244947, 16789027, 29370499, 17335395, 155189359, 1050899, 2451, 1635, 1673619, 1673619, 3859, 132750435, 3148307, 100669539, 1706515, 4198163, 132780643, 8391407, 96469103, 4885267, 213913363, 99293283, 2967, 17533843, 756839, 67108975, 5246099, 5246739, 65837667, 7340051, 3379, 3859, 65868387, 1052051, 2100627, 29199923, 4198163, 32381027, 28599, 14651283, 111, 61367, 3940519827, 4288671855], "listing": [[0, 1048723, "li   x1, 1"], [4, 1081619, "addi x2, x1, 1"], [8, 1114515, "addi x3, x2, 1"], [12, 2196019, "add  x4, x3, x2"], [16, 5246739, "chk  x4, 5"], [20, 300030051, "chk  x4, 5"], [24, 1074922163, "sub  x5, x4, x1"], [28, 4198163, "chk  x5, 4"], [32, 300061283, "chk  x5, 4"], [36, 9437971, "addi x6, x0, 9"], [40, 19, "nop"], [44, 19, "nop"], [48, 6489011, "add  x7, x6, x6"], [52, 18878227, "chk  x7, 18"], [56, 266573411, "chk  x7, 18"], [60, 80741395, "li   x8, 77"], [64, 8398883, "sw   x8, 16(x0)"], [68, 16786563, "lw   x9, 16(x0)"], [72, 1344787, "addi x10, x9, 1"], [76, 81792787, "chk  x10, 78"], [80, 233118307, "chk  x10, 78"], [84, 16786819, "lw   x11, 16(x0)"], [88, 11545123, "sw   x11, 20(x0)"], [92, 20981251, "lw   x12, 20(x0)"], [96, 80744211, "chk  x12, 77"], [100, 233181283, "chk  x12, 77"], [104, 25167507, "li   x13, 24"], [108, 13642787, "sw   x13, 24(x0)"], [112, 25175811, "lw   x14, 24(x0)"], [116, 468867, "lw   x15, 0(x14)"], [120, 25169683, "chk  x15, 24"], [124, 199726179, "chk  x15, 24"], [128, 5244947, "li   x16, 5"], [132, 16789027, "sw   x16, 28(x0)"], [136, 29370499, "lw   x17, 28(x0)"], [140, 17335395, "beq  x17, x16, taken1"], [144, 155189359, "j    fail"], [148, 1050899, "taken1: li   x18, 1"], [152, 2451, "li   x19, 0"], [156, 1635, "beq  x0, x0, taken2"], [160, 1673619, "addi x19, x19, 1"], [164, 1673619, "addi x19, x19, 1"], [168, 3859, "taken2: chk  x19, 0"], [172, 132750435, "taken2: chk  x19, 0"], [176, 3148307, "li   x20, 3"], [180, 100669539, "bne  x0, x0, fail"], [184, 1706515, "addi x20, x20, 1"], [188, 4198163, "chk  x20, 4"], [192, 132780643, "chk  x20, 4"], [196, 8391407, "jal  x21, over"], [200, 96469103, "j    fail"], [204, 4885267, "over:   addi x22, x21, 4"], [208, 213913363, "chk  x22, 204"], [212, 99293283, "chk  x22, 204"], [216, 2967, "auipc x23, 0"], [220, 17533843, "addi x23, x23, 16"], [224, 756839, "jalr x24, 0(x23)"], [228, 67108975, "j    fail"], [232, 5246099, "li   x25, 5"], [236, 5246739, "chk  x25, 5"], [240, 65837667, "chk  x25, 5"], [244, 7340051, "addi x0, x0, 7"], [248, 3379, "add  x26, x0, x0"], [252, 3859, "chk  x26, 0"], [256, 65868387, "chk  x26, 0"], [260, 1052051, "li   x27, 1"], [264, 2100627, "li   x27, 2"], [268, 29199923, "add  x28, x27, x27"], [272, 4198163, "chk  x28, 4"], [276, 32381027, "chk  x28, 4"], [280, 28599, "li   x31, 0x600D"], [284, 14651283, "li   x31, 0x600D"], [288, 111, "halt:   j    halt"], [292, 61367, "fail:   li   x31, 0xDEAD"], [296, 3940519827, "fail:   li   x31, 0xDEAD"], [300, 4288671855, "j    fail"]], "halts": true, "steps": 68, "regs": [0, 1, 2, 3, 5, 4, 9, 18, 77, 77, 78, 77, 77, 24, 24, 24, 5, 5, 1, 0, 4, 200, 204, 232, 228, 5, 0, 2, 4, 0, 4, 24589], "mem": {"16": 77, "20": 77, "24": 24, "28": 5}}, "jump": {"title": "jump.s - chương trình thử trong tests/programs", "file": "tests/programs/jump.s", "words": [1555, 8389359, 103810579, 3859, 132518499, 8392467, 98737763, 791, 29363987, 98768995, 305419191, 305422135, 98800227, 4195603, 75497711, 7343891, 65346147, 1047, 22283283, 263399, 103810579, 102762003, 3859, 31857763, 83889939, 31758435, 28599, 14651283, 111, 61367, 3940519827, 4288671855, 3474707, 32871], "listing": [[0, 1555, "li   x12, 0"], [4, 8389359, "jal  x5, target"], [8, 103810579, "li   x12, 99"], [12, 3859, "target: chk  x12, 0"], [16, 132518499, "target: chk  x12, 0"], [20, 8392467, "chk  x5, 8"], [24, 98737763, "chk  x5, 8"], [28, 791, "auipc x6, 0"], [32, 29363987, "chk  x6, 28"], [36, 98768995, "chk  x6, 28"], [40, 305419191, "lui  x7, 0x12345"], [44, 305422135, "chk  x7, 0x12345000"], [48, 98800227, "chk  x7, 0x12345000"], [52, 4195603, "li   x10, 4"], [56, 75497711, "call add3"], [60, 7343891, "chk  x10, 7"], [64, 65346147, "chk  x10, 7"], [68, 1047, "auipc x8, 0"], [72, 22283283, "addi x8, x8, 21"], [76, 263399, "jalr x9, 0(x8)"], [80, 103810579, "li   x12, 99"], [84, 102762003, "li   x12, 98"], [88, 3859, "chk  x12, 0"], [92, 31857763, "chk  x12, 0"], [96, 83889939, "chk  x9, 80"], [100, 31758435, "chk  x9, 80"], [104, 28599, "li   x31, 0x600D"], [108, 14651283, "li   x31, 0x600D"], [112, 111, "halt:   j    halt"], [116, 61367, "fail:   li   x31, 0xDEAD"], [120, 3940519827, "fail:   li   x31, 0xDEAD"], [124, 4288671855, "j    fail"], [128, 3474707, "add3:   addi x10, x10, 3"], [132, 32871, "ret"]], "halts": true, "steps": 28, "regs": [0, 60, 0, 0, 0, 8, 28, 305418240, 89, 80, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 24589], "mem": {}}, "mem": {"title": "mem.s - chương trình thử trong tests/programs", "file": "tests/programs/mem.s", "words": [268435603, 2291773751, 2880504083, 2138147, 41347, 2291777335, 2881425171, 266444387, 33155, 4222619411, 266442851, 49539, 196087571, 266441315, 1081731, 4204793619, 232889443, 2146691, 160435987, 232887907, 3178883, 4169142035, 232886371, 37251, 4294950711, 2881425171, 199333987, 2150787, 40759, 2308902675, 199331939, 2134403, 4294942519, 2308902675, 165779555, 17826323, 4227235, 41347, 2291736375, 465506067, 132226147, 8759, 590479891, 4231459, 41347, 573775671, 465506067, 98672227, 4227491, 4227107, 41347, 858988343, 322899731, 98669155, 41507, 4235651, 3859, 65116771, 4292870803, 5284899, 8430339, 4292874003, 65212515, 6333987, 12624771, 4292874003, 31692899, 28599, 14651283, 111, 61367, 3940519827, 4288671855], "listing": [[0, 268435603, "li   x1, 0x100"], [4, 2291773751, "li   x2, 0x8899AABB"], [8, 2880504083, "li   x2, 0x8899AABB"], [12, 2138147, "sw   x2, 0(x1)"], [16, 41347, "lw   x3, 0(x1)"], [20, 2291777335, "chk  x3, 0x8899AABB"], [24, 2881425171, "chk  x3, 0x8899AABB"], [28, 266444387, "chk  x3, 0x8899AABB"], [32, 33155, "lb   x3, 0(x1)"], [36, 4222619411, "chk  x3, 0xFFFFFFBB"], [40, 266442851, "chk  x3, 0xFFFFFFBB"], [44, 49539, "lbu  x3, 0(x1)"], [48, 196087571, "chk  x3, 0xBB"], [52, 266441315, "chk  x3, 0xBB"], [56, 1081731, "lb   x3, 1(x1)"], [60, 4204793619, "chk  x3, 0xFFFFFFAA"], [64, 232889443, "chk  x3, 0xFFFFFFAA"], [68, 2146691, "lbu  x3, 2(x1)"], [72, 160435987, "chk  x3, 0x99"], [76, 232887907, "chk  x3, 0x99"], [80, 3178883, "lb   x3, 3(x1)"], [84, 4169142035, "chk  x3, 0xFFFFFF88"], [88, 232886371, "chk  x3, 0xFFFFFF88"], [92, 37251, "lh   x3, 0(x1)"], [96, 4294950711, "chk  x3, 0xFFFFAABB"], [100, 2881425171, "chk  x3, 0xFFFFAABB"], [104, 199333987, "chk  x3, 0xFFFFAABB"], [108, 2150787, "lhu  x3, 2(x1)"], [112, 40759, "chk  x3, 0x8899"], [116, 2308902675, "chk  x3, 0x8899"], [120, 199331939, "chk  x3, 0x8899"], [124, 2134403, "lh   x3, 2(x1)"], [128, 4294942519, "chk  x3, 0xFFFF8899"], [132, 2308902675, "chk  x3, 0xFFFF8899"], [136, 165779555, "chk  x3, 0xFFFF8899"], [140, 17826323, "li   x4, 0x11"], [144, 4227235, "sb   x4, 1(x1)"], [148, 41347, "lw   x3, 0(x1)"], [152, 2291736375, "chk  x3, 0x889911BB"], [156, 465506067, "chk  x3, 0x889911BB"], [160, 132226147, "chk  x3, 0x889911BB"], [164, 8759, "li   x4, 0x2233"], [168, 590479891, "li   x4, 0x2233"], [172, 4231459, "sh   x4, 2(x1)"], [176, 41347, "lw   x3, 0(x1)"], [180, 573775671, "chk  x3, 0x223311BB"], [184, 465506067, "chk  x3, 0x223311BB"], [188, 98672227, "chk  x3, 0x223311BB"], [192, 4227491, "sb   x4, 3(x1)"], [196, 4227107, "sb   x4, 0(x1)"], [200, 41347, "lw   x3, 0(x1)"], [204, 858988343, "chk  x3, 0x33331133"], [208, 322899731, "chk  x3, 0x33331133"], [212, 98669155, "chk  x3, 0x33331133"], [216, 41507, "sw   x0, 4(x1)"], [220, 4235651, "lw   x3, 4(x1)"], [224, 3859, "chk  x3, 0"], [228, 65116771, "chk  x3, 0"], [232, 4292870803, "li   x5, -2"], [236, 5284899, "sw   x5, 8(x1)"], [240, 8430339, "lw   x6, 8(x1)"], [244, 4292874003, "chk  x6, -2"], [248, 65212515, "chk  x6, -2"], [252, 6333987, "sw   x6, 12(x1)"], [256, 12624771, "lw   x7, 12(x1)"], [260, 4292874003, "chk  x7, -2"], [264, 31692899, "chk  x7, -2"], [268, 28599, "li   x31, 0x600D"], [272, 14651283, "li   x31, 0x600D"], [276, 111, "halt:   j    halt"], [280, 61367, "fail:   li   x31, 0xDEAD"], [284, 3940519827, "fail:   li   x31, 0xDEAD"], [288, 4288671855, "j    fail"]], "halts": true, "steps": 70, "regs": [0, 256, 2291772091, 0, 8755, 4294967294, 4294967294, 4294967294, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4294967294, 24589], "mem": {"256": 858984755, "264": 4294967294, "268": 4294967294}}};
+const FLOW = { vi: "# Sơ đồ luồng (flowchart) của từng circuit\n\n> Bản tiếng Việt của docs/FLOWCHARTS.md.\n\nTài liệu này vẽ **sơ đồ luồng cho cả 14 circuit** của dự án, kèm giải thích chi tiết từng bước, ví dụ với giá trị thật và các trường hợp đặc biệt.  Sơ đồ viết bằng **Mermaid**, nên tự hiện thành hình khi mở trên GitHub, trong VS Code (có phần mở rộng Markdown Mermaid) hoặc trong Overleaf/Obsidian.  Nếu chỗ bạn xem không hiện hình, dán đoạn mã vào https://mermaid.live.\n\n**Cách đọc ký hiệu**\n\n| Ký hiệu | Ý nghĩa |\n|---|---|\n| hình chữ nhật | một bước xử lý hoặc một khối mạch |\n| hình thoi | một phép **chọn** (multiplexer) hoặc một điều kiện |\n| hình bầu dục | đầu vào hoặc đầu ra của circuit |\n| mũi tên có chữ | điều kiện hoặc giá trị tín hiệu chọn nhánh đó |\n\nMục lục: 0 Tổng quan - 1 InstructionDecode - 2 MainControl - 3 ImmGen - 4 RegisterFile - 5 ALUControl - 6 ALU - 7 BranchUnit - 8 LoadExtract - 9 StoreMerge - 10 Memory - 11 `main` (single-cycle) - 12 ForwardingUnit - 13 HazardUnit - 14 `Pipeline` - 15 Bảng so sánh nhanh\n\n---\n\n## 0. Tổng quan: cả máy tính nhìn từ xa\n\n```mermaid\nflowchart LR\n    PC([\"PC<br/>địa chỉ lệnh\"]) --> ROM[\"ROM lệnh<br/>256 x 32\"]\n    ROM -->|\"lệnh 32 bit\"| ID[\"InstructionDecode<br/>cắt thành các trường\"]\n    ID --> CTL[\"MainControl<br/>sinh tín hiệu điều khiển\"]\n    ID --> RF[\"RegisterFile<br/>đọc rs1, rs2\"]\n    ID --> IMM[\"ImmGen<br/>dựng hằng số imm\"]\n    CTL -. \"ALUOp\" .-> ALUC[\"ALUControl\"]\n    ALUC -. \"ALUCtrl\" .-> ALU[\"ALU<br/>tính kết quả\"]\n    RF --> ALU\n    IMM --> ALU\n    RF --> BR[\"BranchUnit<br/>có rẽ nhánh không?\"]\n    ALU --> MEM[\"Memory<br/>RAM + LoadExtract + StoreMerge\"]\n    ALU --> WB{\"chọn giá trị<br/>ghi lại (WBSel)\"}\n    MEM --> WB\n    WB --> RF\n    BR --> NPC{\"chọn PC kế tiếp\"}\n    ALU --> NPC\n    NPC --> PC\n```\n\n**Cách đọc.**  Mỗi chu kỳ CPU làm đúng một vòng: lấy lệnh từ ROM tại PC, cắt lệnh, đọc thanh ghi và dựng hằng số, ALU tính, (nếu cần) đụng RAM, chọn giá trị ghi lại vào thanh ghi `rd`, và chọn PC kế tiếp.  Nét đứt là tín hiệu điều khiển, nét liền là dữ liệu.  CPU `main` làm hết vòng này trong **một** chu kỳ xung nhịp; CPU `Pipeline` chia vòng thành 5 tầng để năm lệnh chạy chồng nhau.\n\n---\n\n## 1. InstructionDecode - cắt lệnh thành các trường\n\n```mermaid\nflowchart TD\n    I([\"Instruction<br/>32 bit\"]) --> S[\"Splitter 32 thành 6 phần<br/>chỉ là đi dây, không có cổng\"]\n    S --> O[\"opcode = bit 6..0\"]\n    S --> RD[\"rd = bit 11..7\"]\n    S --> F3[\"funct3 = bit 14..12\"]\n    S --> R1[\"rs1 = bit 19..15\"]\n    S --> R2[\"rs2 = bit 24..20\"]\n    S --> F7[\"funct7 = bit 31..25\"]\n```\n\n**Giải thích từng bước.**\n1. Lệnh 32 bit đi vào một splitter duy nhất.\n2. Splitter chia bus thành sáu dây theo vị trí bit **cố định**: `opcode` (7 bit), `rd` (5), `funct3` (3), `rs1` (5), `rs2` (5), `funct7` (7).\n3. Không có phép tính nào: đây chỉ là đi dây, nên không tốn thời gian và không có gì để sai.\n\n**Ví dụ:** lệnh `00b50533` -> `opcode = 0x33` (kiểu R), `rd = 10`, `funct3 = 0`, `rs1 = 10`, `rs2 = 11`, `funct7 = 0` -> đây là `add x10, x10, x11`.\n\n**Trường hợp đặc biệt:** lệnh kiểu U/J không có `rs1`/`rs2`/`funct3` thật; các bit đó vẫn được cắt ra nhưng các khối sau bỏ qua.  Vì RISC-V đặt `rs1`, `rs2` luôn ở cùng chỗ, thanh ghi có thể được đọc **trong khi** opcode còn đang được giải mã.\n\n---\n\n## 2. MainControl - từ opcode sinh mọi tín hiệu điều khiển\n\n```mermaid\nflowchart TD\n    OP([\"opcode 7 bit\"]) --> C{\"so opcode với 9 hằng số<br/>mỗi nhóm một bộ so sánh\"}\n    C -->|\"0x33\"| R[\"IsR<br/>add, sub, and, or, sll...\"]\n    C -->|\"0x13\"| I[\"IsI<br/>addi, andi, slli...\"]\n    C -->|\"0x03\"| L[\"IsLoad<br/>lb, lh, lw, lbu, lhu\"]\n    C -->|\"0x23\"| S[\"IsStore<br/>sb, sh, sw\"]\n    C -->|\"0x63\"| B[\"IsBranch<br/>beq, bne, blt...\"]\n    C -->|\"0x37\"| LUI[\"IsLui\"]\n    C -->|\"0x17\"| AU[\"IsAuipc\"]\n    C -->|\"0x6F\"| J[\"IsJAL\"]\n    C -->|\"0x67\"| JR[\"IsJALR\"]\n    C -->|\"khác\"| N[\"mọi cờ = 0<br/>lệnh rỗng (NOP) an toàn\"]\n    R --> OR1[\"cổng OR gộp cờ\"]\n    I --> OR1\n    L --> OR1\n    S --> OR1\n    B --> OR1\n    LUI --> OR1\n    AU --> OR1\n    J --> OR1\n    JR --> OR1\n    OR1 --> RW([\"RegWrite = R, I, load, lui, auipc, jal, jalr\"])\n    OR1 --> AS([\"ALUSrc = I, load, store, lui, auipc, jalr\"])\n    OR1 --> AO([\"ALUOp 2 bit<br/>bit1 = R hoặc I, bit0 = I hoặc branch\"])\n    OR1 --> IM([\"ImmSel 3 bit<br/>I 000, S 001, B 010, U 011, J 100\"])\n    OR1 --> ASEL([\"ASel 2 bit<br/>00 rs1, 01 PC, 10 số 0\"])\n    OR1 --> WBS([\"WBSel 2 bit<br/>00 ALU, 01 RAM, 10 PC+4\"])\n    OR1 --> OTH([\"MemWrite = IsStore<br/>MemRead = IsLoad<br/>IsBranch, IsJAL, IsJALR\"])\n```\n\n**Giải thích từng bước.**\n1. Chín bộ so sánh 7 bit so `opcode` với chín hằng số; chỉ một bộ báo \"bằng\", cho ra cờ của nhóm lệnh đó (`IsR`, `IsI`...).\n2. Cổng OR (tối đa 3 ngõ vào, nên chia hai nửa) gộp các cờ thành từng tín hiệu: ví dụ `RegWrite` bật cho mọi nhóm **có ghi `rd`**; store và branch không có mặt nên không ghi thanh ghi.\n3. Các tín hiệu nhiều bit (`ALUOp`, `ImmSel`, `ASel`, `WBSel`) được ghép từ bit đơn bằng splitter.\n4. Opcode lạ làm mọi cờ bằng 0, nên lệnh không làm gì (NOP) mà không phá trạng thái.\n\n**Bảng kết quả cho vài lệnh** (đã kiểm bằng `tests/maincontrol.vec`):\n\n| Lệnh | RegWrite | ALUSrc | MemWrite | MemRead | ALUOp | ImmSel | ASel | WBSel |\n|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|\n| `add` (R) | 1 | 0 | 0 | 0 | 10 | - | 00 | 00 |\n| `addi` (I) | 1 | 1 | 0 | 0 | 11 | 000 | 00 | 00 |\n| `lw` | 1 | 1 | 0 | 1 | 00 | 000 | 00 | 01 |\n| `sw` | 0 | 1 | 1 | 0 | 00 | 001 | 00 | - |\n| `beq` | 0 | 0 | 0 | 0 | 01 | 010 | 00 | - |\n| `lui` | 1 | 1 | 0 | 0 | 00 | 011 | 10 | 00 |\n| `auipc` | 1 | 1 | 0 | 0 | 00 | 011 | 01 | 00 |\n| `jal` | 1 | - | 0 | 0 | - | 100 | - | 10 |\n| `jalr` | 1 | 1 | 0 | 0 | 00 | 000 | 00 | 10 |\n\n---\n\n## 3. ImmGen - dựng hằng số tức thời\n\n```mermaid\nflowchart TD\n    IN([\"Instruction + ImmSel\"]) --> SEL{\"ImmSel\"}\n    SEL -->|\"000 kiểu I\"| TI[\"lấy instr 31..20 (12 bit)<br/>mở rộng dấu lên 32 bit\"]\n    SEL -->|\"001 kiểu S\"| TS[\"ghép instr 31..25 và 11..7 (12 bit)<br/>mở rộng dấu\"]\n    SEL -->|\"010 kiểu B\"| TB[\"ghép bit 31, 7, 30..25, 11..8, rồi bit 0 = 0 (13 bit)<br/>mở rộng dấu\"]\n    SEL -->|\"011 kiểu U\"| TU[\"lấy instr 31..12<br/>nối 12 bit 0 phía sau (imm dịch trái 12)\"]\n    SEL -->|\"100 kiểu J\"| TJ[\"ghép bit 31, 19..12, 20, 30..21, rồi bit 0 = 0 (21 bit)<br/>mở rộng dấu\"]\n    TI --> MUX{\"multiplexer 8 ngả<br/>chọn theo ImmSel\"}\n    TS --> MUX\n    TB --> MUX\n    TU --> MUX\n    TJ --> MUX\n    MUX --> OUT([\"Imm 32 bit\"])\n```\n\n**Giải thích từng bước.**\n1. Cả năm cách dựng hằng số chạy **song song** từ cùng một lệnh (mỗi cách là vài splitter + một bộ mở rộng bit).\n2. Multiplexer chọn kết quả của đúng một cách theo `ImmSel` (do `MainControl` sinh).\n3. **Mở rộng dấu** chép bit cao nhất của hằng số vào các bit phía trên, nên số âm vẫn âm.  Kiểu U thì không mở rộng mà chèn 12 bit 0 (lệnh `lui`/`auipc` đặt hằng số vào 20 bit cao).\n4. Bit 0 của kiểu B và J luôn bằng 0 vì địa chỉ lệnh là bội của 2 (thực tế là 4); lệnh vì thế không cất bit này.\n\n**Ví dụ:** `fe059ce3` (`bnez x11, loop`, kiểu B): imm[12] = 1, imm[11] = 1, imm[10:5] = 111111, imm[4:1] = 1100, bit 0 = 0 -> 13 bit `1111111111000` -> mở rộng dấu thành **`0xFFFFFFF8` = -8**: nhảy lùi 8 byte về đầu vòng lặp.\n\n---\n\n## 4. RegisterFile - đọc hai thanh ghi, ghi một thanh ghi\n\n```mermaid\nflowchart TD\n    subgraph READ[\"Đọc (bất đồng bộ, không chờ xung)\"]\n        RS1([\"rs1\"]) --> M1[\"Mux 32:1<br/>chọn thanh ghi số rs1\"]\n        RS2([\"rs2\"]) --> M2[\"Mux 32:1<br/>chọn thanh ghi số rs2\"]\n        M1 --> D1([\"rs1_data\"])\n        M2 --> D2([\"rs2_data\"])\n    end\n    subgraph WRITE[\"Ghi (ở cạnh xung nhịp)\"]\n        RW([\"RegWrite\"]) --> DM[\"Demux 1:32<br/>chọn theo rd\"]\n        RD([\"rd\"]) --> DM\n        DM -->|\"chỉ thanh ghi số rd có WE = 1\"| REG[\"32 thanh ghi x0..x31<br/>x0 luôn nạp số 0\"]\n        WD([\"write_data\"]) --> REG\n        CLK([\"CLK\"]) --> REG\n    end\n    REG --> M1\n    REG --> M2\n```\n\n**Giải thích từng bước.**\n1. **Đọc:** hai multiplexer 32 ngả chọn thanh ghi theo `rs1` và `rs2`; vì không có xung nhịp ở đây nên đổi `rs1` là `rs1_data` đổi ngay (CPU single-cycle cần toán hạng ngay trong chu kỳ).\n2. **Ghi:** demultiplexer đưa `RegWrite` tới **đúng một** thanh ghi (số `rd`); thanh ghi đó nạp `write_data` ở cạnh xung nhịp, các thanh ghi khác giữ nguyên.\n3. `x0` có đầu vào cố định bằng 0 nên mãi bằng 0, bất kể ghi gì.\n\n**Các trường hợp:** `RegWrite = 0` (store, branch) -> không thanh ghi nào đổi; `rd = 0` -> ghi vào x0 vô hiệu; đọc và ghi cùng thanh ghi trong một chu kỳ -> đọc giá trị cũ (trên pipeline, khối này ghi ở cạnh **xuống** nên lệnh ở ID thấy giá trị mới).\n\n---\n\n## 5. ALUControl - chọn phép tính của ALU\n\n```mermaid\nflowchart TD\n    IN([\"ALUOp, funct3, funct7\"]) --> Q{\"ALUOp\"}\n    Q -->|\"00\"| ADD0[\"ALUCtrl = 0 (ADD)<br/>load, store, lui, auipc, jalr\"]\n    Q -->|\"01\"| SUB0[\"ALUCtrl = 1 (SUB)<br/>branch: so sánh bằng phép trừ\"]\n    Q -->|\"10 kiểu R\"| TR{\"funct3\"}\n    Q -->|\"11 kiểu I\"| TI{\"funct3\"}\n    TR -->|\"000\"| RAS{\"funct7 bit 5\"}\n    RAS -->|\"0\"| RADD[\"ADD (0)\"]\n    RAS -->|\"1\"| RSUB[\"SUB (1)\"]\n    TR -->|\"001\"| RSLL[\"SLL (5)\"]\n    TR -->|\"010\"| RSLT[\"SLT (8)\"]\n    TR -->|\"011\"| RSLTU[\"SLTU (9)\"]\n    TR -->|\"100\"| RXOR[\"XOR (4)\"]\n    TR -->|\"101\"| RSR{\"funct7 bit 5\"}\n    RSR -->|\"0\"| RSRL[\"SRL (6)\"]\n    RSR -->|\"1\"| RSRA[\"SRA (7)\"]\n    TR -->|\"110\"| ROR[\"OR (3)\"]\n    TR -->|\"111\"| RAND[\"AND (2)\"]\n    TI -->|\"000\"| IADD[\"ADD (0): addi\"]\n    TI -->|\"001\"| ISLL[\"SLL (5): slli\"]\n    TI -->|\"010\"| ISLT[\"SLT (8): slti\"]\n    TI -->|\"011\"| ISLTU[\"SLTU (9): sltiu\"]\n    TI -->|\"100\"| IXOR[\"XOR (4): xori\"]\n    TI -->|\"101\"| ISR{\"funct7 bit 5\"}\n    ISR -->|\"0\"| ISRL[\"SRL (6): srli\"]\n    ISR -->|\"1\"| ISRA[\"SRA (7): srai\"]\n    TI -->|\"110\"| IOR[\"OR (3): ori\"]\n    TI -->|\"111\"| IAND[\"AND (2): andi\"]\n```\n\n**Giải thích từng bước.**\n1. `ALUOp` do `MainControl` đưa vào chia thành bốn nhánh: 00 cộng, 01 trừ (không cần xem `funct`), 10 tra bảng kiểu R, 11 tra bảng kiểu I.\n2. Với R và I, `funct3` chọn phép tính (hai multiplexer 8 ngả, mỗi bảng một cái; mỗi dòng bảng là một hằng số 4 bit).\n3. `funct7[5]` (bit 30 của lệnh) làm hai việc: ở kiểu R biến ADD thành SUB và SRL thành SRA; ở kiểu I chỉ có ý nghĩa với lệnh dịch (`srai` khác `srli`).  `addi` bỏ qua bit này vì bit đó là một phần của hằng số.\n\n**Mã đầu ra:** 0 ADD, 1 SUB, 2 AND, 3 OR, 4 XOR, 5 SLL, 6 SRL, 7 SRA, 8 SLT, 9 SLTU.\n\n---\n\n## 6. ALU - tính song song rồi chọn\n\n```mermaid\nflowchart TD\n    A([\"rs1_data (A)\"]) --> P[\"tính SONG SONG mọi phép\"]\n    B([\"rs2_data (B)\"]) --> P\n    P --> R0[\"A + B (ADD)\"]\n    P --> R1[\"A - B (SUB)\"]\n    P --> R2[\"A and B\"]\n    P --> R3[\"A or B\"]\n    P --> R4[\"A xor B\"]\n    P --> R5[\"A dịch trái B[4:0] (SLL)\"]\n    P --> R6[\"A dịch phải logic B[4:0] (SRL)\"]\n    P --> R7[\"A dịch phải số học B[4:0] (SRA)\"]\n    P --> R8[\"A nhỏ hơn B, có dấu<br/>mở rộng 0 thành 0 hoặc 1\"]\n    P --> R9[\"A nhỏ hơn B, không dấu<br/>mở rộng 0 thành 0 hoặc 1\"]\n    R0 --> MX{\"Mux 16 ngả<br/>chọn theo ALU_Ctrl\"}\n    R1 --> MX\n    R2 --> MX\n    R3 --> MX\n    R4 --> MX\n    R5 --> MX\n    R6 --> MX\n    R7 --> MX\n    R8 --> MX\n    R9 --> MX\n    CT([\"ALU_Ctrl 0..9\"]) --> MX\n    MX --> OUT([\"result 32 bit\"])\n```\n\n**Giải thích từng bước.**\n1. Mười phép tính chạy cùng lúc từ cùng hai toán hạng; không phép nào \"biết\" phép nào được chọn.\n2. Multiplexer 16 ngả (dùng 10 ngõ) lấy đúng một kết quả theo `ALU_Ctrl` (từ `ALUControl`).\n3. Lệnh dịch chỉ dùng 5 bit thấp của B (dịch tối đa 31).  SRL chèn bit 0 phía trên, SRA chép bit dấu.\n4. SLT/SLTU cho kết quả 1 bit; **mở rộng 0** thành 32 bit để ra đúng 0 hoặc 1.  (Lỗi từng gặp: mở rộng dấu làm SLTU trả `0xFFFFFFFF`.)\n\n**Ví dụ:** A = -1 (`0xFFFFFFFF`), B = 1: SLT cho 1 (vì -1 < 1 có dấu), SLTU cho 0 (vì 4294967295 không nhỏ hơn 1).  Tràn số khi cộng/trừ bị bỏ qua: kết quả quấn vòng 32 bit đúng như RISC-V.\n\n---\n\n## 7. BranchUnit - branch có được rẽ không\n\n```mermaid\nflowchart TD\n    IN([\"rs1_data, rs2_data, funct3, IsBranch\"]) --> CMP[\"so sánh rs1 với rs2<br/>bằng, nhỏ hơn có dấu, nhỏ hơn không dấu<br/>cùng các phủ định\"]\n    CMP --> F{\"funct3\"}\n    F -->|\"000 beq\"| C0[\"bằng\"]\n    F -->|\"001 bne\"| C1[\"khác\"]\n    F -->|\"100 blt\"| C4[\"nhỏ hơn, có dấu\"]\n    F -->|\"101 bge\"| C5[\"lớn hơn hoặc bằng, có dấu\"]\n    F -->|\"110 bltu\"| C6[\"nhỏ hơn, không dấu\"]\n    F -->|\"111 bgeu\"| C7[\"lớn hơn hoặc bằng, không dấu\"]\n    F -->|\"010, 011\"| C2[\"không phải lệnh branch<br/>điều kiện = 0\"]\n    C0 --> AND\n    C1 --> AND\n    C4 --> AND\n    C5 --> AND\n    C6 --> AND\n    C7 --> AND\n    C2 --> AND\n    AND{\"IsBranch = 1<br/>VÀ điều kiện đúng?\"} -->|\"có\"| T([\"branch_taken = 1<br/>PC = PC + imm\"])\n    AND -->|\"không\"| N([\"branch_taken = 0<br/>PC = PC + 4\"])\n```\n\n**Giải thích từng bước.**\n1. Một bộ so sánh không dấu và một bộ có dấu cho ra các quan hệ \"bằng\" và \"nhỏ hơn\"; ba cổng NOT cho ra các phủ định (\"khác\", \"lớn hơn hoặc bằng\").\n2. Một multiplexer 8 ngả theo `funct3` chọn điều kiện của đúng lệnh branch đang chạy.\n3. Cổng AND với `IsBranch` bảo đảm các lệnh khác (cũng có `funct3`) **không bao giờ** bị coi là rẽ nhánh.\n\n**Ví dụ:** `bnez x11, loop` là `bne x11, x0`: khi x11 = 9 thì 9 khác 0 -> `branch_taken = 1`, PC quay về đầu vòng lặp; khi x11 = 0 thì bằng nhau -> `branch_taken = 0`, vòng lặp kết thúc.  `blt` và `bltu` chỉ khác ở bộ so sánh dùng (có dấu hay không dấu): với -1 và 1, `blt` rẽ, `bltu` không rẽ.\n\n---\n\n## 8. LoadExtract - lấy dữ liệu của lệnh load\n\n```mermaid\nflowchart TD\n    W([\"word 32 bit từ RAM<br/>Address[1:0], funct3\"]) --> SPLB[\"tách 4 byte\"]\n    W --> SPLH[\"tách 2 nửa từ\"]\n    SPLB --> MB{\"chọn byte<br/>theo Address[1:0]\"}\n    SPLH --> MH{\"chọn nửa từ<br/>theo Address[1]\"}\n    MB --> EB1[\"mở rộng DẤU 8 thành 32 bit (lb)\"]\n    MB --> EB2[\"mở rộng 0 8 thành 32 bit (lbu)\"]\n    MH --> EH1[\"mở rộng DẤU 16 thành 32 bit (lh)\"]\n    MH --> EH2[\"mở rộng 0 16 thành 32 bit (lhu)\"]\n    EB1 --> F{\"funct3\"}\n    EB2 --> F\n    EH1 --> F\n    EH2 --> F\n    W --> F\n    F -->|\"000\"| OB[\"lb\"]\n    F -->|\"001\"| OH[\"lh\"]\n    F -->|\"010\"| OW[\"lw: cả từ, không đổi\"]\n    F -->|\"100\"| OBU[\"lbu\"]\n    F -->|\"101\"| OHU[\"lhu\"]\n    OB --> OUT([\"read_data 32 bit\"])\n    OH --> OUT\n    OW --> OUT\n    OBU --> OUT\n    OHU --> OUT\n```\n\n**Giải thích từng bước.**\n1. RAM luôn đọc **nguyên từ 32 bit**; việc cắt byte hay nửa từ là của khối này.\n2. Hai multiplexer chọn byte (theo `Address[1:0]`) và nửa từ (theo `Address[1]`).\n3. Bốn bộ mở rộng bit chuẩn bị cả bốn kết quả (có dấu và không dấu); multiplexer cuối chọn theo `funct3` (000 lb, 001 lh, 010 lw, 100 lbu, 101 lhu).\n\n**Ví dụ:** từ `0x000000F0`, địa chỉ byte 0: `lb` cho `0xFFFFFFF0` (0xF0 có bit dấu = 1 nên mở rộng toàn 1), `lbu` cho `0x000000F0`, `lw` cho nguyên `0x000000F0`.\n\n---\n\n## 9. StoreMerge - ghi một phần của từ (đọc - sửa - ghi)\n\n```mermaid\nflowchart TD\n    IN([\"old_word (từ cũ đang trong RAM)<br/>write_data, funct3, Address[1:0]\"]) --> SZ[\"size = funct3[1:0]<br/>00 byte, 01 nửa từ, 10 từ\"]\n    SZ --> ROM[\"ROM 16 hàng x 4 bit<br/>địa chỉ = size và Address[1:0]\"]\n    ROM --> EN[\"4 bit cho phép: mỗi bit ứng với một làn byte<br/>byte: 0001 0010 0100 1000<br/>nửa từ: 0011, 1100<br/>cả từ: 1111\"]\n    IN --> SRC[\"chọn byte nguồn cho từng làn<br/>sb: luôn lấy byte thấp của write_data<br/>sh: hai byte thấp<br/>sw: cả 4 byte\"]\n    EN --> L{\"với mỗi làn i từ 0 đến 3:<br/>cho phép = 1?\"}\n    SRC --> L\n    IN --> OLD[\"tách old_word thành 4 byte\"]\n    OLD --> L\n    L -->|\"1\"| NEWB[\"làn i lấy byte MỚI\"]\n    L -->|\"0\"| OLDB[\"làn i giữ byte CŨ\"]\n    NEWB --> JOIN[\"ghép 4 làn thành từ mới 32 bit\"]\n    OLDB --> JOIN\n    JOIN --> OUT([\"new_word -> RAM ghi nguyên từ\"])\n```\n\n**Giải thích từng bước.**\n1. RAM chỉ ghi **nguyên từ**, nên khi chỉ ghi một byte phải giữ nguyên ba byte kia.\n2. Từ cũ được đọc ra (RAM đọc bất đồng bộ nên có sẵn trong cùng chu kỳ).\n3. ROM nhỏ 16 hàng đổi `{size, Address[1:0]}` thành 4 bit cho phép, mỗi bit là một \"làn\" byte.\n4. Với mỗi làn: nếu được phép thì lấy byte mới (từ `write_data`), không thì giữ byte cũ.  Ghép bốn làn thành từ mới để RAM ghi.\n\n**Ví dụ:** từ cũ `0x11223344`, `sb x1, 1(x0)` với x1 = `0xAA`: `size = 00` (byte), `Address[1:0] = 01` -> cho phép = `0010` (chỉ làn 1) -> từ mới = `0x1122AA44`.\n\n---\n\n## 10. Memory - bộ nhớ dữ liệu\n\n```mermaid\nflowchart TD\n    IN([\"Address, write_data, MemWrite, CLK, funct3\"]) --> SPL[\"tách Address<br/>Address[9:2] = chỉ số từ<br/>Address[1:0] = byte trong từ\"]\n    SPL --> RAM[\"RAM 256 x 32<br/>ĐỌC bất đồng bộ\"]\n    RAM -->|\"từ cũ\"| LE[\"LoadExtract<br/>cắt byte, nửa từ + mở rộng\"]\n    RAM -->|\"từ cũ\"| SM[\"StoreMerge<br/>ghép byte mới vào từ cũ\"]\n    IN --> SM\n    SM -->|\"từ mới\"| W{\"MemWrite = 1?\"}\n    W -->|\"có, ở cạnh lên xung nhịp\"| WR[\"RAM ghi từ mới vào địa chỉ\"]\n    W -->|\"không\"| NOW[\"RAM không đổi\"]\n    LE --> OUT([\"read_data\"])\n```\n\n**Giải thích từng bước.**\n1. Địa chỉ được tách: chỉ số từ (0..255) đi vào RAM, hai bit thấp chỉ byte trong từ.\n2. RAM trả ngay từ ở địa chỉ đó (đọc bất đồng bộ).  `LoadExtract` biến từ này thành giá trị của lệnh load.\n3. Khi là lệnh store, `StoreMerge` dựng từ mới; chỉ khi `MemWrite = 1` thì RAM mới ghi, ở cạnh lên của xung nhịp.\n4. Lệnh không phải load/store có `MemWrite = 0` nên RAM không đổi; `read_data` vẫn có giá trị nhưng bị bỏ qua ở bước write-back.\n\n**Vì sao đọc bất đồng bộ:** nếu đọc đồng bộ thì dữ liệu chỉ xuất hiện sau cạnh xung kế tiếp, lệnh load trả dữ liệu không xác định (lỗi đã gặp và sửa).  Địa chỉ từ 1 KiB trở lên quấn vòng vì chỉ dùng `Address[9:2]`.\n\n---\n\n## 11. `main` - CPU single-cycle: một lệnh trong một chu kỳ\n\n```mermaid\nflowchart TD\n    S([\"bắt đầu chu kỳ\"]) --> IF[\"IF: ROM đọc lệnh tại PC<br/>pc_plus4 = PC + 4\"]\n    IF --> ID[\"ID: InstructionDecode cắt lệnh<br/>MainControl sinh điều khiển<br/>RegisterFile đọc rs1, rs2<br/>ImmGen dựng imm\"]\n    ID --> MA{\"ASel\"}\n    MA -->|\"00\"| A1[\"A = rs1\"]\n    MA -->|\"01 auipc\"| A2[\"A = PC\"]\n    MA -->|\"10 lui\"| A3[\"A = 0\"]\n    ID --> MB{\"ALUSrc\"}\n    MB -->|\"0\"| B1[\"B = rs2\"]\n    MB -->|\"1\"| B2[\"B = imm\"]\n    A1 --> ALU\n    A2 --> ALU\n    A3 --> ALU\n    B1 --> ALU\n    B2 --> ALU\n    ALU[\"EX: ALUControl chọn phép, ALU tính alu_result<br/>BranchUnit tính branch_taken\"] --> MEMQ{\"lệnh load hoặc store?\"}\n    MEMQ -->|\"load: MemRead\"| LD[\"MEM: RAM đọc, LoadExtract cho mem_rdata\"]\n    MEMQ -->|\"store: MemWrite\"| ST[\"MEM: StoreMerge dựng từ mới, RAM ghi\"]\n    MEMQ -->|\"không\"| SK[\"bỏ qua MEM\"]\n    LD --> WBQ\n    ST --> WBQ\n    SK --> WBQ\n    WBQ{\"WBSel\"} -->|\"00\"| W1[\"ghi alu_result\"]\n    WBQ -->|\"01\"| W2[\"ghi mem_rdata\"]\n    WBQ -->|\"10\"| W3[\"ghi PC + 4\"]\n    W1 --> RWQ{\"RegWrite = 1?\"}\n    W2 --> RWQ\n    W3 --> RWQ\n    RWQ -->|\"có\"| WR[\"ghi giá trị vào rd ở cạnh xung\"]\n    RWQ -->|\"không\"| NW[\"không ghi thanh ghi\"]\n    WR --> NP\n    NW --> NP\n    NP{\"chọn PC kế tiếp\"} -->|\"IsJALR\"| P3[\"(rs1 + imm) với bit 0 = 0\"]\n    NP -->|\"branch_taken hoặc IsJAL\"| P2[\"PC + imm\"]\n    NP -->|\"còn lại\"| P1[\"PC + 4\"]\n    P1 --> E([\"PC mới, hết chu kỳ\"])\n    P2 --> E\n    P3 --> E\n```\n\n**Giải thích từng bước.**\n1. **IF:** ROM nhận `PC[9:2]`, trả lệnh; bộ cộng riêng tính `PC + 4`.\n2. **ID:** lệnh được cắt, điều khiển được sinh, hai thanh ghi được đọc, hằng số được dựng; cả bốn việc diễn ra song song.\n3. **EX:** hai multiplexer chọn toán hạng A (`rs1`, `PC` hay `0`) và B (`rs2` hay `imm`); ALU tính; `BranchUnit` quyết định branch.\n4. **MEM:** chỉ có việc khi là load/store.\n5. **WB:** multiplexer `WBSel` chọn giá trị ghi (ALU, RAM hay PC+4); nếu `RegWrite = 1` thì ghi vào `rd`.\n6. **PC kế tiếp:** `jalr` (đích tính bằng ALU, xóa bit 0) ưu tiên cao nhất; rồi tới branch được rẽ hoặc `jal` (PC + imm); còn lại PC + 4.\n\n**Vì sao thiết kế thế:** `lui`, `auipc`, `jal`, `jalr` dùng lại đúng ALU và đường write-back nhờ `ASel` và `WBSel`, không thêm phần cứng riêng.\n\n**Ví dụ mỗi nhóm lệnh trong `demo.s`:** xem `docs/vi/DEMO_EXPLAIN.md` mục 3 (add, addi, bnez, sw, lw, jal, ret, sub, slti) với giá trị thật trên từng dây.\n\n---\n\n## 12. ForwardingUnit - chọn nguồn mới nhất cho toán hạng ở EX\n\n```mermaid\nflowchart TD\n    IN([\"rs1_ex (hoặc rs2_ex)<br/>rd_mem, RegWrite_mem<br/>rd_wb, RegWrite_wb\"]) --> Q1{\"lệnh ở MEM ghi thanh ghi<br/>VÀ rd_mem khác x0<br/>VÀ rd_mem = rs1_ex ?\"}\n    Q1 -->|\"có\"| F10([\"Forward = 10<br/>lấy từ EX/MEM\"])\n    Q1 -->|\"không\"| Q2{\"lệnh ở WB ghi thanh ghi<br/>VÀ rd_wb khác x0<br/>VÀ rd_wb = rs1_ex ?\"}\n    Q2 -->|\"có\"| F01([\"Forward = 01<br/>lấy từ MEM/WB\"])\n    Q2 -->|\"không\"| F00([\"Forward = 00<br/>lấy từ register file\"])\n```\n\n**Giải thích từng bước.**\n1. Vấn đề: lệnh ở EX cần thanh ghi mà một lệnh **trước đó** chưa kịp ghi vào register file (phụ thuộc RAW: đọc sau ghi).\n2. Kiểm tra lệnh ngay trước (đang ở MEM) **trước**: nếu nó ghi đúng thanh ghi cần thì lấy kết quả của nó từ EX/MEM (`Forward = 10`).\n3. Nếu không, kiểm tra lệnh cách một (đang ở WB): lấy từ MEM/WB (`Forward = 01`).\n4. Cả hai đều không khớp: dùng giá trị đọc từ register file (`00`).\n5. Khối này chạy hai lần: một cho `rs1` (`ForwardA`), một cho `rs2` (`ForwardB`).\n\n**Vì sao ưu tiên MEM:** nếu cả hai tầng cùng ghi thanh ghi đó thì lệnh ở MEM mới hơn nên giá trị của nó là đúng.  **Vì sao loại x0:** x0 luôn bằng 0, forward một \"kết quả\" ghi vào x0 sẽ sai.  Giá trị lấy từ EX/MEM là kết quả ALU, **riêng `jal`/`jalr` là PC + 4**.\n\n**Ví dụ (`hazards_demo.s`):** `li x1,100` rồi ngay sau là `sw x1,0(x0)`: khi `sw` ở EX thì `li` ở MEM, `rd_mem = 1 = rs2_ex` -> `ForwardB = 10`.\n\n---\n\n## 13. HazardUnit - phát hiện load-use và dừng pipeline\n\n```mermaid\nflowchart TD\n    IN([\"MemRead_ex, rd_ex<br/>rs1_id, rs2_id\"]) --> Q1{\"lệnh ở EX là load<br/>(MemRead_ex = 1)?\"}\n    Q1 -->|\"không\"| N([\"stall = 0\"])\n    Q1 -->|\"có\"| Q2{\"rd_ex khác x0?\"}\n    Q2 -->|\"không\"| N\n    Q2 -->|\"có\"| Q3{\"rd_ex = rs1_id<br/>HOẶC rd_ex = rs2_id?\"}\n    Q3 -->|\"không\"| N\n    Q3 -->|\"có\"| S([\"stall = 1\"])\n    S --> A1[\"PC đứng yên (run = 0)\"]\n    S --> A2[\"IF/ID đứng yên\"]\n    S --> A3[\"từ điều khiển vào ID/EX bị xóa<br/>thành 0 = bubble\"]\n```\n\n**Giải thích từng bước.**\n1. Lệnh load chỉ có dữ liệu ở **cuối tầng MEM**, quá muộn để lệnh ngay sau dùng ở EX; forwarding không cứu được.\n2. Điều kiện stall: lệnh ở EX là load, đích khác x0, và lệnh đang ở ID dùng đúng thanh ghi đó (`rs1` hoặc `rs2`).\n3. Khi `stall = 1`: PC và IF/ID đứng yên một chu kỳ (lệnh ở ID phải chờ), còn ID/EX nhận lệnh rỗng (bubble).  Chu kỳ sau load đã ở MEM/WB nên forwarding lấy được dữ liệu.\n\n**Chi phí đúng 1 chu kỳ.**  Load, một lệnh không liên quan rồi mới dùng: không stall.  **Ví dụ:** `lw x2,0(x0)` rồi `addi x3,x2,1`: tại tick 4 `stall = 1`, tick 5 PC đứng ở 0x10.\n\n---\n\n## 14. `Pipeline` - một chu kỳ của CPU 5 tầng\n\n```mermaid\nflowchart TD\n    S([\"bắt đầu chu kỳ: cả 5 tầng chạy song song\"]) --> IFS\n    subgraph IFS[\"IF - nạp lệnh\"]\n        I1{\"pc_src_ex = 1?<br/>(branch/jal/jalr vừa quyết định ở EX)\"}\n        I1 -->|\"có\"| I2[\"PC kế = đích nhảy target_ex<br/>lệnh vừa nạp bị đổi thành 0 (flush)\"]\n        I1 -->|\"không\"| I3[\"PC kế = PC + 4<br/>lệnh = ROM tại PC\"]\n        I4{\"stall = 1?\"}\n        I4 -->|\"có\"| I5[\"PC và IF/ID đứng yên\"]\n        I4 -->|\"không\"| I6[\"PC và IF/ID nạp giá trị mới\"]\n    end\n    subgraph IDS[\"ID - giải mã\"]\n        D1[\"InstructionDecode, MainControl, ImmGen<br/>RegisterFile đọc rs1, rs2\"]\n        D2{\"HazardUnit:<br/>load-use?\"}\n        D1 --> D2\n        D2 -->|\"có\"| D3[\"stall = 1<br/>từ điều khiển vào ID/EX = 0 (bubble)\"]\n        D2 -->|\"không\"| D4{\"pc_src_ex = 1?\"}\n        D4 -->|\"có\"| D5[\"từ điều khiển vào ID/EX = 0<br/>(flush lệnh nạp nhầm)\"]\n        D4 -->|\"không\"| D6[\"từ điều khiển thật đi tiếp\"]\n    end\n    subgraph EXS[\"EX - thực thi\"]\n        E1[\"ForwardingUnit chọn nguồn<br/>của toán hạng A và B\"]\n        E1 --> E2{\"ForwardA/B\"}\n        E2 -->|\"00\"| E3[\"lấy từ ID/EX (thanh ghi)\"]\n        E2 -->|\"01\"| E4[\"lấy wb_data (MEM/WB)\"]\n        E2 -->|\"10\"| E5[\"lấy EX/MEM<br/>(ALU, hoặc PC+4 nếu jal/jalr)\"]\n        E3 --> E6[\"ALU tính, BranchUnit quyết định<br/>PC + imm và đích jalr\"]\n        E4 --> E6\n        E5 --> E6\n        E6 --> E7{\"branch_taken hoặc IsJAL hoặc IsJALR?\"}\n        E7 -->|\"có\"| E8[\"pc_src_ex = 1\"]\n        E7 -->|\"không\"| E9[\"pc_src_ex = 0\"]\n    end\n    subgraph MS[\"MEM - bộ nhớ\"]\n        M1[\"Memory: load đọc, store ghi\"]\n    end\n    subgraph WS[\"WB - ghi lại\"]\n        W1[\"WBSel chọn alu_result, mem_rdata hoặc PC+4<br/>ghi vào rd ở cạnh XUỐNG xung nhịp\"]\n    end\n    IFS --> IDS\n    IDS --> EXS\n    EXS --> MS\n    MS --> WS\n```\n\n**Giải thích từng bước.**\n1. Trong mỗi chu kỳ năm tầng làm việc trên **năm lệnh khác nhau**; bốn thanh ghi pipeline (IF/ID, ID/EX, EX/MEM, MEM/WB) giữ mọi thứ mà mỗi lệnh cần ở tầng sau, gồm cả \"từ điều khiển\" đóng gói sinh một lần ở ID.\n2. **Stall (load-use):** `HazardUnit` thấy lệnh ở ID phụ thuộc lệnh load ở EX -> giữ PC và IF/ID, chèn bubble vào ID/EX.\n3. **Forwarding:** ở EX, nếu một toán hạng đã có ở lệnh phía trước chưa ghi xong, `ForwardingUnit` đưa nó thẳng vào ALU.\n4. **Flush (control hazard):** branch, `jal`, `jalr` quyết định ở EX; khi `pc_src_ex = 1`, PC nhảy tới đích và **hai lệnh đã nạp phía sau bị hủy** (thành bubble): mất 2 chu kỳ.  Branch không rẽ không mất gì.\n5. **Register file ghi ở cạnh xuống** (`CLK_n`): lệnh ở WB ghi nửa đầu chu kỳ, lệnh ở ID đọc nửa sau nên thấy giá trị mới (không cần forward khoảng cách 3 lệnh).\n\n**Các trường hợp (tóm tắt):**\n\n| Tình huống | Dấu hiệu trên probe | Cách giải quyết | Chi phí |\n|---|---|---|---|\n| dùng giá trị ALU vừa tính | `ForwardA/B` = 10 hoặc 01 | forwarding | 0 chu kỳ |\n| dùng giá trị vừa load | `stall` = 1, PC đứng yên 1 tick | stall + forwarding | 1 chu kỳ |\n| branch/jal/jalr được rẽ | `pc_src_ex` = 1, sau đó `instr_id` = 0 | flush 2 lệnh | 2 chu kỳ |\n| branch không rẽ | `pc_src_ex` = 0 | không làm gì | 0 chu kỳ |\n\nChi tiết từng tick của `hazards_demo.s` xem `docs/vi/DEMO_EXPLAIN.md` mục 6.\n\n---\n\n## 15. Bảng so sánh nhanh: mỗi circuit trả lời câu hỏi gì\n\n| Circuit | Câu hỏi nó trả lời | Đầu vào chính | Đầu ra chính |\n|---|---|---|---|\n| InstructionDecode | Lệnh gồm những trường nào? | `Instruction` | `opcode rd funct3 rs1 rs2 funct7` |\n| MainControl | Lệnh này cần bật những tín hiệu nào? | `opcode` | `RegWrite ALUSrc MemWrite MemRead IsBranch ALUOp ImmSel ASel WBSel IsJAL IsJALR` |\n| ImmGen | Hằng số trong lệnh là bao nhiêu? | `Instruction`, `ImmSel` | `Imm` |\n| RegisterFile | Giá trị các thanh ghi nguồn, và ghi vào đâu? | `rs1 rs2 rd write_data RegWrite` | `rs1_data rs2_data` |\n| ALUControl | ALU phải làm phép gì? | `ALUOp funct3 funct7` | `ALUCtrl` |\n| ALU | Kết quả phép tính là gì? | `rs1_data rs2_data ALU_Ctrl` | `result` |\n| BranchUnit | Có rẽ nhánh không? | `rs1_data rs2_data funct3 IsBranch` | `branch_taken` |\n| LoadExtract | Giá trị load là gì? | từ RAM, `Address[1:0]`, `funct3` | `read_data` |\n| StoreMerge | Từ mới ghi vào RAM là gì? | từ cũ, `write_data`, `funct3`, `Address[1:0]` | `new_word` |\n| Memory | Đọc/ghi RAM thế nào? | `Address write_data MemWrite funct3` | `read_data` |\n| `main` | Một lệnh chạy trọn vẹn thế nào? | xung nhịp | PC, thanh ghi, RAM |\n| ForwardingUnit | Lấy toán hạng từ đâu cho đúng? | `rs1_ex rs2_ex rd_mem rd_wb RegWrite_*` | `ForwardA ForwardB` |\n| HazardUnit | Có phải dừng pipeline không? | `MemRead_ex rd_ex rs1_id rs2_id` | `stall` |\n| `Pipeline` | Năm lệnh chạy chồng thế nào? | xung nhịp | PC, thanh ghi, RAM |\n", en: "# Flowcharts of each circuit\n\n> English version of docs/vi/FLOWCHARTS.md (the Vietnamese file is the original).\n\nThis document draws a **flowchart for all 14 circuits** of the project, with a detailed step-by-step explanation, examples with real values, and special cases.  The diagrams are written in **Mermaid**, so they render automatically on GitHub, in VS Code (with a Markdown Mermaid extension), or in Obsidian.  If your viewer does not render them, paste the code into https://mermaid.live.\n\n**How to read the notation**\n\n| Symbol | Meaning |\n|---|---|\n| rectangle | a processing step or a circuit block |\n| diamond | a **selection** (multiplexer) or a condition |\n| rounded shape | an input or output of the circuit |\n| labeled arrow | the condition or signal value that selects that branch |\n\nContents: 0 Overview - 1 InstructionDecode - 2 MainControl - 3 ImmGen - 4 RegisterFile - 5 ALUControl - 6 ALU - 7 BranchUnit - 8 LoadExtract - 9 StoreMerge - 10 Memory - 11 `main` (single-cycle) - 12 ForwardingUnit - 13 HazardUnit - 14 `Pipeline` - 15 Quick comparison table\n\n---\n\n## 0. Overview: the whole computer from a distance\n\n```mermaid\nflowchart LR\n    PC([\"PC<br/>instruction address\"]) --> ROM[\"Instruction ROM<br/>256 x 32\"]\n    ROM -->|\"32-bit instruction\"| ID[\"InstructionDecode<br/>cuts into fields\"]\n    ID --> CTL[\"MainControl<br/>generates control signals\"]\n    ID --> RF[\"RegisterFile<br/>reads rs1, rs2\"]\n    ID --> IMM[\"ImmGen<br/>builds the imm constant\"]\n    CTL -. \"ALUOp\" .-> ALUC[\"ALUControl\"]\n    ALUC -. \"ALUCtrl\" .-> ALU[\"ALU<br/>computes the result\"]\n    RF --> ALU\n    IMM --> ALU\n    RF --> BR[\"BranchUnit<br/>is the branch taken?\"]\n    ALU --> MEM[\"Memory<br/>RAM + LoadExtract + StoreMerge\"]\n    ALU --> WB{\"select the value<br/>to write back (WBSel)\"}\n    MEM --> WB\n    WB --> RF\n    BR --> NPC{\"select next PC\"}\n    ALU --> NPC\n    NPC --> PC\n```\n\n**How to read it.**  In each cycle the CPU does exactly one loop: fetch the instruction from ROM at PC, cut the instruction, read registers and build the constant, the ALU computes, (if needed) access RAM, select the value to write back into register `rd`, and select the next PC.  Dashed lines are control signals, solid lines are data.  The `main` CPU does this whole loop in **one** clock cycle; the `Pipeline` CPU splits the loop into 5 stages so that five instructions run overlapped.\n\n---\n\n## 1. InstructionDecode - cutting the instruction into fields\n\n```mermaid\nflowchart TD\n    I([\"Instruction<br/>32 bit\"]) --> S[\"Splitter 32 into 6 parts<br/>just wiring, no gates\"]\n    S --> O[\"opcode = bit 6..0\"]\n    S --> RD[\"rd = bit 11..7\"]\n    S --> F3[\"funct3 = bit 14..12\"]\n    S --> R1[\"rs1 = bit 19..15\"]\n    S --> R2[\"rs2 = bit 24..20\"]\n    S --> F7[\"funct7 = bit 31..25\"]\n```\n\n**Step-by-step explanation.**\n1. The 32-bit instruction goes into a single splitter.\n2. The splitter divides the bus into six wires at **fixed** bit positions: `opcode` (7 bits), `rd` (5), `funct3` (3), `rs1` (5), `rs2` (5), `funct7` (7).\n3. There is no computation: this is just wiring, so it costs no time and there is nothing that can go wrong.\n\n**Example:** instruction `00b50533` -> `opcode = 0x33` (R-type), `rd = 10`, `funct3 = 0`, `rs1 = 10`, `rs2 = 11`, `funct7 = 0` -> this is `add x10, x10, x11`.\n\n**Special case:** U/J-type instructions have no real `rs1`/`rs2`/`funct3`; those bits are still cut out but the later blocks ignore them.  Because RISC-V always places `rs1` and `rs2` in the same spot, the registers can be read **while** the opcode is still being decoded.\n\n---\n\n## 2. MainControl - generating every control signal from the opcode\n\n```mermaid\nflowchart TD\n    OP([\"opcode 7 bit\"]) --> C{\"compare opcode with 9 constants<br/>one comparator per group\"}\n    C -->|\"0x33\"| R[\"IsR<br/>add, sub, and, or, sll...\"]\n    C -->|\"0x13\"| I[\"IsI<br/>addi, andi, slli...\"]\n    C -->|\"0x03\"| L[\"IsLoad<br/>lb, lh, lw, lbu, lhu\"]\n    C -->|\"0x23\"| S[\"IsStore<br/>sb, sh, sw\"]\n    C -->|\"0x63\"| B[\"IsBranch<br/>beq, bne, blt...\"]\n    C -->|\"0x37\"| LUI[\"IsLui\"]\n    C -->|\"0x17\"| AU[\"IsAuipc\"]\n    C -->|\"0x6F\"| J[\"IsJAL\"]\n    C -->|\"0x67\"| JR[\"IsJALR\"]\n    C -->|\"other\"| N[\"all flags = 0<br/>safe empty instruction (NOP)\"]\n    R --> OR1[\"OR gates combine flags\"]\n    I --> OR1\n    L --> OR1\n    S --> OR1\n    B --> OR1\n    LUI --> OR1\n    AU --> OR1\n    J --> OR1\n    JR --> OR1\n    OR1 --> RW([\"RegWrite = R, I, load, lui, auipc, jal, jalr\"])\n    OR1 --> AS([\"ALUSrc = I, load, store, lui, auipc, jalr\"])\n    OR1 --> AO([\"ALUOp 2 bit<br/>bit1 = R or I, bit0 = I or branch\"])\n    OR1 --> IM([\"ImmSel 3 bit<br/>I 000, S 001, B 010, U 011, J 100\"])\n    OR1 --> ASEL([\"ASel 2 bit<br/>00 rs1, 01 PC, 10 zero\"])\n    OR1 --> WBS([\"WBSel 2 bit<br/>00 ALU, 01 RAM, 10 PC+4\"])\n    OR1 --> OTH([\"MemWrite = IsStore<br/>MemRead = IsLoad<br/>IsBranch, IsJAL, IsJALR\"])\n```\n\n**Step-by-step explanation.**\n1. Nine 7-bit comparators compare `opcode` with nine constants; only one reports \"equal\", producing the flag of that instruction group (`IsR`, `IsI`...).\n2. OR gates (at most 3 inputs, so split into two halves) combine the flags into each signal: for example `RegWrite` is on for every group that **writes `rd`**; store and branch are not included, so they do not write registers.\n3. Multi-bit signals (`ALUOp`, `ImmSel`, `ASel`, `WBSel`) are assembled from single bits with a splitter.\n4. An unknown opcode makes every flag 0, so the instruction does nothing (NOP) without corrupting the state.\n\n**Result table for some instructions** (checked with `tests/maincontrol.vec`):\n\n| Instruction | RegWrite | ALUSrc | MemWrite | MemRead | ALUOp | ImmSel | ASel | WBSel |\n|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|\n| `add` (R) | 1 | 0 | 0 | 0 | 10 | - | 00 | 00 |\n| `addi` (I) | 1 | 1 | 0 | 0 | 11 | 000 | 00 | 00 |\n| `lw` | 1 | 1 | 0 | 1 | 00 | 000 | 00 | 01 |\n| `sw` | 0 | 1 | 1 | 0 | 00 | 001 | 00 | - |\n| `beq` | 0 | 0 | 0 | 0 | 01 | 010 | 00 | - |\n| `lui` | 1 | 1 | 0 | 0 | 00 | 011 | 10 | 00 |\n| `auipc` | 1 | 1 | 0 | 0 | 00 | 011 | 01 | 00 |\n| `jal` | 1 | - | 0 | 0 | - | 100 | - | 10 |\n| `jalr` | 1 | 1 | 0 | 0 | 00 | 000 | 00 | 10 |\n\n---\n\n## 3. ImmGen - building the immediate constant\n\n```mermaid\nflowchart TD\n    IN([\"Instruction + ImmSel\"]) --> SEL{\"ImmSel\"}\n    SEL -->|\"000 I-type\"| TI[\"take instr 31..20 (12 bit)<br/>sign-extend to 32 bit\"]\n    SEL -->|\"001 S-type\"| TS[\"join instr 31..25 and 11..7 (12 bit)<br/>sign-extend\"]\n    SEL -->|\"010 B-type\"| TB[\"join bit 31, 7, 30..25, 11..8, then bit 0 = 0 (13 bit)<br/>sign-extend\"]\n    SEL -->|\"011 U-type\"| TU[\"take instr 31..12<br/>append 12 zero bits (imm shifted left 12)\"]\n    SEL -->|\"100 J-type\"| TJ[\"join bit 31, 19..12, 20, 30..21, then bit 0 = 0 (21 bit)<br/>sign-extend\"]\n    TI --> MUX{\"8-way multiplexer<br/>selected by ImmSel\"}\n    TS --> MUX\n    TB --> MUX\n    TU --> MUX\n    TJ --> MUX\n    MUX --> OUT([\"Imm 32 bit\"])\n```\n\n**Step-by-step explanation.**\n1. All five ways of building the constant run **in parallel** from the same instruction (each is a few splitters plus a bit extender).\n2. The multiplexer selects the result of exactly one way according to `ImmSel` (generated by `MainControl`).\n3. **Sign extension** copies the highest bit of the constant into the upper bits, so negative numbers stay negative.  The U-type does not extend but inserts 12 zero bits (`lui`/`auipc` put the constant into the upper 20 bits).\n4. Bit 0 of the B and J types is always 0 because instruction addresses are multiples of 2 (in practice 4); the instruction therefore does not store this bit.\n\n**Example:** `fe059ce3` (`bnez x11, loop`, B-type): imm[12] = 1, imm[11] = 1, imm[10:5] = 111111, imm[4:1] = 1100, bit 0 = 0 -> 13 bits `1111111111000` -> sign-extended to **`0xFFFFFFF8` = -8**: jump back 8 bytes to the start of the loop.\n\n---\n\n## 4. RegisterFile - read two registers, write one register\n\n```mermaid\nflowchart TD\n    subgraph READ[\"Read (asynchronous, no clock wait)\"]\n        RS1([\"rs1\"]) --> M1[\"Mux 32:1<br/>selects register number rs1\"]\n        RS2([\"rs2\"]) --> M2[\"Mux 32:1<br/>selects register number rs2\"]\n        M1 --> D1([\"rs1_data\"])\n        M2 --> D2([\"rs2_data\"])\n    end\n    subgraph WRITE[\"Write (at the clock edge)\"]\n        RW([\"RegWrite\"]) --> DM[\"Demux 1:32<br/>selected by rd\"]\n        RD([\"rd\"]) --> DM\n        DM -->|\"only register number rd has WE = 1\"| REG[\"32 registers x0..x31<br/>x0 always loads zero\"]\n        WD([\"write_data\"]) --> REG\n        CLK([\"CLK\"]) --> REG\n    end\n    REG --> M1\n    REG --> M2\n```\n\n**Step-by-step explanation.**\n1. **Read:** two 32-way multiplexers select the register by `rs1` and `rs2`; since there is no clock here, changing `rs1` changes `rs1_data` immediately (the single-cycle CPU needs the operands within the cycle).\n2. **Write:** the demultiplexer sends `RegWrite` to **exactly one** register (number `rd`); that register loads `write_data` at the clock edge, the other registers keep their values.\n3. `x0` has its input tied to 0 so it stays 0 forever, no matter what is written.\n\n**Cases:** `RegWrite = 0` (store, branch) -> no register changes; `rd = 0` -> the write to x0 has no effect; reading and writing the same register in one cycle -> reads the old value (on the pipeline, this block writes at the **falling** edge so the instruction in ID sees the new value).\n\n---\n\n## 5. ALUControl - choosing the ALU operation\n\n```mermaid\nflowchart TD\n    IN([\"ALUOp, funct3, funct7\"]) --> Q{\"ALUOp\"}\n    Q -->|\"00\"| ADD0[\"ALUCtrl = 0 (ADD)<br/>load, store, lui, auipc, jalr\"]\n    Q -->|\"01\"| SUB0[\"ALUCtrl = 1 (SUB)<br/>branch: compare by subtraction\"]\n    Q -->|\"10 R-type\"| TR{\"funct3\"}\n    Q -->|\"11 I-type\"| TI{\"funct3\"}\n    TR -->|\"000\"| RAS{\"funct7 bit 5\"}\n    RAS -->|\"0\"| RADD[\"ADD (0)\"]\n    RAS -->|\"1\"| RSUB[\"SUB (1)\"]\n    TR -->|\"001\"| RSLL[\"SLL (5)\"]\n    TR -->|\"010\"| RSLT[\"SLT (8)\"]\n    TR -->|\"011\"| RSLTU[\"SLTU (9)\"]\n    TR -->|\"100\"| RXOR[\"XOR (4)\"]\n    TR -->|\"101\"| RSR{\"funct7 bit 5\"}\n    RSR -->|\"0\"| RSRL[\"SRL (6)\"]\n    RSR -->|\"1\"| RSRA[\"SRA (7)\"]\n    TR -->|\"110\"| ROR[\"OR (3)\"]\n    TR -->|\"111\"| RAND[\"AND (2)\"]\n    TI -->|\"000\"| IADD[\"ADD (0): addi\"]\n    TI -->|\"001\"| ISLL[\"SLL (5): slli\"]\n    TI -->|\"010\"| ISLT[\"SLT (8): slti\"]\n    TI -->|\"011\"| ISLTU[\"SLTU (9): sltiu\"]\n    TI -->|\"100\"| IXOR[\"XOR (4): xori\"]\n    TI -->|\"101\"| ISR{\"funct7 bit 5\"}\n    ISR -->|\"0\"| ISRL[\"SRL (6): srli\"]\n    ISR -->|\"1\"| ISRA[\"SRA (7): srai\"]\n    TI -->|\"110\"| IOR[\"OR (3): ori\"]\n    TI -->|\"111\"| IAND[\"AND (2): andi\"]\n```\n\n**Step-by-step explanation.**\n1. `ALUOp`, supplied by `MainControl`, splits into four branches: 00 add, 01 subtract (no need to look at `funct`), 10 look up the R-type table, 11 look up the I-type table.\n2. For R and I, `funct3` selects the operation (two 8-way multiplexers, one per table; each table row is a 4-bit constant).\n3. `funct7[5]` (bit 30 of the instruction) does two things: in R-type it turns ADD into SUB and SRL into SRA; in I-type it only matters for shift instructions (`srai` differs from `srli`).  `addi` ignores this bit because it is part of the constant.\n\n**Output codes:** 0 ADD, 1 SUB, 2 AND, 3 OR, 4 XOR, 5 SLL, 6 SRL, 7 SRA, 8 SLT, 9 SLTU.\n\n---\n\n## 6. ALU - compute in parallel, then select\n\n```mermaid\nflowchart TD\n    A([\"rs1_data (A)\"]) --> P[\"compute ALL operations IN PARALLEL\"]\n    B([\"rs2_data (B)\"]) --> P\n    P --> R0[\"A + B (ADD)\"]\n    P --> R1[\"A - B (SUB)\"]\n    P --> R2[\"A and B\"]\n    P --> R3[\"A or B\"]\n    P --> R4[\"A xor B\"]\n    P --> R5[\"A shifted left by B[4:0] (SLL)\"]\n    P --> R6[\"A logical shift right by B[4:0] (SRL)\"]\n    P --> R7[\"A arithmetic shift right by B[4:0] (SRA)\"]\n    P --> R8[\"A less than B, signed<br/>zero-extend to 0 or 1\"]\n    P --> R9[\"A less than B, unsigned<br/>zero-extend to 0 or 1\"]\n    R0 --> MX{\"16-way Mux<br/>selected by ALU_Ctrl\"}\n    R1 --> MX\n    R2 --> MX\n    R3 --> MX\n    R4 --> MX\n    R5 --> MX\n    R6 --> MX\n    R7 --> MX\n    R8 --> MX\n    R9 --> MX\n    CT([\"ALU_Ctrl 0..9\"]) --> MX\n    MX --> OUT([\"result 32 bit\"])\n```\n\n**Step-by-step explanation.**\n1. Ten operations run at the same time from the same two operands; no operation \"knows\" which one is selected.\n2. The 16-way multiplexer (using 10 inputs) takes exactly one result according to `ALU_Ctrl` (from `ALUControl`).\n3. Shift instructions use only the low 5 bits of B (shift at most 31).  SRL inserts 0 bits at the top, SRA copies the sign bit.\n4. SLT/SLTU produce a 1-bit result; **zero-extend** it to 32 bits to get exactly 0 or 1.  (A bug we hit: sign extension made SLTU return `0xFFFFFFFF`.)\n\n**Example:** A = -1 (`0xFFFFFFFF`), B = 1: SLT gives 1 (since -1 < 1 signed), SLTU gives 0 (since 4294967295 is not less than 1).  Overflow in add/subtract is ignored: the result wraps around at 32 bits exactly as in RISC-V.\n\n---\n\n## 7. BranchUnit - is the branch taken\n\n```mermaid\nflowchart TD\n    IN([\"rs1_data, rs2_data, funct3, IsBranch\"]) --> CMP[\"compare rs1 with rs2<br/>equal, less than signed, less than unsigned<br/>and their negations\"]\n    CMP --> F{\"funct3\"}\n    F -->|\"000 beq\"| C0[\"equal\"]\n    F -->|\"001 bne\"| C1[\"not equal\"]\n    F -->|\"100 blt\"| C4[\"less than, signed\"]\n    F -->|\"101 bge\"| C5[\"greater than or equal, signed\"]\n    F -->|\"110 bltu\"| C6[\"less than, unsigned\"]\n    F -->|\"111 bgeu\"| C7[\"greater than or equal, unsigned\"]\n    F -->|\"010, 011\"| C2[\"not a branch instruction<br/>condition = 0\"]\n    C0 --> AND\n    C1 --> AND\n    C4 --> AND\n    C5 --> AND\n    C6 --> AND\n    C7 --> AND\n    C2 --> AND\n    AND{\"IsBranch = 1<br/>AND condition true?\"} -->|\"yes\"| T([\"branch_taken = 1<br/>PC = PC + imm\"])\n    AND -->|\"no\"| N([\"branch_taken = 0<br/>PC = PC + 4\"])\n```\n\n**Step-by-step explanation.**\n1. One unsigned comparator and one signed comparator produce the \"equal\" and \"less than\" relations; three NOT gates produce the negations (\"not equal\", \"greater than or equal\").\n2. An 8-way multiplexer driven by `funct3` selects the condition of exactly the branch instruction being executed.\n3. The AND gate with `IsBranch` guarantees that other instructions (which also have a `funct3`) are **never** treated as taken branches.\n\n**Example:** `bnez x11, loop` is `bne x11, x0`: when x11 = 9, 9 is not equal to 0 -> `branch_taken = 1`, PC returns to the start of the loop; when x11 = 0 they are equal -> `branch_taken = 0`, the loop ends.  `blt` and `bltu` differ only in which comparator is used (signed or unsigned): with -1 and 1, `blt` is taken, `bltu` is not.\n\n---\n\n## 8. LoadExtract - extracting the data of a load instruction\n\n```mermaid\nflowchart TD\n    W([\"32-bit word from RAM<br/>Address[1:0], funct3\"]) --> SPLB[\"split into 4 bytes\"]\n    W --> SPLH[\"split into 2 halfwords\"]\n    SPLB --> MB{\"select byte<br/>by Address[1:0]\"}\n    SPLH --> MH{\"select halfword<br/>by Address[1]\"}\n    MB --> EB1[\"SIGN-extend 8 to 32 bit (lb)\"]\n    MB --> EB2[\"zero-extend 8 to 32 bit (lbu)\"]\n    MH --> EH1[\"SIGN-extend 16 to 32 bit (lh)\"]\n    MH --> EH2[\"zero-extend 16 to 32 bit (lhu)\"]\n    EB1 --> F{\"funct3\"}\n    EB2 --> F\n    EH1 --> F\n    EH2 --> F\n    W --> F\n    F -->|\"000\"| OB[\"lb\"]\n    F -->|\"001\"| OH[\"lh\"]\n    F -->|\"010\"| OW[\"lw: whole word, unchanged\"]\n    F -->|\"100\"| OBU[\"lbu\"]\n    F -->|\"101\"| OHU[\"lhu\"]\n    OB --> OUT([\"read_data 32 bit\"])\n    OH --> OUT\n    OW --> OUT\n    OBU --> OUT\n    OHU --> OUT\n```\n\n**Step-by-step explanation.**\n1. RAM always reads the **entire 32-bit word**; cutting out a byte or halfword is the job of this block.\n2. Two multiplexers select the byte (by `Address[1:0]`) and the halfword (by `Address[1]`).\n3. Four bit extenders prepare all four results (signed and unsigned); the final multiplexer selects by `funct3` (000 lb, 001 lh, 010 lw, 100 lbu, 101 lhu).\n\n**Example:** word `0x000000F0`, byte address 0: `lb` gives `0xFFFFFFF0` (0xF0 has sign bit = 1 so it is extended with all 1s), `lbu` gives `0x000000F0`, `lw` gives the whole `0x000000F0`.\n\n---\n\n## 9. StoreMerge - writing part of a word (read - modify - write)\n\n```mermaid\nflowchart TD\n    IN([\"old_word (the old word currently in RAM)<br/>write_data, funct3, Address[1:0]\"]) --> SZ[\"size = funct3[1:0]<br/>00 byte, 01 halfword, 10 word\"]\n    SZ --> ROM[\"ROM 16 rows x 4 bit<br/>address = size and Address[1:0]\"]\n    ROM --> EN[\"4 enable bits: each bit corresponds to one byte lane<br/>byte: 0001 0010 0100 1000<br/>halfword: 0011, 1100<br/>word: 1111\"]\n    IN --> SRC[\"select the source byte for each lane<br/>sb: always the low byte of write_data<br/>sh: the two low bytes<br/>sw: all 4 bytes\"]\n    EN --> L{\"for each lane i from 0 to 3:<br/>enable = 1?\"}\n    SRC --> L\n    IN --> OLD[\"split old_word into 4 bytes\"]\n    OLD --> L\n    L -->|\"1\"| NEWB[\"lane i takes the NEW byte\"]\n    L -->|\"0\"| OLDB[\"lane i keeps the OLD byte\"]\n    NEWB --> JOIN[\"join 4 lanes into the new 32-bit word\"]\n    OLDB --> JOIN\n    JOIN --> OUT([\"new_word -> RAM writes the whole word\"])\n```\n\n**Step-by-step explanation.**\n1. RAM only writes a **whole word**, so when writing just one byte the other three bytes must be preserved.\n2. The old word is read out (RAM reads asynchronously so it is available in the same cycle).\n3. A small 16-row ROM converts `{size, Address[1:0]}` into 4 enable bits, each bit being one byte \"lane\".\n4. For each lane: if enabled, take the new byte (from `write_data`), otherwise keep the old byte.  The four lanes are joined into the new word for RAM to write.\n\n**Example:** old word `0x11223344`, `sb x1, 1(x0)` with x1 = `0xAA`: `size = 00` (byte), `Address[1:0] = 01` -> enable = `0010` (only lane 1) -> new word = `0x1122AA44`.\n\n---\n\n## 10. Memory - the data memory\n\n```mermaid\nflowchart TD\n    IN([\"Address, write_data, MemWrite, CLK, funct3\"]) --> SPL[\"split Address<br/>Address[9:2] = word index<br/>Address[1:0] = byte within word\"]\n    SPL --> RAM[\"RAM 256 x 32<br/>asynchronous READ\"]\n    RAM -->|\"old word\"| LE[\"LoadExtract<br/>cuts byte, halfword + extends\"]\n    RAM -->|\"old word\"| SM[\"StoreMerge<br/>merges new byte into old word\"]\n    IN --> SM\n    SM -->|\"new word\"| W{\"MemWrite = 1?\"}\n    W -->|\"yes, at the rising clock edge\"| WR[\"RAM writes the new word to the address\"]\n    W -->|\"no\"| NOW[\"RAM unchanged\"]\n    LE --> OUT([\"read_data\"])\n```\n\n**Step-by-step explanation.**\n1. The address is split: the word index (0..255) goes into RAM, the two low bits indicate the byte within the word.\n2. RAM immediately returns the word at that address (asynchronous read).  `LoadExtract` turns this word into the value of the load instruction.\n3. For a store instruction, `StoreMerge` builds the new word; only when `MemWrite = 1` does RAM write, at the rising clock edge.\n4. Instructions that are not load/store have `MemWrite = 0` so RAM is unchanged; `read_data` still has a value but it is ignored at the write-back step.\n\n**Why asynchronous read:** with a synchronous read the data would only appear after the next clock edge, and a load would return undefined data (a bug we hit and fixed).  Addresses of 1 KiB and above wrap around because only `Address[9:2]` is used.\n\n---\n\n## 11. `main` - single-cycle CPU: one instruction in one cycle\n\n```mermaid\nflowchart TD\n    S([\"start of cycle\"]) --> IF[\"IF: ROM reads the instruction at PC<br/>pc_plus4 = PC + 4\"]\n    IF --> ID[\"ID: InstructionDecode cuts the instruction<br/>MainControl generates control<br/>RegisterFile reads rs1, rs2<br/>ImmGen builds imm\"]\n    ID --> MA{\"ASel\"}\n    MA -->|\"00\"| A1[\"A = rs1\"]\n    MA -->|\"01 auipc\"| A2[\"A = PC\"]\n    MA -->|\"10 lui\"| A3[\"A = 0\"]\n    ID --> MB{\"ALUSrc\"}\n    MB -->|\"0\"| B1[\"B = rs2\"]\n    MB -->|\"1\"| B2[\"B = imm\"]\n    A1 --> ALU\n    A2 --> ALU\n    A3 --> ALU\n    B1 --> ALU\n    B2 --> ALU\n    ALU[\"EX: ALUControl selects the operation, ALU computes alu_result<br/>BranchUnit computes branch_taken\"] --> MEMQ{\"load or store instruction?\"}\n    MEMQ -->|\"load: MemRead\"| LD[\"MEM: RAM reads, LoadExtract gives mem_rdata\"]\n    MEMQ -->|\"store: MemWrite\"| ST[\"MEM: StoreMerge builds the new word, RAM writes\"]\n    MEMQ -->|\"no\"| SK[\"skip MEM\"]\n    LD --> WBQ\n    ST --> WBQ\n    SK --> WBQ\n    WBQ{\"WBSel\"} -->|\"00\"| W1[\"write alu_result\"]\n    WBQ -->|\"01\"| W2[\"write mem_rdata\"]\n    WBQ -->|\"10\"| W3[\"write PC + 4\"]\n    W1 --> RWQ{\"RegWrite = 1?\"}\n    W2 --> RWQ\n    W3 --> RWQ\n    RWQ -->|\"yes\"| WR[\"write the value into rd at the clock edge\"]\n    RWQ -->|\"no\"| NW[\"no register write\"]\n    WR --> NP\n    NW --> NP\n    NP{\"select next PC\"} -->|\"IsJALR\"| P3[\"(rs1 + imm) with bit 0 = 0\"]\n    NP -->|\"branch_taken or IsJAL\"| P2[\"PC + imm\"]\n    NP -->|\"otherwise\"| P1[\"PC + 4\"]\n    P1 --> E([\"new PC, end of cycle\"])\n    P2 --> E\n    P3 --> E\n```\n\n**Step-by-step explanation.**\n1. **IF:** ROM receives `PC[9:2]` and returns the instruction; a separate adder computes `PC + 4`.\n2. **ID:** the instruction is cut, control is generated, two registers are read, the constant is built; all four things happen in parallel.\n3. **EX:** two multiplexers select operand A (`rs1`, `PC` or `0`) and B (`rs2` or `imm`); the ALU computes; `BranchUnit` decides the branch.\n4. **MEM:** there is work only for load/store.\n5. **WB:** the `WBSel` multiplexer selects the value to write (ALU, RAM or PC+4); if `RegWrite = 1` it is written into `rd`.\n6. **Next PC:** `jalr` (target computed by the ALU, bit 0 cleared) has the highest priority; then a taken branch or `jal` (PC + imm); otherwise PC + 4.\n\n**Why it is designed this way:** `lui`, `auipc`, `jal`, `jalr` reuse the same ALU and write-back path thanks to `ASel` and `WBSel`, with no extra dedicated hardware.\n\n**Examples of each instruction group in `demo.s`:** see `DEMO_EXPLAIN.md` section 3 (add, addi, bnez, sw, lw, jal, ret, sub, slti) with the real values on each wire.\n\n---\n\n## 12. ForwardingUnit - choosing the newest source for the operand at EX\n\n```mermaid\nflowchart TD\n    IN([\"rs1_ex (or rs2_ex)<br/>rd_mem, RegWrite_mem<br/>rd_wb, RegWrite_wb\"]) --> Q1{\"the instruction at MEM writes a register<br/>AND rd_mem is not x0<br/>AND rd_mem = rs1_ex ?\"}\n    Q1 -->|\"yes\"| F10([\"Forward = 10<br/>take from EX/MEM\"])\n    Q1 -->|\"no\"| Q2{\"the instruction at WB writes a register<br/>AND rd_wb is not x0<br/>AND rd_wb = rs1_ex ?\"}\n    Q2 -->|\"yes\"| F01([\"Forward = 01<br/>take from MEM/WB\"])\n    Q2 -->|\"no\"| F00([\"Forward = 00<br/>take from the register file\"])\n```\n\n**Step-by-step explanation.**\n1. The problem: the instruction at EX needs a register that an **earlier** instruction has not yet written into the register file (a RAW dependency: read after write).\n2. Check the immediately preceding instruction (now at MEM) **first**: if it writes exactly the register needed, take its result from EX/MEM (`Forward = 10`).\n3. If not, check the instruction one further back (now at WB): take from MEM/WB (`Forward = 01`).\n4. If neither matches: use the value read from the register file (`00`).\n5. This block runs twice: once for `rs1` (`ForwardA`), once for `rs2` (`ForwardB`).\n\n**Why MEM has priority:** if both stages write that register, the instruction at MEM is newer so its value is the correct one.  **Why x0 is excluded:** x0 is always 0, and forwarding a \"result\" written to x0 would be wrong.  The value taken from EX/MEM is the ALU result, **except for `jal`/`jalr`, where it is PC + 4**.\n\n**Example (`hazards_demo.s`):** `li x1,100` followed immediately by `sw x1,0(x0)`: when `sw` is at EX, `li` is at MEM, `rd_mem = 1 = rs2_ex` -> `ForwardB = 10`.\n\n---\n\n## 13. HazardUnit - detecting load-use and stalling the pipeline\n\n```mermaid\nflowchart TD\n    IN([\"MemRead_ex, rd_ex<br/>rs1_id, rs2_id\"]) --> Q1{\"the instruction at EX is a load<br/>(MemRead_ex = 1)?\"}\n    Q1 -->|\"no\"| N([\"stall = 0\"])\n    Q1 -->|\"yes\"| Q2{\"rd_ex is not x0?\"}\n    Q2 -->|\"no\"| N\n    Q2 -->|\"yes\"| Q3{\"rd_ex = rs1_id<br/>OR rd_ex = rs2_id?\"}\n    Q3 -->|\"no\"| N\n    Q3 -->|\"yes\"| S([\"stall = 1\"])\n    S --> A1[\"PC holds (run = 0)\"]\n    S --> A2[\"IF/ID holds\"]\n    S --> A3[\"control word into ID/EX is cleared<br/>to 0 = bubble\"]\n```\n\n**Step-by-step explanation.**\n1. A load instruction only has its data at the **end of the MEM stage**, too late for the next instruction to use at EX; forwarding cannot save it.\n2. Stall condition: the instruction at EX is a load, its destination is not x0, and the instruction at ID uses exactly that register (`rs1` or `rs2`).\n3. When `stall = 1`: PC and IF/ID hold for one cycle (the instruction at ID must wait), and ID/EX receives an empty instruction (bubble).  In the next cycle the load is at MEM/WB so forwarding can get the data.\n\n**The cost is exactly 1 cycle.**  Load, one unrelated instruction, then the use: no stall.  **Example:** `lw x2,0(x0)` then `addi x3,x2,1`: at tick 4 `stall = 1`, at tick 5 PC stays at 0x10.\n\n---\n\n## 14. `Pipeline` - one cycle of the 5-stage CPU\n\n```mermaid\nflowchart TD\n    S([\"start of cycle: all 5 stages run in parallel\"]) --> IFS\n    subgraph IFS[\"IF - instruction fetch\"]\n        I1{\"pc_src_ex = 1?<br/>(branch/jal/jalr just decided at EX)\"}\n        I1 -->|\"yes\"| I2[\"next PC = jump target target_ex<br/>the instruction just fetched is changed to 0 (flush)\"]\n        I1 -->|\"no\"| I3[\"next PC = PC + 4<br/>instruction = ROM at PC\"]\n        I4{\"stall = 1?\"}\n        I4 -->|\"yes\"| I5[\"PC and IF/ID hold\"]\n        I4 -->|\"no\"| I6[\"PC and IF/ID load new values\"]\n    end\n    subgraph IDS[\"ID - decode\"]\n        D1[\"InstructionDecode, MainControl, ImmGen<br/>RegisterFile reads rs1, rs2\"]\n        D2{\"HazardUnit:<br/>load-use?\"}\n        D1 --> D2\n        D2 -->|\"yes\"| D3[\"stall = 1<br/>control word into ID/EX = 0 (bubble)\"]\n        D2 -->|\"no\"| D4{\"pc_src_ex = 1?\"}\n        D4 -->|\"yes\"| D5[\"control word into ID/EX = 0<br/>(flush the wrongly fetched instruction)\"]\n        D4 -->|\"no\"| D6[\"the real control word moves on\"]\n    end\n    subgraph EXS[\"EX - execute\"]\n        E1[\"ForwardingUnit selects the source<br/>of operands A and B\"]\n        E1 --> E2{\"ForwardA/B\"}\n        E2 -->|\"00\"| E3[\"take from ID/EX (register)\"]\n        E2 -->|\"01\"| E4[\"take wb_data (MEM/WB)\"]\n        E2 -->|\"10\"| E5[\"take EX/MEM<br/>(ALU, or PC+4 for jal/jalr)\"]\n        E3 --> E6[\"ALU computes, BranchUnit decides<br/>PC + imm and the jalr target\"]\n        E4 --> E6\n        E5 --> E6\n        E6 --> E7{\"branch_taken or IsJAL or IsJALR?\"}\n        E7 -->|\"yes\"| E8[\"pc_src_ex = 1\"]\n        E7 -->|\"no\"| E9[\"pc_src_ex = 0\"]\n    end\n    subgraph MS[\"MEM - memory\"]\n        M1[\"Memory: load reads, store writes\"]\n    end\n    subgraph WS[\"WB - write back\"]\n        W1[\"WBSel selects alu_result, mem_rdata or PC+4<br/>writes into rd at the FALLING clock edge\"]\n    end\n    IFS --> IDS\n    IDS --> EXS\n    EXS --> MS\n    MS --> WS\n```\n\n**Step-by-step explanation.**\n1. In each cycle the five stages work on **five different instructions**; four pipeline registers (IF/ID, ID/EX, EX/MEM, MEM/WB) hold everything each instruction needs in the later stages, including the packed \"control word\" generated once at ID.\n2. **Stall (load-use):** `HazardUnit` sees that the instruction at ID depends on the load at EX -> hold PC and IF/ID, insert a bubble into ID/EX.\n3. **Forwarding:** at EX, if an operand is already available from an earlier instruction that has not finished writing, `ForwardingUnit` feeds it straight into the ALU.\n4. **Flush (control hazard):** branch, `jal`, `jalr` are decided at EX; when `pc_src_ex = 1`, PC jumps to the target and the **two instructions already fetched behind are discarded** (turned into bubbles): this costs 2 cycles.  A branch not taken costs nothing.\n5. **The register file writes at the falling edge** (`CLK_n`): the instruction at WB writes in the first half of the cycle, the instruction at ID reads in the second half and so sees the new value (no need to forward at a distance of 3 instructions).\n\n**Cases (summary):**\n\n| Situation | Sign on the probe | How it is resolved | Cost |\n|---|---|---|---|\n| uses an ALU value just computed | `ForwardA/B` = 10 or 01 | forwarding | 0 cycles |\n| uses a value just loaded | `stall` = 1, PC holds for 1 tick | stall + forwarding | 1 cycle |\n| branch/jal/jalr taken | `pc_src_ex` = 1, then `instr_id` = 0 | flush 2 instructions | 2 cycles |\n| branch not taken | `pc_src_ex` = 0 | nothing | 0 cycles |\n\nFor the tick-by-tick details of `hazards_demo.s` see `DEMO_EXPLAIN.md` section 6.\n\n---\n\n## 15. Quick comparison table: what question each circuit answers\n\n| Circuit | The question it answers | Main inputs | Main outputs |\n|---|---|---|---|\n| InstructionDecode | Which fields does the instruction consist of? | `Instruction` | `opcode rd funct3 rs1 rs2 funct7` |\n| MainControl | Which signals must this instruction turn on? | `opcode` | `RegWrite ALUSrc MemWrite MemRead IsBranch ALUOp ImmSel ASel WBSel IsJAL IsJALR` |\n| ImmGen | What is the constant in the instruction? | `Instruction`, `ImmSel` | `Imm` |\n| RegisterFile | What are the values of the source registers, and where to write? | `rs1 rs2 rd write_data RegWrite` | `rs1_data rs2_data` |\n| ALUControl | Which operation must the ALU perform? | `ALUOp funct3 funct7` | `ALUCtrl` |\n| ALU | What is the result of the operation? | `rs1_data rs2_data ALU_Ctrl` | `result` |\n| BranchUnit | Is the branch taken? | `rs1_data rs2_data funct3 IsBranch` | `branch_taken` |\n| LoadExtract | What is the loaded value? | word from RAM, `Address[1:0]`, `funct3` | `read_data` |\n| StoreMerge | What is the new word written to RAM? | old word, `write_data`, `funct3`, `Address[1:0]` | `new_word` |\n| Memory | How are RAM reads/writes done? | `Address write_data MemWrite funct3` | `read_data` |\n| `main` | How does one instruction run to completion? | clock | PC, registers, RAM |\n| ForwardingUnit | Where to take the operand from to be correct? | `rs1_ex rs2_ex rd_mem rd_wb RegWrite_*` | `ForwardA ForwardB` |\n| HazardUnit | Must the pipeline stall? | `MemRead_ex rd_ex rs1_id rs2_id` | `stall` |\n| `Pipeline` | How do five instructions run overlapped? | clock | PC, registers, RAM |\n" };
+</script>
+<script>
+"use strict";
+const $ = (s, r) => (r || document).querySelector(s);
+const hx = (v, n) => RV.hex(v, n);
+const SVGNS = "http://www.w3.org/2000/svg";
+const COL = { IF: "#3b82f6", ID: "#10b981", EX: "#f59e0b", MEM: "#ef4444", WB: "#8b5cf6", acc: "#2f6df6", acc2: "#e8870c", good: "#178a3e", bad: "#d63a3a", gray: "#8a97a8" };
+function el(name, attrs, parent, text) {
+  const e = document.createElementNS(SVGNS, name);
+  for (const k in attrs || {}) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+/* ================================================================= small SVG chart library */
+const Chart = {
+  frame(box, title, w, h) {
+    box.innerHTML = "";
+    const svg = el("svg", { viewBox: `0 0 ${w} ${h}` }, box);
+    el("text", { class: "ctitle", x: 4, y: 14 }, svg, title);
+    return svg;
+  },
+  niceMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; },
+  legend(svg, items, x, y) {
+    let cx = x;
+    items.forEach(([name, color]) => {
+      el("rect", { x: cx, y: y - 8, width: 10, height: 10, rx: 2, fill: color }, svg);
+      el("text", { class: "lg", x: cx + 14, y: y }, svg, name);
+      cx += 14 + name.length * 6.1 + 12;
+    });
+  },
+  bars(box, cfg) {
+    const w = cfg.w || 560, h = cfg.h || 300, m = { l: 44, r: 10, t: 40, b: 46 };
+    const svg = Chart.frame(box, cfg.title, w, h);
+    const n = cfg.labels.length, S = cfg.series.length;
+    let maxv = 0;
+    for (let i = 0; i < n; i++) {
+      if (cfg.stacked) maxv = Math.max(maxv, cfg.series.reduce((a, s) => a + s.values[i], 0));
+      else cfg.series.forEach((s) => { maxv = Math.max(maxv, s.values[i]); });
+    }
+    const top = Chart.niceMax(maxv * 1.05), pw = w - m.l - m.r, ph = h - m.t - m.b;
+    for (let k = 0; k <= 4; k++) {
+      const y = m.t + ph - (ph * k) / 4;
+      el("line", { class: "gridl", x1: m.l, x2: w - m.r, y1: y, y2: y }, svg);
+      el("text", { x: m.l - 5, y: y + 3, "text-anchor": "end" }, svg, (+(top * k / 4).toFixed(2)).toString());
+    }
+    el("line", { class: "axis", x1: m.l, x2: w - m.r, y1: m.t + ph, y2: m.t + ph }, svg);
+    const gw = pw / Math.max(n, 1);
+    for (let i = 0; i < n; i++) {
+      const gx = m.l + gw * i;
+      if (cfg.stacked) {
+        let acc = 0; const bw = gw * 0.56;
+        cfg.series.forEach((s) => {
+          const v = s.values[i], hh = (v / top) * ph;
+          if (v > 0) { const r = el("rect", { x: gx + (gw - bw) / 2, y: m.t + ph - ((acc + v) / top) * ph, width: bw, height: hh, fill: s.color, rx: 2 }, svg); el("title", {}, r, `${cfg.labels[i]} - ${s.name}: ${v}`); }
+          acc += v;
+        });
+        if (gw > 22) el("text", { x: gx + gw / 2, y: m.t + ph - (acc / top) * ph - 4, "text-anchor": "middle", style: "font-weight:700" }, svg, String(acc));
+      } else {
+        const bw = (gw * 0.78) / S;
+        cfg.series.forEach((s, j) => {
+          const v = s.values[i], hh = (v / top) * ph, x = gx + gw * 0.11 + bw * j;
+          const r = el("rect", { x, y: m.t + ph - hh, width: bw - 1.5, height: hh, fill: s.color, rx: 2 }, svg); el("title", {}, r, `${cfg.labels[i]} - ${s.name}: ${v}`);
+          if (gw > 50) el("text", { x: x + bw / 2 - 0.7, y: m.t + ph - hh - 3, "text-anchor": "middle", style: "font-size:9px" }, svg, cfg.fmt ? cfg.fmt(v) : String(v));
+        });
+      }
+      if (n <= 14 || i % Math.ceil(n / 14) === 0) {
+        const lab = el("text", { x: gx + gw / 2, y: m.t + ph + 14, "text-anchor": "middle" }, svg, cfg.labels[i]);
+        if (cfg.labels[i].length > 6) lab.setAttribute("transform", `rotate(-18 ${gx + gw / 2} ${m.t + ph + 14})`);
+      }
+    }
+    Chart.legend(svg, cfg.series.map((s) => [s.name, s.color]), m.l, 30);
+  },
+  lines(box, cfg) {
+    const w = cfg.w || 560, h = cfg.h || 260, m = { l: 50, r: 12, t: 40, b: 34 };
+    const svg = Chart.frame(box, cfg.title, w, h);
+    let xmax = cfg.xmax || 1, ymax = 0, ymin = cfg.ymin !== undefined ? cfg.ymin : 0;
+    cfg.series.forEach((s) => s.pts.forEach(([x, y]) => { xmax = Math.max(xmax, x); ymax = Math.max(ymax, y); ymin = Math.min(ymin, y); }));
+    const top = cfg.ytop || Chart.niceMax(ymax * 1.08), pw = w - m.l - m.r, ph = h - m.t - m.b;
+    const X = (x) => m.l + (x / xmax) * pw, Y = (y) => m.t + ph - ((y - ymin) / (top - ymin || 1)) * ph;
+    for (let k = 0; k <= 4; k++) {
+      const yv = ymin + ((top - ymin) * k) / 4, y = Y(yv);
+      el("line", { class: "gridl", x1: m.l, x2: w - m.r, y1: y, y2: y }, svg);
+      el("text", { x: m.l - 5, y: y + 3, "text-anchor": "end" }, svg, cfg.yfmt ? cfg.yfmt(yv) : (+yv.toFixed(2)).toString());
+    }
+    el("line", { class: "axis", x1: m.l, x2: w - m.r, y1: m.t + ph, y2: m.t + ph }, svg);
+    for (let k = 0; k <= 5; k++) { const xv = (xmax * k) / 5; el("text", { x: X(xv), y: m.t + ph + 14, "text-anchor": "middle" }, svg, String(Math.round(xv))); }
+    cfg.series.forEach((s) => {
+      if (!s.pts.length) return;
+      let d = "";
+      s.pts.forEach(([x, y], i) => { if (i === 0) d += `M${X(x)},${Y(y)}`; else if (s.step) d += `H${X(x)}V${Y(y)}`; else d += `L${X(x)},${Y(y)}`; });
+      el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+      if (s.pts.length < 60 && !s.nodots) s.pts.forEach(([x, y]) => el("circle", { cx: X(x), cy: Y(y), r: 2.4, fill: s.color }, svg));
+    });
+    Chart.legend(svg, cfg.series.map((s) => [s.name, s.color]), m.l, 30);
+    if (cfg.xLabel) el("text", { x: w - m.r, y: h - 3, "text-anchor": "end", style: "fill:var(--muted)" }, svg, cfg.xLabel);
+  },
+  donut(box, cfg) {
+    const w = 560, h = 260, svg = Chart.frame(box, cfg.title, w, h);
+    const total = cfg.parts.reduce((a, p) => a + p.value, 0);
+    if (!total) { el("text", { x: w / 2, y: h / 2, "text-anchor": "middle", style: "fill:var(--muted)" }, svg, "bấm Tick để bắt đầu"); return; }
+    const cx = 140, cy = 142, R = 82, r = 50;
+    let a0 = -Math.PI / 2;
+    cfg.parts.forEach((p) => {
+      if (!p.value) return;
+      const a1 = a0 + (p.value / total) * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0;
+      const pt = (rad, a) => `${cx + rad * Math.cos(a)},${cy + rad * Math.sin(a)}`;
+      const path = p.value === total ? `M${cx - R},${cy}A${R},${R} 0 1 1 ${cx + R},${cy}A${R},${R} 0 1 1 ${cx - R},${cy}Z M${cx - r},${cy}A${r},${r} 0 1 0 ${cx + r},${cy}A${r},${r} 0 1 0 ${cx - r},${cy}Z`
+        : `M${pt(R, a0)}A${R},${R} 0 ${big} 1 ${pt(R, a1)}L${pt(r, a1)}A${r},${r} 0 ${big} 0 ${pt(r, a0)}Z`;
+      const e = el("path", { d: path, fill: p.color, "fill-rule": "evenodd" }, svg); el("title", {}, e, `${p.name}: ${p.value}`);
+      a0 = a1;
+    });
+    el("text", { x: cx, y: cy + 5, "text-anchor": "middle", style: "font-size:20px;font-weight:800" }, svg, String(total));
+    cfg.parts.filter((p) => p.value).forEach((p, i) => {
+      el("rect", { x: 270, y: 54 + i * 21, width: 12, height: 12, rx: 3, fill: p.color }, svg);
+      el("text", { x: 288, y: 64 + i * 21, style: "font-size:12px" }, svg, `${p.name}: ${p.value} (${Math.round((p.value * 100) / total)}%)`);
+    });
+  },
+};
+
+/* ----------------------------------------------------------------- tabs */
+const tabs = ["intro", "single", "pipe", "perf", "flow"];
+function showTab(t) {
+  if (!tabs.includes(t)) t = "intro";
+  tabs.forEach((n) => { $("#" + n).hidden = n !== t; });
+  document.querySelectorAll("#tabs [data-tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false"));
+  if (location.hash !== "#" + t) history.replaceState(null, "", location.search + "#" + t);
+  if (t === "flow") renderFlow(flowIndex);
+  if (t === "perf") drawPerf();
+}
+document.querySelectorAll("#tabs [data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+$("#themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.dataset.theme;
+  const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+});
+
+/* ----------------------------------------------------------------- common helpers */
+const keys = Object.keys(PROGRAMS);
+function fillProgSelect(sel, preferred) {
+  keys.forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = PROGRAMS[k].title; sel.appendChild(o); });
+  sel.value = preferred;
+}
+function progText(p) { const m = {}; p.listing.forEach(([pc, , t]) => { m[pc] = t; }); return m; }
+function renderListing(box, p) {
+  box.innerHTML = "";
+  p.listing.forEach(([pc, w, t]) => {
+    const d = document.createElement("div");
+    d.textContent = `${hx(pc, 4).slice(2)}  ${hx(w).slice(2)}  ${t}`;
+    d.dataset.pc = pc;
+    box.appendChild(d);
+  });
+}
+function markListing(box, pcs) {
+  box.querySelectorAll("div").forEach((d) => { const pc = +d.dataset.pc; d.className = pcs.includes(pc) ? (pcs[0] === pc ? "cur" : "cur2") : ""; });
+  const cur = box.querySelector(".cur");
+  if (cur) box.scrollTop = Math.max(0, cur.offsetTop - box.clientHeight / 2);
+}
+function renderRegs(box, regs, changed) {
+  box.innerHTML = "";
+  for (let i = 0; i < 32; i++) {
+    const s = document.createElement("span");
+    s.textContent = `x${i}`.padEnd(4) + hx(regs[i], 8).slice(2);
+    if (changed === i) s.className = "ch"; else if (!regs[i]) s.className = "z";
+    box.appendChild(s);
+  }
+}
+function memText(ram) {
+  const parts = [];
+  ram.forEach((v, i) => { if (v) parts.push(`[${hx(i * 4, 3).slice(2)}]=${hx(v)}`); });
+  return parts.length ? parts.join("  ") : "-";
+}
+function kv(box, pairs) {
+  box.innerHTML = "";
+  pairs.forEach(([k, v]) => { const a = document.createElement("span"), b = document.createElement("span"); a.textContent = k; b.textContent = v; box.append(a, b); });
+}
+function kpis(box, items) {
+  box.innerHTML = items.map(([cls, v, l]) => `<div class="kpi ${cls || ""}"><b>${v}</b><span>${l}</span></div>`).join("");
+}
+function makeRunner(btn, tickFn, speedEl) {
+  let timer = null;
+  const stop = () => { if (timer) clearInterval(timer); timer = null; btn.textContent = "Chạy"; };
+  btn.addEventListener("click", () => {
+    if (timer) { stop(); return; }
+    btn.textContent = "Dừng";
+    const run = () => { if (!tickFn()) stop(); };
+    const start = () => { if (timer) clearInterval(timer); timer = setInterval(run, 1100 - speedEl.value * 85); };
+    start(); speedEl.oninput = () => { if (timer) start(); };
+  });
+  return stop;
+}
+function classOf(op) {
+  return op === 0x33 ? "R (add, sub...)" : op === 0x13 ? "I (addi...)" : op === 0x03 ? "load" : op === 0x23 ? "store" : op === 0x63 ? "branch" : op === 0x6f || op === 0x67 ? "jal / jalr" : "lui / auipc";
+}
+const CLASS_COL = { "R (add, sub...)": "#3b82f6", "I (addi...)": "#10b981", load: "#f59e0b", store: "#ef4444", branch: "#8b5cf6", "jal / jalr": "#ec4899", "lui / auipc": "#14b8a6" };
+
+/* ================================================================= SINGLE-CYCLE VIEW */
+const SC = { cpu: null, prog: null, svg: $("#scSvg"), els: {}, hist: [], mix: {} };
+const B = {
+  PC: [24, 330, 64, 52, "PC", "reg", "reg"], ADD4: [24, 190, 64, 40, "PC + 4", "", ""], ROM: [150, 318, 100, 76, "ROM lệnh", "mem", ""],
+  NPC: [48, 490, 190, 48, "Chọn PC kế tiếp", "", ""],
+  DEC: [300, 70, 150, 48, "InstructionDecode", "", ""], CTRL: [300, 130, 150, 48, "MainControl", "ctl", ""], IMM: [300, 190, 150, 48, "ImmGen", "", ""],
+  RF: [300, 262, 150, 150, "RegisterFile", "reg", ""],
+  MUXA: [580, 286, 30, 70, "", "", "mux"], MUXB: [580, 380, 30, 70, "", "", "mux"],
+  ALUC: [660, 120, 130, 44, "ALUControl", "ctl", ""], ALU: [660, 270, 130, 190, "ALU", "", "alu"],
+  ADDT: [560, 490, 120, 46, "PC + imm", "", ""], BR: [700, 490, 130, 46, "BranchUnit", "", ""],
+  MEM: [905, 270, 90, 190, "Memory", "mem", ""], WB: [1040, 300, 36, 130, "", "", "mux"],
+};
+const BANDS = [["IF", "IF - Nạp lệnh", 8, 262, COL.IF], ["ID", "ID - Giải mã", 278, 268, COL.ID], ["EX", "EX - Thực thi", 554, 326, COL.EX], ["MEM", "MEM - Bộ nhớ", 888, 124, COL.MEM], ["WB", "WB", 1020, 92, COL.WB]];
+const W = {
+  pcrom: ["", [88, 356], [150, 356]], pcadd: ["", [56, 330], [56, 230]],
+  bus: ["", [250, 356], [272, 356], [272, 94]], bus1: ["", [272, 94], [300, 94]], bus2: ["", [272, 154], [300, 154]], bus3: ["", [272, 214], [300, 214]], bus4: ["", [272, 356], [300, 356]],
+  rfa: ["", [450, 304], [580, 304]], rfb: ["", [450, 376], [500, 376], [500, 398], [580, 398]], immb: ["", [450, 214], [530, 214], [530, 420], [580, 420]],
+  muxa: ["", [610, 321], [636, 321], [636, 330], [660, 330]], muxb: ["", [610, 415], [636, 415], [636, 410], [660, 410]],
+  aluc: ["ctl", [725, 164], [725, 270]], ctrlalu: ["ctl", [450, 154], [620, 154], [620, 142], [660, 142]],
+  alumem: ["", [790, 365], [905, 365]], memwb: ["", [995, 365], [1040, 365]], alwb: ["", [800, 365], [850, 365], [850, 236], [1020, 236], [1020, 330], [1040, 330]],
+  rfbr: ["", [450, 340], [480, 340], [480, 513], [700, 513]], addtnpc: ["", [560, 525], [540, 525], [540, 586], [140, 586], [140, 538]],
+  wbrf: ["", [1076, 365], [1090, 365], [1090, 574], [280, 574], [280, 318], [300, 318]], npcpc: ["", [48, 514], [16, 514], [16, 356], [24, 356]],
+  add4npc: ["", [88, 214], [104, 214], [104, 500], [140, 500], [140, 490]], addtwb: ["", [88, 204], [120, 204], [120, 30], [1102, 30], [1102, 400], [1076, 400]],
+};
+function shapePath(x, y, w, h, shape) {
+  if (shape === "mux") return `M${x},${y}L${x + w},${y + 10}L${x + w},${y + h - 10}L${x},${y + h}Z`;
+  if (shape === "alu") return `M${x},${y}L${x + w},${y + h * 0.22}L${x + w},${y + h * 0.78}L${x},${y + h}L${x},${y + h * 0.56}L${x + 16},${y + h / 2}L${x},${y + h * 0.44}Z`;
+  return null;
+}
+function buildSC() {
+  const s = SC.svg; s.innerHTML = ""; SC.els = {};
+  BANDS.forEach(([k, label, x, w, c]) => {
+    el("rect", { class: "band", x, y: 40, width: w, height: 540, rx: 14, fill: c }, s);
+    el("text", { class: "bandlab", x: x + 10, y: 58, style: `fill:${c}` }, s, label);
+  });
+  for (const id in W) { const [k, ...pts] = W[id]; SC.els["w_" + id] = el("polyline", { class: "wire " + k, points: pts.map((p) => p.join(",")).join(" ") }, s); }
+  for (const id in B) {
+    const [x, y, w, h, title, kind, shape] = B[id];
+    const g = el("g", {}, s), sp = shapePath(x, y, w, h, shape);
+    SC.els["b_" + id] = sp ? el("path", { class: "box " + kind, d: sp }, g) : el("rect", { class: "box " + kind, x, y, width: w, height: h, rx: shape === "reg" ? 4 : 8 }, g);
+    if (shape === "reg") el("path", { d: `M${x},${y + h - 12}L${x + 8},${y + h - 6}L${x},${y + h}`, fill: "none", stroke: "var(--muted)", "stroke-width": 1.2 }, g);
+    const tx = shape === "alu" ? x + w / 2 + 6 : x + w / 2;
+    if (title) el("text", { class: "title", x: tx, y: y + 16, "text-anchor": "middle" }, g, title);
+    const base = shape === "mux" ? y + h / 2 - 2 : shape === "alu" ? y + h / 2 - 22 : y + 30;
+    SC.els["v_" + id] = el("text", { class: "val", x: tx, y: base, "text-anchor": "middle" }, g, "");
+    SC.els["v2_" + id] = el("text", { class: "val", x: tx, y: base + 12, "text-anchor": "middle" }, g, "");
+    SC.els["v3_" + id] = el("text", { class: "val", x: tx, y: base + 24, "text-anchor": "middle" }, g, "");
+  }
+  const tag = (id, x, y, text, anchor) => { SC.els["t_" + id] = el("text", { class: "tag", x, y, "text-anchor": anchor || "start" }, s, text); };
+  tag("pcA", 574, 325, "PC", "end"); tag("zeroA", 574, 342, "0", "end"); tag("rs1A", 574, 308, "rs1", "end");
+  tag("rs2B", 574, 402, "rs2", "end"); tag("immB", 574, 424, "imm", "end");
+  tag("rs2mem", 899, 444, "rs2_data", "end"); tag("wbin1", 1034, 334, "ALU", "end"); tag("wbin2", 1034, 369, "RAM", "end"); tag("wbin3", 1034, 404, "PC+4", "end");
+  tag("br", 836, 517, "branch_taken", "start"); tag("jalr", 244, 520, "alu_result (jalr)", "start");
+  SC.els.t_nextpc = el("text", { class: "tag on", x: 150, y: 560, "text-anchor": "start" }, s, "");
+}
+function scExplain(s) {
+  const op = s.opcode, rd = "x" + s.rd, a = "x" + s.rs1, b = "x" + s.rs2, nm = RV.ALU_NAMES[s.ALUCtrl];
+  const nxt = `PC kế tiếp = <b>${hx(s.next_pc)}</b>.`;
+  const si = (v) => (v | 0);
+  let t;
+  if (op === 0x33) t = `Lệnh kiểu <b>R</b>: đọc ${a} = ${hx(s.rs1_data)} và ${b} = ${hx(s.rs2_data)}; ALUControl chọn <b>${nm}</b>; ALU ra <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x13) t = `Lệnh <b>I</b> (ALU với hằng số): đọc ${a} = ${hx(s.rs1_data)}, imm = ${si(s.imm)} (${hx(s.imm)}); ALU <b>${nm}</b> cho <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x03) t = `<b>Load</b>: địa chỉ = ${a} + imm = ${hx(s.rs1_data)} + ${si(s.imm)} = <b>${hx(s.alu_result)}</b>; RAM trả từ ${hx(s.ram_word)}, LoadExtract (funct3 = ${s.f3}) cho <b>${hx(s.mem_rdata)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x23) t = `<b>Store</b>: địa chỉ = ${a} + imm = <b>${hx(s.alu_result)}</b>; ghi ${b} = ${hx(s.rs2_data)}; StoreMerge dựng từ mới ${hx(s.new_word)} (cho phép byte ${s.byte_en.toString(2).padStart(4, "0")}); không ghi thanh ghi. ${nxt}`;
+  else if (op === 0x63) t = `<b>Branch</b>: so ${a} = ${hx(s.rs1_data)} với ${b} = ${hx(s.rs2_data)} (funct3 = ${s.f3}) -> <b>${s.branch_taken ? "RẼ" : "không rẽ"}</b>. ${s.branch_taken ? `PC = PC + imm = ${hx(s.pc)} + ${si(s.imm)} = <b>${hx(s.next_pc)}</b>.` : nxt} Không ghi thanh ghi.`;
+  else if (op === 0x37) t = `<b>lui</b>: ASel = 10 chọn số 0, B = imm = ${hx(s.imm)}; ALU cộng cho <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x17) t = `<b>auipc</b>: ASel = 01 chọn PC = ${hx(s.pc)}, B = imm = ${hx(s.imm)}; ALU cộng cho <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x6f) t = `<b>jal</b>: ghi PC + 4 = <b>${hx(s.pc_plus4)}</b> (địa chỉ trả về) vào ${rd}; nhảy tới PC + imm = ${hx(s.pc)} + ${si(s.imm)} = <b>${hx(s.next_pc)}</b>.`;
+  else if (op === 0x67) t = `<b>jalr</b>: đích = (${a} + imm) bỏ bit 0 = (${hx(s.rs1_data)} + ${si(s.imm)}) & ~1 = <b>${hx(s.next_pc)}</b>; ghi PC + 4 = ${hx(s.pc_plus4)} vào ${rd}${s.rd === 0 ? " (rd = x0 nên không ghi gì)" : ""}.`;
+  else t = `Lệnh rỗng (opcode ${hx(op, 2)}): mọi tín hiệu điều khiển bằng 0, CPU không làm gì. ${nxt}`;
+  if (s.RegWrite && s.rd === 0) t += " <i>(rd = x0: ghi vào x0 không có tác dụng)</i>";
+  return t;
+}
+const SC_STAGE = [
+  { b: ["PC", "ADD4", "ROM", "NPC"], w: ["pcrom", "pcadd", "npcpc", "add4npc"] },
+  { b: ["DEC", "CTRL", "IMM", "RF"], w: ["bus", "bus1", "bus2", "bus3", "bus4", "rfa", "rfb", "immb"] },
+  { b: ["MUXA", "MUXB", "ALUC", "ALU", "BR", "ADDT"], w: ["muxa", "muxb", "aluc", "ctrlalu", "rfbr", "addtnpc"] },
+  { b: ["MEM"], w: ["alumem"] },
+  { b: ["WB"], w: ["memwb", "alwb", "addtwb", "wbrf"] },
+];
+let scTimers = [];
+function scApply(bOn, wOn, anim) {
+  scTimers.forEach(clearTimeout); scTimers = [];
+  const setB = (id, f) => SC.els["b_" + id].classList.toggle("on", !!f), setW = (id, f) => SC.els["w_" + id].classList.toggle("on", !!f);
+  if (!anim) { for (const id in B) setB(id, bOn[id]); for (const id in W) setW(id, wOn[id]); return; }
+  for (const id in B) setB(id, 0); for (const id in W) setW(id, 0);
+  SC_STAGE.forEach((st, i) => scTimers.push(setTimeout(() => { st.b.forEach((id) => setB(id, bOn[id])); st.w.forEach((id) => setW(id, wOn[id])); }, i * 340)));
+}
+function scDraw(anim) {
+  const cpu = SC.cpu, s = cpu.peek(), E = SC.els, last = cpu.last;
+  const on = (id, f) => { E[id].classList.toggle("on", !!f); };
+  const mem = s.MemRead || s.MemWrite;
+  const bOn = { PC: 1, ADD4: 1, ROM: 1, DEC: 1, CTRL: 1, IMM: 1, RF: 1, MUXA: 1, MUXB: 1, ALUC: 1, ALU: 1, BR: s.IsBranch, ADDT: s.take_target && !s.IsJALR, NPC: 1, MEM: mem, WB: s.RegWrite };
+  const wOn = { pcrom: 1, pcadd: 1, bus: 1, bus1: 1, bus2: 1, bus3: 1, bus4: 1,
+    rfa: s.ASel === 0, rfb: !s.ALUSrc, immb: s.ALUSrc, muxa: 1, muxb: 1, aluc: 1, ctrlalu: 1, alumem: mem, memwb: s.RegWrite && s.WBSel === 1,
+    alwb: s.RegWrite && s.WBSel === 0, rfbr: s.IsBranch, addtnpc: s.take_target && !s.IsJALR, wbrf: s.RegWrite, npcpc: 1, add4npc: !s.take_target && !s.IsJALR,
+    addtwb: s.RegWrite && s.WBSel === 2 };
+  scApply(bOn, wOn, anim && $("#scAnim").checked);
+  const set = (id, a, b, c) => { E["v_" + id].textContent = a || ""; E["v2_" + id].textContent = b || ""; E["v3_" + id].textContent = c || ""; E["v_" + id].classList.add("hot"); };
+  set("PC", hx(s.pc)); set("ADD4", hx(s.pc_plus4)); set("ROM", hx(s.instr), `op ${hx(s.opcode, 2)}`);
+  set("DEC", `rd=${s.rd} rs1=${s.rs1} rs2=${s.rs2}`, `funct3=${s.f3} funct7=${hx(s.f7, 2)}`);
+  set("CTRL", `RW=${s.RegWrite} AS=${s.ALUSrc} MW=${s.MemWrite} MR=${s.MemRead}`, `ALUOp=${s.ALUOp} Imm=${s.ImmSel} WB=${s.WBSel}`);
+  set("IMM", hx(s.imm)); set("RF", `rs1_data`, hx(s.rs1_data), `rs2_data ${hx(s.rs2_data)}`);
+  set("MUXA", ""); set("MUXB", "");
+  set("ALUC", RV.ALU_NAMES[s.ALUCtrl], `ALUCtrl = ${s.ALUCtrl}`);
+  set("ALU", `A ${hx(s.alu_a)}`, `B ${hx(s.alu_b)}`, `= ${hx(s.alu_result)}`);
+  set("BR", s.IsBranch ? (s.branch_taken ? "RẼ" : "không rẽ") : "-"); set("ADDT", hx(s.pc_target));
+  set("NPC", hx(s.next_pc), s.IsJALR ? "jalr" : s.take_target ? "PC + imm" : "PC + 4");
+  set("MEM", s.MemWrite ? "ghi" : s.MemRead ? "đọc" : "-", mem ? `từ[${(s.alu_result >>> 2) & 255}]` : "", s.MemWrite ? hx(s.new_word) : s.MemRead ? hx(s.mem_rdata) : "");
+  set("WB", "");
+  const tg = (id, f) => E["t_" + id].classList.toggle("on", !!f);
+  tg("rs1A", s.ASel === 0); tg("pcA", s.ASel === 1); tg("zeroA", s.ASel === 2); tg("rs2B", !s.ALUSrc); tg("immB", s.ALUSrc);
+  tg("wbin1", s.RegWrite && s.WBSel === 0); tg("wbin2", s.RegWrite && s.WBSel === 1); tg("wbin3", s.RegWrite && s.WBSel === 2);
+  tg("rs2mem", s.MemWrite); tg("br", s.branch_taken); tg("jalr", s.IsJALR);
+  E.t_nextpc.textContent = `next_pc = ${hx(s.next_pc)}   wb_data = ${hx(s.wb_data)}`;
+  $("#scExplain").innerHTML = scExplain(s);
+  markListing($("#scListing"), [s.pc]);
+  renderRegs($("#scRegs"), cpu.regs, last && last.reg_changed ? last.reg_written : -1);
+  $("#scMem").textContent = memText(cpu.ram);
+  $("#scInfo").textContent = `tick ${cpu.tick}`;
+  kv($("#scProbes"), [["PC", hx(s.pc)], ["instr", hx(s.instr)], ["alu_result", hx(s.alu_result)], ["branch_taken", s.branch_taken], ["wb_data", hx(s.wb_data)],
+    ["RegWrite", s.RegWrite], ["MemWrite", s.MemWrite], ["ALUSrc", s.ALUSrc], ["ALUCtrl", s.ALUCtrl + " " + RV.ALU_NAMES[s.ALUCtrl]], ["WBSel", s.WBSel.toString(2).padStart(2, "0")],
+    ["rs1_data", hx(s.rs1_data)], ["rs2_data", hx(s.rs2_data)], ["imm", hx(s.imm)], ["mem_rdata", hx(s.mem_rdata)], ["next_pc", hx(s.next_pc)]]);
+  scCharts();
+}
+function scCharts() {
+  const cpu = SC.cpu, H = SC.hist;
+  const total = Object.values(SC.mix).reduce((a, b) => a + b, 0);
+  kpis($("#scKpis"), [["", cpu.tick, "tick đã chạy"], ["if", hx(cpu.pc, 4), "PC hiện tại"], ["id", total, "lệnh đã thực thi"], ["ex", total ? "1.00" : "-", "CPI (luôn bằng 1)"],
+    ["mm", SC.mix.branch || 0, "branch đã chạy"], ["wb", cpu.regs.filter((v, i) => i && v).length, "thanh ghi khác 0"]]);
+  Chart.lines($("#scChartPc"), { title: "PC theo tick (vòng lặp hiện thành bậc thang lùi)", xLabel: "tick", nodots: true, series: [{ name: "PC", color: COL.IF, step: true, nodots: true, pts: H.map((h) => [h.tick, h.pc]) }], xmax: Math.max(10, cpu.tick), ytop: Chart.niceMax(Math.max(...H.map((h) => h.pc), 16) * 1.05), yfmt: (v) => "0x" + Math.round(v).toString(16) });
+  const regSeries = []; const palette = [COL.acc, COL.acc2, COL.good, COL.WB, COL.MEM, "#14b8a6", "#ec4899"];
+  for (let r = 1; r < 32 && regSeries.length < 6; r++) if (H.some((h) => h.regs[r] !== 0)) regSeries.push({ name: "x" + r, color: palette[regSeries.length], step: true, nodots: true, pts: H.map((h) => [h.tick, h.regs[r] > 0x7fffffff ? h.regs[r] - 4294967296 : h.regs[r]]) });
+  Chart.lines($("#scChartReg"), { title: "Giá trị các thanh ghi theo tick", xLabel: "tick", series: regSeries, xmax: Math.max(10, cpu.tick), ymin: Math.min(0, ...regSeries.flatMap((s) => s.pts.map((p) => p[1]))) });
+  Chart.donut($("#scChartMix"), { title: "Các loại lệnh đã chạy", parts: Object.keys(CLASS_COL).map((k) => ({ name: k, color: CLASS_COL[k], value: SC.mix[k] || 0 })) });
+}
+function scLoad(key) {
+  SC.key = key; SC.prog = PROGRAMS[key]; SC.cpu = new RV.SingleCycle(SC.prog.words); SC.hist = []; SC.mix = {};
+  SC.hist.push({ tick: 0, pc: 0, regs: SC.cpu.regs.slice() });
+  renderListing($("#scListing"), SC.prog);
+  scDraw();
+}
+function scAdvance() {
+  const before = SC.cpu.pc, st = SC.cpu.peek();
+  SC.cpu.step();
+  const c = classOf(st.opcode); SC.mix[c] = (SC.mix[c] || 0) + 1;
+  SC.hist.push({ tick: SC.cpu.tick, pc: SC.cpu.pc, regs: SC.cpu.regs.slice() });
+  return SC.cpu.pc !== before;
+}
+function scTick(anim) { const moved = scAdvance(); scDraw(anim === true); return moved; }
+function scJump(t) { stopSC(); scLoad(SC.key); for (let i = 0; i < t; i++) scAdvance(); scDraw(false); }
+buildSC();
+fillProgSelect($("#scProg"), "demo");
+$("#scProg").addEventListener("change", () => { stopSC(); scLoad($("#scProg").value); });
+$("#scReset").addEventListener("click", () => { stopSC(); scLoad($("#scProg").value); });
+$("#scTick").addEventListener("click", () => { scTick(true); });
+$("#scBack").addEventListener("click", () => scJump(Math.max(0, SC.cpu.tick - 1)));
+const stopSC = makeRunner($("#scRun"), scTick, $("#scSpeed"));
+scLoad("demo");
+
+/* ================================================================= PIPELINE: detailed datapath (inlined into the page) */
+const PD = { svg: $("#pdSvg"), els: {} };
+// boxes: id -> [x, y, w, h, title, kind, shape]
+const PB = {
+  // IF
+  PC: [26, 372, 62, 50, "PC", "reg", "reg"], ADD4: [26, 250, 62, 36, "PC + 4", "", ""], NPCM: [108, 160, 28, 70, "", "", "mux"],
+  ROM: [120, 360, 92, 76, "ROM lệnh", "mem", ""], FLM: [226, 372, 24, 50, "", "", "mux"],
+  IFID: [268, 330, 58, 130, "IF/ID", "reg", "regbar"],
+  // ID
+  DEC: [352, 70, 124, 42, "InstructionDecode", "", ""], CTRL: [352, 126, 124, 42, "MainControl", "ctl", ""], IMM: [352, 182, 124, 42, "ImmGen", "", ""],
+  RF: [352, 250, 124, 130, "RegisterFile", "reg", ""], HAZ: [352, 430, 124, 50, "HazardUnit", "ctl", ""], BUBM: [526, 126, 26, 60, "", "ctl", "mux"],
+  IDEX: [614, 60, 86, 420, "ID/EX", "reg", "regbar"],
+  // EX
+  FWD: [736, 72, 120, 44, "ForwardingUnit", "ctl", ""], ALUC: [900, 72, 110, 38, "ALUControl", "ctl", ""],
+  OPA: [736, 170, 28, 80, "", "", "mux"], OPB: [736, 280, 28, 80, "", "", "mux"], ALA: [806, 170, 26, 64, "", "", "mux"], ALB: [806, 280, 26, 64, "", "", "mux"],
+  ALU: [880, 160, 104, 150, "ALU", "", "alu"], BR: [880, 340, 104, 42, "BranchUnit", "", ""],
+  ADDT: [740, 420, 104, 40, "PC + imm", "", ""], JALR: [862, 420, 112, 40, "ALU & ~1", "", ""], TGT: [996, 420, 26, 56, "", "", "mux"], PCS: [996, 340, 34, 40, "OR", "ctl", ""],
+  EXMEM: [1072, 150, 74, 300, "EX/MEM", "reg", "regbar"], FWDM: [1066, 96, 82, 40, "fwd_mem_val", "", ""],
+  // MEM
+  MEM: [1170, 230, 96, 160, "Memory", "mem", ""], MEMWB: [1292, 200, 76, 220, "MEM/WB", "reg", "regbar"],
+  // WB
+  WBM: [1396, 250, 32, 130, "", "", "mux"],
+};
+const PBANDS = [["IF - Nạp lệnh", 10, 252, COL.IF], ["ID - Giải mã", 336, 276, COL.ID], ["EX - Thực thi", 702, 360, COL.EX], ["MEM - Bộ nhớ", 1152, 138, COL.MEM], ["WB - Ghi lại", 1370, 120, COL.WB]];
+const PW = {
+  // IF
+  pcrom: ["", [88, 397], [120, 397]], pcadd: ["", [57, 372], [57, 286]], add4m: ["", [88, 268], [100, 268], [100, 185], [108, 185]],
+  npcpc: ["", [136, 195], [150, 195], [150, 128], [16, 128], [16, 397], [26, 397]], romfl: ["", [212, 397], [226, 397]], flifid: ["", [250, 397], [268, 397]],
+  // ID
+  bus: ["", [326, 397], [338, 397], [338, 91]], bus1: ["", [338, 91], [352, 91]], bus2: ["", [338, 203], [352, 203]], bus3: ["", [338, 270], [352, 270]], bus4: ["", [338, 455], [352, 455]],
+  deccl: ["", [414, 112], [414, 126]], ctlbub: ["", [476, 147], [526, 147]], bubidex: ["", [552, 156], [614, 156]], immidex: ["", [476, 203], [614, 203]],
+  rs1idex: ["", [476, 300], [614, 300]], rs2idex: ["", [476, 350], [614, 350]], wbrf: ["", [1428, 315], [1458, 315], [1458, 585], [330, 585], [330, 330], [352, 330]],
+  stallw: ["ctl", [476, 455], [539, 455], [539, 186]],
+  // EX
+  ida: ["", [700, 190], [736, 190]], idb: ["", [700, 300], [736, 300]], idpc: ["", [700, 130], [780, 130], [780, 217], [806, 217]], idimm: ["", [700, 372], [790, 372], [790, 330], [806, 330]],
+  opaal: ["", [764, 210], [806, 190]], opbal: ["", [764, 320], [806, 300]], opbsd: ["", [764, 345], [772, 345], [772, 398], [1048, 398], [1048, 330], [1072, 330]],
+  alua: ["", [832, 202], [880, 200]], alub: ["", [832, 312], [880, 270]],
+  alures: ["", [984, 235], [1072, 235]], aluc: ["ctl", [955, 110], [955, 160]], fwdctl: ["ctl", [796, 116], [796, 150], [750, 150], [750, 170]],
+  brpc: ["", [984, 361], [996, 361]], tgtpcs: ["", [1009, 420], [1009, 380]],
+  addtt: ["", [792, 460], [792, 482], [1001, 482], [1001, 476]], jalrt: ["", [918, 460], [918, 478], [1011, 478], [1011, 476]],
+  // MEM / WB
+  exmemaddr: ["", [1146, 260], [1170, 260]], exmemdata: ["", [1146, 340], [1170, 340]], memw: ["", [1266, 300], [1292, 300]], exw: ["", [1146, 215], [1280, 215], [1280, 232], [1292, 232]],
+  w1: ["", [1368, 268], [1396, 268]], w2: ["", [1368, 300], [1396, 300]], w3: ["", [1368, 336], [1396, 336]],
+  // control lines along the top
+  tgtnpc: ["", [1022, 448], [1040, 448], [1040, 40], [96, 40], [96, 215], [108, 215]],
+  pcsrc: ["ctl", [1030, 360], [1052, 360], [1052, 48], [122, 48], [122, 160]], pcsrcfl: ["ctl", [238, 48], [238, 372]], pcsrcbub: ["ctl", [539, 48], [539, 126]],
+  // forwarding paths (trunk + branches)
+  fwdwbT: ["fwd", [1330, 420], [1330, 520], [710, 520], [710, 206]], fwdwbA: ["fwd", [710, 210], [736, 210]], fwdwbB: ["fwd", [710, 320], [736, 320]], fwdwbB2: ["fwd", [710, 210], [710, 320]],
+  fwdmemT: ["fwd", [1107, 450], [1107, 500], [722, 500], [722, 230]], fwdmemA: ["fwd", [722, 230], [736, 230]], fwdmemB: ["fwd", [722, 340], [736, 340]], fwdmemB2: ["fwd", [722, 230], [722, 340]],
+  fwdmemsrc: ["fwd", [1107, 136], [1107, 150]],
+};
+function pdShape(x, y, w, h, shape) {
+  if (shape === "mux") return `M${x},${y}L${x + w},${y + 10}L${x + w},${y + h - 10}L${x},${y + h}Z`;
+  if (shape === "alu") return `M${x},${y}L${x + w},${y + h * 0.22}L${x + w},${y + h * 0.78}L${x},${y + h}L${x},${y + h * 0.56}L${x + 16},${y + h / 2}L${x},${y + h * 0.44}Z`;
+  return null;
+}
+function pdBuild() {
+  const s = PD.svg; s.innerHTML = ""; PD.els = {};
+  PBANDS.forEach(([label, x, w, c]) => {
+    el("rect", { class: "band", x, y: 52, width: w, height: 548, rx: 14, fill: c }, s);
+    el("text", { class: "bandlab", x: x + 10, y: 70, style: `fill:${c}` }, s, label);
+  });
+  PD.els.chips = [];
+  PBANDS.forEach(([, x, w, c]) => { PD.els.chips.push(el("text", { x: x + w / 2, y: 30, "text-anchor": "middle", style: `font:700 13px ui-monospace,Consolas,monospace;fill:${c}` }, s, "")); });
+  for (const id in PW) { const [k, ...pts] = PW[id]; PD.els["w_" + id] = el("polyline", { class: "wire " + k, points: pts.map((p) => p.join(",")).join(" ") }, s); }
+  for (const id in PB) {
+    const [x, y, w, h, title, kind, shape] = PB[id];
+    const g = el("g", {}, s), sp = pdShape(x, y, w, h, shape);
+    PD.els["b_" + id] = sp ? el("path", { class: "box " + kind, d: sp }, g) : el("rect", { class: "box " + kind, x, y, width: w, height: h, rx: shape === "reg" ? 4 : shape === "regbar" ? 6 : 8 }, g);
+    if (shape === "reg") el("path", { d: `M${x},${y + h - 12}L${x + 8},${y + h - 6}L${x},${y + h}`, fill: "none", stroke: "var(--muted)", "stroke-width": 1.2 }, g);
+    const tx = shape === "alu" ? x + w / 2 + 6 : x + w / 2;
+    if (title) el("text", { class: "title", x: tx, y: y + (shape === "regbar" ? 14 : 15), "text-anchor": "middle" }, g, title);
+    const base = shape === "mux" ? y + h / 2 - 2 : shape === "alu" ? y + h / 2 - 22 : shape === "regbar" ? y + 32 : y + 29;
+    for (let i = 1; i <= 9; i++) PD.els[`v${i}_${id}`] = el("text", { class: "val", x: tx, y: base + (i - 1) * 12, "text-anchor": "middle" }, g, "");
+  }
+  const tag = (id, x, y, text, anchor) => { PD.els["t_" + id] = el("text", { class: "tag", x, y, "text-anchor": anchor || "start" }, s, text); };
+  tag("zeroFl", 222, 417, "0", "end"); tag("instrFl", 222, 388, "ROM", "end");
+  tag("tgtT", 104, 223, "đích", "end"); tag("pc4T", 104, 178, "+4", "end");
+  tag("zeroB", 520, 180, "0", "end"); tag("ctlB", 520, 150, "ctrl", "end");
+  tag("wbA", 733, 214, "wb", "end"); tag("memA", 733, 234, "mem", "end"); tag("regA", 733, 194, "reg", "end");
+  tag("wbB", 733, 324, "wb", "end"); tag("memB", 733, 344, "mem", "end"); tag("regB", 733, 304, "reg", "end");
+  tag("pcAl", 803, 221, "pc", "end"); tag("zAl", 803, 231, "0", "end"); tag("opAl", 803, 194, "opA", "end"); tag("opBl", 803, 304, "opB", "end"); tag("immBl", 803, 334, "imm", "end");
+  tag("stallT", 476, 475, "stall", "start"); tag("holdT", 18, 118, "", "start"); tag("holdIf", 268, 478, "", "start");
+  tag("wbd", 1440, 312, "wb_data", "start");
+  tag("fwdwbT", 1000, 536, "forward từ MEM/WB (01)", "middle"); tag("fwdmemT", 900, 516, "forward từ EX/MEM (10)", "middle");
+  tag("pcsT", 1034, 62, "pc_src_ex", "start"); tag("tgtT2", 1044, 440, "target_ex", "start");
+  tag("alurT", 988, 232, "alu_result", "start");
+  tag("rd1", 1330, 442, "rd, RegWrite, WBSel đi cùng lệnh", "middle");
+  tag("note", 20, 618, "Nét đứt cam = tín hiệu điều khiển;  nét xanh lá = forwarding;  hộp đỏ = stall hoặc flush ở khối đó", "start");
+}
+function pdDraw() {
+  const cpu = PL.cpu, k = cpu.comb(), E = PD.els, fi = cpu.ifid, ie = cpu.idex, em = cpu.exmem, mw = cpu.memwb, c = ie.ctrl;
+  const pID = fi.id >= 0 && !fi.flush, pEX = ie.id >= 0 && !ie.flush, pMEM = em.id >= 0, pWB = mw.id >= 0;
+  const bon = (id, f, bad) => { const e = E["b_" + id]; e.classList.toggle("on", !!f && !bad); e.classList.toggle("bad", !!bad); };
+  const won = (id, f) => E["w_" + id].classList.toggle("on", !!f);
+  const jmp = c.IsBranch || c.IsJAL || c.IsJALR;
+  bon("PC", 1); bon("ADD4", 1); bon("NPCM", 1); bon("ROM", 1); bon("FLM", k.pc_src_ex, k.pc_src_ex);
+  bon("IFID", fi.id >= 0, 0); bon("DEC", pID); bon("CTRL", pID); bon("IMM", pID); bon("RF", pID || (mw.RegWrite && mw.rd));
+  bon("HAZ", pID, k.stall); bon("BUBM", k.bubble, k.stall || k.pc_src_ex);
+  bon("IDEX", ie.id >= 0, 0);
+  bon("FWD", pEX); bon("OPA", pEX); bon("OPB", pEX); bon("ALA", pEX); bon("ALB", pEX); bon("ALU", pEX); bon("ALUC", pEX);
+  bon("BR", pEX && c.IsBranch); bon("ADDT", pEX && (c.IsBranch || c.IsJAL)); bon("JALR", pEX && c.IsJALR); bon("TGT", pEX && jmp); bon("PCS", k.pc_src_ex);
+  bon("EXMEM", pMEM); bon("FWDM", k.ForwardA === 2 || k.ForwardB === 2);
+  bon("MEM", pMEM && (em.MemRead || em.MemWrite)); bon("MEMWB", pWB); bon("WBM", pWB && mw.RegWrite);
+  const fa = k.ForwardA, fb = k.ForwardB;
+  const W_ON = { pcrom: 1, pcadd: 1, add4m: !k.pc_src_ex, npcpc: 1, romfl: 1, flifid: 1, bus: pID, bus1: pID, bus2: pID, bus3: pID, bus4: pID, deccl: pID, ctlbub: pID, bubidex: pEX || k.bubble, immidex: pID,
+    rs1idex: pID, rs2idex: pID, wbrf: pWB && mw.RegWrite && mw.rd, stallw: k.stall, ida: pEX && fa === 0, idb: pEX && fb === 0, idpc: pEX && c.ASel === 1, idimm: pEX && c.ALUSrc,
+    opaal: pEX && c.ASel === 0, opbal: pEX && !c.ALUSrc, opbsd: pEX && c.MemWrite, alua: pEX, alub: pEX, alures: pEX, aluc: pEX, fwdctl: fa || fb,
+    brpc: pEX && c.IsBranch, tgtpcs: pEX && jmp, addtt: pEX && (c.IsBranch || c.IsJAL), jalrt: pEX && c.IsJALR,
+    exmemaddr: pMEM && (em.MemRead || em.MemWrite), exmemdata: pMEM && em.MemWrite, memw: pMEM && em.MemRead, exw: pMEM,
+    w1: pWB && mw.RegWrite && mw.WBSel === 0, w2: pWB && mw.RegWrite && mw.WBSel === 1, w3: pWB && mw.RegWrite && mw.WBSel === 2,
+    tgtnpc: k.pc_src_ex, pcsrc: k.pc_src_ex, pcsrcfl: k.pc_src_ex, pcsrcbub: k.pc_src_ex,
+    fwdwbT: fa === 1 || fb === 1, fwdwbA: fa === 1, fwdwbB: fb === 1, fwdwbB2: fb === 1 && fa !== 1 ? 0 : fb === 1 && fa === 1,
+    fwdmemT: fa === 2 || fb === 2, fwdmemA: fa === 2, fwdmemB: fb === 2, fwdmemB2: fa === 2 && fb === 2, fwdmemsrc: fa === 2 || fb === 2 };
+  for (const id in PW) won(id, W_ON[id]);
+  // chips
+  const nm = (id, flush) => (flush ? "X flush" : id < 0 ? "bubble" : plName(id));
+  [nm(cpu.fid), nm(fi.id, fi.flush), nm(ie.id, ie.flush), nm(em.id), nm(mw.id)].forEach((t, i) => { E.chips[i].textContent = t; });
+  // values
+  const V = (id, ...ls) => { for (let i = 1; i <= 9; i++) E[`v${i}_${id}`].textContent = ls[i - 1] || ""; E[`v1_${id}`].classList.add("hot"); };
+  const sel = (n) => ["reg", "wb", "mem", "reg"][n];
+  V("PC", hx(cpu.pc)); V("ADD4", hx(u32(cpu.pc + 4))); V("NPCM", ""); V("ROM", hx(k.instr_if)); V("FLM", "");
+  V("IFID", "pc_id", hx(fi.pc, 4), "instr_id", hx(fi.instr).slice(2));
+  V("DEC", `rd=${k.dID.rd} rs1=${k.dID.rs1} rs2=${k.dID.rs2}`, `f3=${k.dID.f3} f7=${hx(k.dID.f7, 2)}`);
+  V("CTRL", `RW=${k.cID.RegWrite} AS=${k.cID.ALUSrc} MW=${k.cID.MemWrite} MR=${k.cID.MemRead}`, `ALUOp=${k.cID.ALUOp} Imm=${k.cID.ImmSel} WB=${k.cID.WBSel}`);
+  V("IMM", hx(k.imm_id)); V("RF", "rs1_data", hx(k.rs1_data_id), "rs2_data", hx(k.rs2_data_id), "", `ghi x${mw.RegWrite && mw.rd ? mw.rd : "-"}`);
+  V("HAZ", k.stall ? "STALL = 1" : "stall = 0", k.stall ? "giữ PC, IF/ID" : "load-use? không");
+  V("BUBM", k.bubble ? "0" : "");
+  V("IDEX", "pc_ex " + hx(ie.pc, 4).slice(2), "rs1_data", hx(ie.rs1d).slice(2), "rs2_data", hx(ie.rs2d).slice(2), "imm " + hx(ie.imm).slice(2).replace(/^0+(?=.)/, ""), `rs1=${ie.rs1} rs2=${ie.rs2}`, `rd=${ie.rd} f3=${ie.f3}`, `RW${c.RegWrite}AS${c.ALUSrc}MW${c.MemWrite}MR${c.MemRead}`);
+  V("FWD", `ForwardA = ${fa.toString(2).padStart(2, "0")}`, `ForwardB = ${fb.toString(2).padStart(2, "0")}`);
+  V("OPA", ""); V("OPB", ""); V("ALA", ""); V("ALB", "");
+  V("ALUC", RV.ALU_NAMES[k.ALUCtrl], `ALUCtrl = ${k.ALUCtrl}`);
+  V("ALU", `A ${hx(k.alu_a)}`, `B ${hx(k.alu_b)}`, `= ${hx(k.alu_result_ex)}`);
+  V("BR", c.IsBranch ? (k.branch_taken ? "RẼ" : "không rẽ") : "-"); V("ADDT", hx(k.pc_target)); V("JALR", hx(k.jalr_target)); V("TGT", ""); V("PCS", `${k.pc_src_ex}`);
+  V("EXMEM", "alu_result", hx(em.alu_result).slice(2), "store_data", hx(em.store_data).slice(2), "pc4", hx(em.pc4, 4).slice(2), `rd=${em.rd}`, `RW=${em.RegWrite} MW=${em.MemWrite}`, `MR=${em.MemRead} WB=${em.WBSel}`);
+  V("FWDM", hx(k.fwd_mem_val));
+  V("MEM", em.MemWrite ? "ghi" : em.MemRead ? "đọc" : "-", em.MemRead || em.MemWrite ? `từ[${(em.alu_result >>> 2) & 255}]` : "", em.MemWrite ? hx(k.new_word) : em.MemRead ? hx(k.mem_rdata_mem) : "");
+  V("MEMWB", "alu_result", hx(mw.alu_result).slice(2), "mem_rdata", hx(mw.mem_rdata).slice(2), "pc4", hx(mw.pc4, 4).slice(2), `rd=${mw.rd}`, `RW=${mw.RegWrite} WB=${mw.WBSel}`);
+  V("WBM", "");
+  const tg = (id, f, bad) => { E["t_" + id].classList.toggle("on", !!f); E["t_" + id].style.fill = bad ? "var(--bad)" : ""; };
+  tg("zeroFl", k.pc_src_ex, 1); tg("instrFl", !k.pc_src_ex); tg("tgtT", k.pc_src_ex); tg("pc4T", !k.pc_src_ex);
+  tg("regA", pEX && fa === 0); tg("wbA", fa === 1); tg("memA", fa === 2); tg("regB", pEX && fb === 0); tg("wbB", fb === 1); tg("memB", fb === 2);
+  tg("opAl", pEX && c.ASel === 0); tg("pcAl", pEX && c.ASel === 1); tg("zAl", pEX && c.ASel === 2); tg("opBl", pEX && !c.ALUSrc); tg("immBl", pEX && c.ALUSrc);
+  tg("ctlB", !k.bubble); tg("zeroB", k.bubble, k.stall);
+  E.t_stallT.textContent = k.stall ? "stall = 1: dừng PC và IF/ID, chèn bubble" : "stall = 0"; tg("stallT", k.stall, k.stall);
+  E.t_holdT.textContent = k.stall ? "PC giữ nguyên (run = 0)" : ""; tg("holdT", k.stall, 1);
+  E.t_holdIf.textContent = k.stall ? "IF/ID giữ nguyên" : ""; tg("holdIf", k.stall, 1);
+  E.t_wbd.textContent = `wb_data = ${hx(k.wb_data)}`; tg("wbd", pWB && mw.RegWrite);
+  tg("fwdwbT", fa === 1 || fb === 1); tg("fwdmemT", fa === 2 || fb === 2);
+  E.t_fwdwbT.textContent = fa === 1 || fb === 1 ? `forward từ MEM/WB (01) = ${hx(k.wb_data)}` : "forward từ MEM/WB (01)";
+  E.t_fwdmemT.textContent = fa === 2 || fb === 2 ? `forward từ EX/MEM (10) = ${hx(k.fwd_mem_val)}` : "forward từ EX/MEM (10)";
+  E.t_pcsT.textContent = `pc_src_ex = ${k.pc_src_ex}`; tg("pcsT", k.pc_src_ex, 1);
+  E.t_tgtT2.textContent = `target_ex = ${hx(k.target_ex)}`; tg("tgtT2", k.pc_src_ex);
+  E.t_alurT.textContent = `${hx(k.alu_result_ex)}`; tg("alurT", pEX);
+  // operand muxes show the chosen source
+  E.v1_OPA.textContent = ""; E.v1_OPB.textContent = "";
+  pdCtrlTable(k);
+}
+function u32(v) { return v >>> 0; }
+function ctrlText(c) { return `RW${c.RegWrite} AS${c.ALUSrc} MW${c.MemWrite} MR${c.MemRead}`; }
+function pdCtrlTable(k) {
+  const cpu = PL.cpu, ie = cpu.idex, em = cpu.exmem, mw = cpu.memwb;
+  const cols = ["RegWrite", "ALUSrc", "MemWrite", "MemRead", "IsBranch", "IsJAL", "IsJALR", "ALUOp", "ASel", "WBSel"];
+  const rows = [
+    ["ID (ctrl_in vào ID/EX)", k.bubble ? Object.assign({}, { RegWrite: 0, ALUSrc: 0, MemWrite: 0, MemRead: 0, IsBranch: 0, IsJAL: 0, IsJALR: 0, ALUOp: 0, ASel: 0, WBSel: 0 }) : k.cID, k.bubble ? "bubble (từ điều khiển = 0)" : ""],
+    ["EX (ctrl_ex, 13 bit)", ie.ctrl, ""],
+    ["MEM (ctrl_mem, 5 bit)", { RegWrite: em.RegWrite, MemWrite: em.MemWrite, MemRead: em.MemRead, WBSel: em.WBSel }, "chỉ giữ 4 tín hiệu cần cho MEM và WB"],
+    ["WB (ctrl_wb, 3 bit)", { RegWrite: mw.RegWrite, WBSel: mw.WBSel }, "chỉ giữ RegWrite và WBSel"],
+  ];
+  let h = "<table><tr><th>từ điều khiển đi cùng lệnh<\/th>" + cols.map((c) => `<th class='n'>${c}<\/th>`).join("") + "<th><\/th><\/tr>";
+  rows.forEach(([name, c, note]) => {
+    h += `<tr><td><b>${name}<\/b><\/td>` + cols.map((n) => (n in c ? `<td class='n' style='${c[n] ? "font-weight:800;color:var(--accent)" : "color:var(--muted)"}'>${c[n]}<\/td>` : "<td class='n' style='color:var(--muted)'>-<\/td>")).join("") + `<td class='tip'>${note}<\/td><\/tr>`;
+  });
+  $("#pdCtrl").innerHTML = h + "<\/table>";
+}
+pdBuild();
+
+/* ================================================================= PIPELINE: animated instruction conveyor (inlined into the page) */
+const CV = { track: $("#cvTrack"), fwd: $("#cvFwd"), els: new Map(), bub: {}, timers: new Set() };
+const CV_ST = ["IF", "ID", "EX", "MEM", "WB"], CV_COL = [COL.IF, COL.ID, COL.EX, COL.MEM, COL.WB];
+const CV_NAMES = ["IF - Nạp lệnh", "ID - Giải mã", "EX - Thực thi", "MEM - Bộ nhớ", "WB - Ghi lại"];
+function cvBuild() {
+  const t = CV.track;
+  t.querySelectorAll(".cvcol").forEach((e) => e.remove());
+  CV_ST.forEach((s, i) => {
+    const c = document.createElement("div");
+    c.className = "cvcol"; c.style.left = i * 20 + "%"; c.style.setProperty("--c", CV_COL[i]);
+    c.innerHTML = `<b>${CV_NAMES[i]}<\/b>`;
+    t.appendChild(c);
+  });
+  CV.fwd.innerHTML = "";
+}
+function cvReset() {
+  CV.els.forEach((e) => e.remove()); CV.els.clear();
+  Object.values(CV.bub).forEach((e) => e.remove()); CV.bub = {};
+}
+function cvInstrColor(id) {
+  const f = PL.cpu.fetched[id]; if (!f) return COL.gray;
+  const w = PL.prog.words[(f.pc >>> 2) & 255] | 0;
+  return CLASS_COL[classOf(w & 0x7f)] || COL.gray;
+}
+function cvDetail(stage, id, k, cpu) {
+  if (stage === 0) return `nạp ${hx(k.instr_if)}`;
+  if (stage === 1) return `rs1=${hx(k.rs1_data_id)}`;
+  if (stage === 2) return `${RV.ALU_NAMES[k.ALUCtrl]} = ${hx(k.alu_result_ex)}`;
+  if (stage === 3) { const em = cpu.exmem; return em.MemWrite ? `ghi ${hx(em.store_data)}` : em.MemRead ? `đọc ${hx(k.mem_rdata_mem)}` : `addr ${hx(em.alu_result)}`; }
+  const mw = cpu.memwb; return mw.RegWrite && mw.rd ? `x${mw.rd} <- ${hx(k.wb_data)}` : "không ghi";
+}
+function cvUpdate() {
+  const cpu = PL.cpu, k = cpu.comb(), fi = cpu.ifid, ie = cpu.idex, em = cpu.exmem, mw = cpu.memwb;
+  const occ = [];   // real instructions
+  const bub = [];   // stages holding a bubble
+  occ.push({ id: cpu.fid, st: 0, doomed: !!k.pc_src_ex, held: !!k.stall });
+  if (fi.id >= 0) occ.push({ id: fi.id, st: 1, flush: fi.flush, stall: !!k.stall }); else bub.push(1);
+  if (ie.id >= 0) occ.push({ id: ie.id, st: 2, flush: ie.flush, redirect: !!k.pc_src_ex && !ie.flush }); else bub.push(2);
+  if (em.id >= 0) occ.push({ id: em.id, st: 3 }); else bub.push(3);
+  if (mw.id >= 0) occ.push({ id: mw.id, st: 4 }); else bub.push(4);
+  const seen = new Set();
+  occ.forEach((o) => {
+    const key = "i" + o.id; seen.add(key);
+    let e = CV.els.get(key), fresh = false;
+    if (!e) {
+      e = document.createElement("div"); e.className = "cvcard"; e.innerHTML = "<b><\/b><i><\/i><u><\/u>";
+      e.style.left = "-20%"; e.style.opacity = "0"; CV.track.appendChild(e); CV.els.set(key, e); fresh = true;
+    }
+    const col = cvInstrColor(o.id);
+    e.style.setProperty("--c", col);
+    e.className = "cvcard" + (o.flush ? " flush" : "") + (o.stall ? " stall" : "") + (o.held ? " held" : "") + (o.doomed ? " doomed" : "") + (o.redirect ? " redirect" : "");
+    e.querySelector("b").textContent = o.flush ? "X flush" : plName(o.id);
+    const f = cpu.fetched[o.id];
+    e.querySelector("i").textContent = f ? "PC " + hx(f.pc, 4) : "";
+    e.querySelector("u").textContent = o.flush ? "bị hủy" : o.doomed ? "sẽ bị flush" : o.held ? "giữ nguyên (stall)" : cvDetail(o.st, o.id, k, cpu);
+    const place = () => { e.style.left = o.st * 20 + "%"; e.style.opacity = "1"; };
+    if (fresh) requestAnimationFrame(() => requestAnimationFrame(place)); else place();
+  });
+  CV.els.forEach((e, key) => {
+    if (seen.has(key)) return;
+    CV.els.delete(key);
+    if (e.classList.contains("flush")) { e.classList.add("dead"); e.style.opacity = "0"; }
+    else { e.style.left = "100%"; e.style.opacity = "0"; }
+    setTimeout(() => e.remove(), 700);
+  });
+  // bubbles
+  [1, 2, 3, 4].forEach((st) => {
+    const need = bub.includes(st) && !(st === 1 && fi.flush);
+    let e = CV.bub[st];
+    if (need && !e) { e = document.createElement("div"); e.className = "cvbub"; e.style.left = st * 20 + "%"; e.innerHTML = "<b>bubble<\/b><u>lệnh rỗng (NOP)<\/u>"; CV.track.appendChild(e); CV.bub[st] = e; requestAnimationFrame(() => (e.style.opacity = "1")); }
+    if (!need && e) { e.style.opacity = "0"; delete CV.bub[st]; setTimeout(() => e.remove(), 500); }
+  });
+  // arrows
+  const F = CV.fwd; F.innerHTML = "";
+  const cx = (st) => 280 * st + 140;
+  const arrow = (d, cls, label, lx, ly) => { el("path", { d, class: "cvarrow " + cls }, F); el("text", { x: lx, y: ly, class: "cvlab " + cls, "text-anchor": "middle" }, F, label); };
+  const fa = k.ForwardA, fb = k.ForwardB;
+  if (fa === 2 || fb === 2) arrow(`M${cx(3)},-10 C${cx(3)},-52 ${cx(2)},-52 ${cx(2)},-10`, "fwd", `forward ${fa === 2 ? "A" : ""}${fb === 2 ? "B" : ""} = ${hx(k.fwd_mem_val)}`, (cx(3) + cx(2)) / 2, -38);
+  if (fa === 1 || fb === 1) arrow(`M${cx(4)},-10 C${cx(4)},-82 ${cx(2)},-82 ${cx(2)},-10`, "fwd", `forward ${fa === 1 ? "A" : ""}${fb === 1 ? "B" : ""} = ${hx(k.wb_data)}`, (cx(4) + cx(2)) / 2, -58);
+  if (k.pc_src_ex) arrow(`M${cx(2)},-10 C${cx(2)},-82 ${cx(0)},-82 ${cx(0)},-10`, "flushA", `pc_src_ex: PC <- ${hx(k.target_ex)}, hủy 2 lệnh`, (cx(2) + cx(0)) / 2, -58);
+  if (k.stall) arrow(`M${cx(1)},-10 C${cx(1)},-40 ${cx(0)},-40 ${cx(0)},-10`, "stallA", "stall: PC, IF/ID đứng yên", (cx(1) + cx(0)) / 2, -30);
+  const chips = [];
+  if (k.stall) chips.push('<span class="badge stall">stall<\/span> load-use: lệnh ở ID chờ dữ liệu của lệnh load ở EX; một bubble được chèn vào EX');
+  if (k.pc_src_ex) chips.push('<span class="badge flush">flush<\/span> lệnh ở EX chuyển hướng PC; hai lệnh nạp phía sau bị hủy (thẻ đỏ)');
+  if (fa || fb) chips.push(`<span class="badge fwd">forward<\/span> EX lấy toán hạng ${fa ? "A" : ""}${fa && fb ? " và " : ""}${fb ? "B" : ""} từ ${fa === 2 || fb === 2 ? "EX/MEM" : "MEM/WB"} thay vì register file`);
+  if (!chips.length) chips.push('<span class="badge ok">bình thường<\/span> các thẻ tiến một tầng mỗi tick');
+  $("#cvStatus").innerHTML = chips.join("<br>");
+}
+function cvEvents(key) {
+  const p = PROGRAMS[key], q = new RV.Pipeline(p.words), found = {};
+  for (let i = 0; i < Math.min(p.steps * 3 + 60, 300); i++) {
+    q.step(); const k = q.comb();
+    if (k.stall && !found.stall) found.stall = q.tick;
+    if ((k.ForwardA || k.ForwardB) && !found.fwd) found.fwd = q.tick;
+    if (k.pc_src_ex && !found.flush) found.flush = q.tick;
+  }
+  const box = $("#cvJump"); box.innerHTML = "<label>Nhảy tới sự kiện đầu tiên:<\/label>";
+  [["fwd", "forwarding"], ["stall", "stall load-use"], ["flush", "flush (rẽ nhánh)"]].forEach(([f, name]) => {
+    const b = document.createElement("button");
+    if (found[f]) { b.textContent = `${name} (tick ${found[f]})`; b.onclick = () => plJump(found[f]); } else { b.textContent = `${name}: không có`; b.disabled = true; }
+    box.appendChild(b);
+  });
+}
+cvBuild();
+
+/* ================================================================= PIPELINE VIEW */
+const PL = { cpu: null, prog: null, svg: $("#plSvg"), text: {}, els: {}, ev: [] };
+const STAGES = [["IF", "Nạp lệnh", 20, COL.IF], ["ID", "Giải mã", 220, COL.ID], ["EX", "Thực thi", 420, COL.EX], ["MEM", "Bộ nhớ", 620, COL.MEM], ["WB", "Ghi lại", 820, COL.WB]];
+const REGX = [[198, "IF/ID"], [398, "ID/EX"], [598, "EX/MEM"], [798, "MEM/WB"]];
+function buildPL() {
+  const s = PL.svg; s.innerHTML = ""; PL.els = {};
+  STAGES.forEach(([k, name, x, c]) => {
+    el("rect", { x, y: 36, width: 172, height: 158, rx: 12, fill: c, opacity: 0.1 }, s);
+    el("rect", { x, y: 36, width: 172, height: 6, rx: 3, fill: c }, s);
+    PL.els["b_" + k] = el("rect", { class: "box", x, y: 36, width: 172, height: 158, rx: 12, style: "fill:none" }, s);
+    el("text", { class: "title", x: x + 86, y: 62, "text-anchor": "middle", style: `fill:${c};font-size:13px` }, s, `${k} - ${name}`);
+    PL.els["i_" + k] = el("text", { class: "val hot", x: x + 86, y: 94, "text-anchor": "middle", style: "font-size:13px" }, s, "");
+    PL.els["p_" + k] = el("text", { class: "val", x: x + 86, y: 113, "text-anchor": "middle" }, s, "");
+    PL.els["q_" + k] = el("text", { class: "val", x: x + 86, y: 133, "text-anchor": "middle" }, s, "");
+    PL.els["r_" + k] = el("text", { class: "val", x: x + 86, y: 151, "text-anchor": "middle" }, s, "");
+    PL.els["s_" + k] = el("text", { class: "val", x: x + 86, y: 169, "text-anchor": "middle" }, s, "");
+  });
+  REGX.forEach(([x, name]) => {
+    el("rect", { class: "box reg", x, y: 36, width: 22, height: 158, rx: 5 }, s);
+    el("text", { class: "tag", x: x + 11, y: 210, "text-anchor": "middle" }, s, name);
+    el("polyline", { class: "wire on", points: `${x - 6},115 ${x},115` }, s);
+    el("polyline", { class: "wire on", points: `${x + 22},115 ${x + 28},115` }, s);
+  });
+  PL.els.fwdMem = el("path", { class: "wire", d: "M609,196 C609,262 440,262 440,198", style: "stroke:var(--accent)" }, s);
+  PL.els.fwdWb = el("path", { class: "wire", d: "M809,196 C809,300 450,300 450,198", style: "stroke:var(--accent)" }, s);
+  PL.els.fwdMemT = el("text", { class: "tag", x: 520, y: 258, "text-anchor": "middle" }, s, "");
+  PL.els.fwdWbT = el("text", { class: "tag", x: 620, y: 310, "text-anchor": "middle" }, s, "");
+  PL.els.flush = el("path", { class: "wire", d: "M520,32 C520,-24 120,-24 120,32", style: "stroke:var(--bad)" }, s);
+  PL.els.flushT = el("text", { class: "tag", x: 320, y: -22, "text-anchor": "middle", style: "fill:var(--bad)" }, s, "");
+  PL.els.stallT = el("text", { class: "tag", x: 106, y: 226, "text-anchor": "middle", style: "fill:var(--bad);font-weight:700" }, s, "");
+  PL.els.hold = el("rect", { class: "box bad", x: 20, y: 36, width: 172, height: 158, rx: 12, style: "fill:none", visibility: "hidden" }, s);
+}
+function plName(id) { if (id < 0) return "bubble"; const f = PL.cpu.fetched[id]; return f ? (PL.text[f.pc] || "?") : "?"; }
+function plPc(id) { const f = PL.cpu.fetched[id]; return f ? hx(f.pc, 4) : ""; }
+function plDraw() {
+  const cpu = PL.cpu, k = cpu.comb(), E = PL.els;
+  const fi = cpu.ifid, ie = cpu.idex, em = cpu.exmem, mw = cpu.memwb;
+  const ins = (stage, id, flush, lines) => {
+    E["i_" + stage].textContent = flush ? "X (flush)" : plName(id);
+    E["i_" + stage].style.fill = flush ? "var(--bad)" : id < 0 ? "var(--muted)" : "var(--ink)";
+    E["p_" + stage].textContent = id >= 0 ? "PC " + plPc(id) : "";
+    lines.slice(0, 3).forEach((t, i) => { E[["q_", "r_", "s_"][i] + stage].textContent = t || ""; });
+    E["b_" + stage].classList.toggle("on", id >= 0 && !flush);
+    E["b_" + stage].classList.toggle("bad", !!flush);
+  };
+  ins("IF", cpu.fid, false, [`PC = ${hx(cpu.pc)}`, `instr = ${hx(k.instr_if)}`, k.pc_src_ex ? "(sẽ bị flush)" : k.stall ? "(giữ nguyên)" : ""]);
+  ins("ID", fi.id, fi.flush, [`instr = ${hx(fi.instr)}`, `rs1_data = ${hx(k.rs1_data_id)}`, `rs2_data = ${hx(k.rs2_data_id)}`]);
+  ins("EX", ie.id, ie.flush, [`opA = ${hx(k.opA)}`, `opB = ${hx(k.opB)}`, `ALU ${RV.ALU_NAMES[k.ALUCtrl]} = ${hx(k.alu_result_ex)}`]);
+  ins("MEM", em.id, false, [`addr = ${hx(em.alu_result)}`, em.MemWrite ? `ghi ${hx(em.store_data)}` : em.MemRead ? `đọc ${hx(k.mem_rdata_mem)}` : "-", ""]);
+  ins("WB", mw.id, false, [mw.RegWrite && mw.rd ? `x${mw.rd} <- ${hx(k.wb_data)}` : "không ghi", ["ALU", "RAM", "PC+4", "0"][mw.WBSel], ""]);
+  const fwdA = k.ForwardA, fwdB = k.ForwardB, fm = fwdA === 2 || fwdB === 2, fw = fwdA === 1 || fwdB === 1;
+  E.fwdMem.classList.toggle("on", fm); E.fwdWb.classList.toggle("on", fw); E.fwdMem.classList.toggle("hide", !fm); E.fwdWb.classList.toggle("hide", !fw);
+  E.fwdMemT.classList.toggle("on", fm); E.fwdWbT.classList.toggle("on", fw);
+  E.fwdMemT.textContent = fm ? `forward từ EX/MEM (${fwdA === 2 ? "A" : ""}${fwdB === 2 ? "B" : ""})` : "";
+  E.fwdWbT.textContent = fw ? `forward từ MEM/WB (${fwdA === 1 ? "A" : ""}${fwdB === 1 ? "B" : ""})` : "";
+  E.flush.classList.toggle("on", !!k.pc_src_ex); E.flush.classList.toggle("hide", !k.pc_src_ex);
+  E.flushT.textContent = k.pc_src_ex ? "pc_src_ex = 1: PC nhảy tới đích, flush IF/ID và ID/EX" : "";
+  E.hold.setAttribute("visibility", k.stall ? "visible" : "hidden");
+  E.stallT.textContent = k.stall ? "STALL: PC và IF/ID đứng yên" : "";
+  const parts = [];
+  if (k.stall) parts.push(`<span class="badge stall">stall</span> Lệnh ở ID dùng thanh ghi mà lệnh <b>load</b> ở EX chưa đọc xong: PC và IF/ID đứng yên một chu kỳ, ID/EX nhận <b>bubble</b>.`);
+  if (k.pc_src_ex) parts.push(`<span class="badge flush">flush</span> Lệnh ở EX (<b>${plName(ie.id)}</b>) chuyển hướng PC tới <b>${hx(k.target_ex)}</b>; hai lệnh đã nạp phía sau bị hủy thành bubble (mất 2 chu kỳ).`);
+  if (k.ForwardA) parts.push(`<span class="badge fwd">forward A</span> Toán hạng A của EX lấy từ <b>${k.ForwardA === 2 ? "EX/MEM" : "MEM/WB"}</b> (= ${hx(k.opA)}) thay vì register file.`);
+  if (k.ForwardB) parts.push(`<span class="badge fwd">forward B</span> Toán hạng B của EX lấy từ <b>${k.ForwardB === 2 ? "EX/MEM" : "MEM/WB"}</b> (= ${hx(k.opB)}) thay vì register file.`);
+  if (!parts.length) parts.push(`<span class="badge ok">bình thường</span> Không có hazard: mỗi tầng chuyển lệnh sang tầng kế.`);
+  if (cpu.wbWritten > 0) parts.push(`Cạnh xuống xung nhịp vừa rồi: register file ghi <b>x${cpu.wbWritten}</b> = ${hx(cpu.regs[cpu.wbWritten])} (lệnh ở WB).`);
+  $("#plExplain").innerHTML = parts.join("<br>");
+  markListing($("#plListing"), [fi.id >= 0 && cpu.fetched[fi.id] ? cpu.fetched[fi.id].pc : -1, ...(ie.id >= 0 && cpu.fetched[ie.id] ? [cpu.fetched[ie.id].pc] : [])]);
+  renderRegs($("#plRegs"), cpu.regs, cpu.wbWritten);
+  $("#plMem").textContent = memText(cpu.ram);
+  $("#plInfo").textContent = `tick ${cpu.tick}`;
+  kv($("#plProbes"), [["PC", hx(cpu.pc)], ["instr_id", hx(fi.instr)], ["stall", k.stall], ["pc_src_ex", k.pc_src_ex], ["ForwardA", k.ForwardA.toString(2).padStart(2, "0")],
+    ["ForwardB", k.ForwardB.toString(2).padStart(2, "0")], ["alu_result_ex", hx(k.alu_result_ex)], ["wb_data", hx(k.wb_data)], ["run", k.run], ["bubble", k.bubble],
+    ["opA", hx(k.opA)], ["opB", hx(k.opB)], ["target_ex", hx(k.target_ex)], ["rd_ex", ie.rd], ["rd_mem", em.rd], ["rd_wb", mw.rd]]);
+  cvUpdate(); pdDraw(); plGantt(); plCharts();
+}
+function plCharts() {
+  const cpu = PL.cpu, ev = PL.ev;
+  const retired = ev.reduce((a, e) => a + e.ret, 0), stalls = ev.reduce((a, e) => a + e.stall, 0), flushes = ev.reduce((a, e) => a + e.flush, 0), fwds = ev.reduce((a, e) => a + (e.fwd ? 1 : 0), 0);
+  kpis($("#plKpis"), [["", cpu.tick, "tick đã chạy"], ["wb", retired, "lệnh đã hoàn tất (qua WB)"], ["ex", retired ? (cpu.tick / retired).toFixed(2) : "-", "CPI tích lũy"], ["mm", stalls, "chu kỳ stall"], ["mm", flushes, "lần flush (x2 chu kỳ)"], ["id", fwds, "tick có forwarding"]]);
+  let cum = 0; const cpi = ev.map((e, i) => { cum += e.ret; return [i + 1, cum ? (i + 1) / cum : 0]; }).filter((p) => p[1] > 0 && p[0] >= 5);
+  Chart.lines($("#plChartCpi"), { title: "CPI tích lũy (số tick / số lệnh đã hoàn tất)", xLabel: "tick", series: [{ name: "pipeline", color: COL.EX, pts: cpi }, { name: "lý tưởng = 1", color: COL.gray, nodots: true, pts: [[5, 1], [Math.max(10, cpu.tick), 1]] }], xmax: Math.max(10, cpu.tick), ymin: 0, ytop: Math.max(2, Chart.niceMax(Math.max(...cpi.map((p) => p[1]), 1) * 1.05)) });
+  Chart.bars($("#plChartEv"), { title: "Sự kiện theo tick (1 = có xảy ra)", labels: ev.map((e, i) => String(i + 1)), stacked: true,
+    series: [{ name: "stall", color: "#d99a1c", values: ev.map((e) => e.stall) }, { name: "flush", color: COL.bad, values: ev.map((e) => e.flush) }, { name: "forward", color: COL.acc, values: ev.map((e) => (e.fwd ? 1 : 0)) }], w: 560, h: 260 });
+}
+function plGantt() {
+  const cpu = PL.cpu, H = cpu.history, box = $("#plGantt");
+  const rows = new Map();
+  const put = (id, tick, st) => { if (id < 0) return; if (!rows.has(id)) rows.set(id, { id, cells: {} }); rows.get(id).cells[tick] = st; };
+  H.forEach((h) => { put(h.IF, h.tick, "IF"); put(h.ID, h.tick, h.IDflush ? "X" : "ID"); put(h.EX, h.tick, h.EXflush ? "X" : "EX"); put(h.MEM, h.tick, "MEM"); put(h.WB, h.tick, "WB"); });
+  const ids = [...rows.keys()].sort((a, b) => a - b);
+  const last = H.length ? H[H.length - 1].tick : 0;
+  let html = "<table><tr><td class='lab'>lệnh (đã fetch)</td>";
+  for (let t = 0; t <= last; t++) html += `<td class="hd">${t}</td>`;
+  html += "</tr>";
+  const stalled = new Set();
+  H.forEach((h, i) => { if (i > 0 && H[i - 1].ID === h.ID && h.ID >= 0 && !h.IDflush && H[i - 1].stall) stalled.add(h.ID + ":" + h.tick); });
+  ids.forEach((id) => {
+    const r = rows.get(id), f = cpu.fetched[id];
+    html += `<tr><td class="lab">${esc(f ? (PL.text[f.pc] || "?") : "?")} <span style="color:var(--muted)">@${f ? hx(f.pc, 4).slice(2) : ""}</span></td>`;
+    for (let t = 0; t <= last; t++) { const st = r.cells[t]; html += st ? `<td class="${st}${stalled.has(id + ":" + t) ? " st" : ""}">${st}</td>` : "<td></td>"; }
+    html += "</tr>";
+  });
+  box.innerHTML = html + "</table>";
+  box.scrollLeft = box.scrollWidth; box.scrollTop = box.scrollHeight;
+}
+function plLoad(key) {
+  PL.key = key; PL.prog = PROGRAMS[key]; PL.text = progText(PL.prog); PL.ev = [];
+  PL.cpu = new RV.Pipeline(PL.prog.words);
+  renderListing($("#plListing"), PL.prog);
+  cvReset(); cvEvents(key);
+  plDraw();
+}
+function plJump(t) {
+  stopPL(); plLoad(PL.key);
+  for (let i = 0; i < t; i++) plStep();
+  plDraw();
+}
+function plStep() {
+  const c = PL.cpu, k = c.comb(), before = c.memwb;
+  c.step();
+  PL.ev.push({ stall: k.stall, flush: k.pc_src_ex ? 1 : 0, fwd: k.ForwardA || k.ForwardB ? 1 : 0, ret: before.id >= 0 ? 1 : 0 });
+}
+function plTick() { plStep(); plDraw(); return PL.cpu.tick < 400; }
+buildPL();
+fillProgSelect($("#plProg"), "hazards_demo");
+$("#plProg").addEventListener("change", () => { stopPL(); plLoad($("#plProg").value); });
+$("#plReset").addEventListener("click", () => { stopPL(); plLoad($("#plProg").value); });
+$("#plBack").addEventListener("click", () => plJump(Math.max(0, PL.cpu.tick - 1)));
+$("#plTick").addEventListener("click", plTick);
+const stopPL = makeRunner($("#plRun"), plTick, $("#plSpeed"));
+plLoad("hazards_demo");
+
+/* ================================================================= PERFORMANCE (all programs, computed live) */
+let PERF = null;
+function computePerf() {
+  const out = [];
+  Object.keys(PROGRAMS).forEach((k) => {
+    const p = PROGRAMS[k];
+    const s = new RV.SingleCycle(p.words); let lastS = 0;
+    for (let i = 1; i <= p.steps + 5; i++) { const b = s.regs.slice(); s.step(); if (s.regs.some((v, j) => v !== b[j])) lastS = i; }
+    const q = new RV.Pipeline(p.words); let lastP = 0; const ev = [];
+    for (let i = 1; i <= p.steps * 3 + 60; i++) {
+      const b = q.regs.slice(), c = q.comb(); q.step();
+      ev.push({ stall: c.stall, flush: c.pc_src_ex ? 1 : 0, fwd: c.ForwardA || c.ForwardB ? 1 : 0 });
+      if (q.regs.some((v, j) => v !== b[j])) lastP = i;
+    }
+    const use = ev.slice(0, lastP);
+    const stalls = use.reduce((a, e) => a + e.stall, 0), flushes = use.reduce((a, e) => a + e.flush, 0), fwds = use.reduce((a, e) => a + e.fwd, 0);
+    out.push({ key: k, name: k.replace("_demo", ""), instr: lastS, single: lastS, pipe: lastP, stalls, flushes, fwds, fill: lastP - lastS - stalls - 2 * flushes });
+  });
+  return out;
+}
+function drawPerf() {
+  if (!PERF) PERF = computePerf();
+  const P = PERF, names = P.map((p) => p.key);
+  const tot = P.reduce((a, p) => ({ i: a.i + p.instr, p: a.p + p.pipe }), { i: 0, p: 0 });
+  kpis($("#pfKpis"), [["", P.length, "chương trình đã đo"], ["id", tot.i, "tổng lệnh (= tổng chu kỳ single-cycle)"], ["ex", tot.p, "tổng chu kỳ pipeline"], ["mm", (tot.p / tot.i).toFixed(2), "CPI trung bình của pipeline"],
+    ["wb", P.reduce((a, p) => a + p.flushes, 0), "lần flush (branch/jump được rẽ)"], ["if", P.reduce((a, p) => a + p.stalls, 0), "chu kỳ stall load-use"]]);
+  Chart.bars($("#pfCycles"), { title: "Số chu kỳ để hoàn tất (thấp hơn = nhanh hơn)", labels: names, series: [{ name: "single-cycle", color: COL.IF, values: P.map((p) => p.single) }, { name: "pipeline", color: COL.EX, values: P.map((p) => p.pipe) }], h: 320 });
+  Chart.bars($("#pfCpi"), { title: "CPI = chu kỳ / lệnh (single-cycle luôn bằng 1)", labels: names, fmt: (v) => v.toFixed(2), series: [{ name: "single-cycle", color: COL.IF, values: P.map(() => 1) }, { name: "pipeline", color: COL.EX, values: P.map((p) => +(p.pipe / p.instr).toFixed(2)) }], h: 320 });
+  Chart.bars($("#pfBreak"), { title: "Chi phí của pipeline: các chu kỳ đến từ đâu", labels: names, stacked: true, h: 320,
+    series: [{ name: "lệnh", color: COL.IF, values: P.map((p) => p.instr) }, { name: "flush x2", color: COL.bad, values: P.map((p) => 2 * p.flushes) }, { name: "stall", color: "#d99a1c", values: P.map((p) => p.stalls) }, { name: "làm đầy/xả", color: COL.gray, values: P.map((p) => Math.max(0, p.fill)) }] });
+  Chart.bars($("#pfRatio"), { title: "Tỉ lệ chu kỳ pipeline / single-cycle (1.00 = bằng nhau)", labels: names, fmt: (v) => v.toFixed(2), h: 320, series: [{ name: "pipeline / single", color: COL.WB, values: P.map((p) => +(p.pipe / p.single).toFixed(2)) }] });
+  let t = "<table><tr><th>chương trình</th><th class='n'>lệnh</th><th class='n'>single-cycle</th><th class='n'>pipeline</th><th class='n'>CPI pipeline</th><th class='n'>lần flush</th><th class='n'>stall</th><th class='n'>tick có forward</th><th>vì sao</th></tr>";
+  const why = { alu: "không có branch được rẽ, forwarding che hết phụ thuộc", mem: "ít branch", hazard: "có stall load-use và branch được rẽ", jump: "nhiều lệnh nhảy", branch: "nhiều branch được rẽ", fib: "vòng lặp: 1 branch được rẽ mỗi 4 lệnh", demo: "vòng lặp 10 lần + một lần gọi hàm", hazards_demo: "chương trình nhỏ để xem hazard" };
+  P.forEach((p) => { t += `<tr><td><b>${p.key}</b></td><td class="n">${p.instr}</td><td class="n">${p.single}</td><td class="n">${p.pipe}</td><td class="n">${(p.pipe / p.instr).toFixed(2)}</td><td class="n">${p.flushes}</td><td class="n">${p.stalls}</td><td class="n">${p.fwds}</td><td>${why[p.key] || ""}</td></tr>`; });
+  $("#pfTable").innerHTML = t + "</table>";
+}
+
+/* ================================================================= FLOWCHARTS */
+let flowLang = "vi", flowIndex = 0, mermaidReady = null;
+function mdToHtml(md) {
+  const lines = md.split("\n"), out = [];
+  let i = 0;
+  const inline = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\*([^*]+)\*/g, "<i>$1</i>");
+  while (i < lines.length) {
+    const ln = lines[i];
+    if (ln.startsWith("```mermaid")) { const code = []; i++; while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]); i++; out.push(`<pre class="mermaid">${esc(code.join("\n"))}</pre>`); continue; }
+    if (ln.startsWith("```")) { const code = []; i++; while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]); i++; out.push(`<pre>${esc(code.join("\n"))}</pre>`); continue; }
+    const h = /^(#{1,4}) (.*)$/.exec(ln);
+    if (h) { out.push(`<h${Math.min(h[1].length + 1, 4)}>${inline(h[2])}</h${Math.min(h[1].length + 1, 4)}>`); i++; continue; }
+    if (ln.startsWith(">")) { out.push(`<blockquote>${inline(ln.replace(/^>\s?/, ""))}</blockquote>`); i++; continue; }
+    if (/^\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
+      const rows = []; while (i < lines.length && /^\|.*\|\s*$/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const head = cells(rows[0]); const body = rows.slice(2).map(cells);
+      out.push("<table><tr>" + head.map((c) => `<th>${inline(c)}</th>`).join("") + "</tr>" + body.map((r) => "<tr>" + r.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") + "</table>");
+      continue;
+    }
+    if (/^\s*(\d+\.|[-*]) /.test(ln)) {
+      const ord = /^\s*\d+\./.test(ln), items = [];
+      while (i < lines.length && /^\s*(\d+\.|[-*]) /.test(lines[i])) { items.push(lines[i].replace(/^\s*(\d+\.|[-*]) /, "")); i++; }
+      out.push(`<${ord ? "ol" : "ul"}>` + items.map((t) => `<li>${inline(t)}</li>`).join("") + `</${ord ? "ol" : "ul"}>`); continue;
+    }
+    if (ln.trim() === "" || /^---+$/.test(ln.trim())) { i++; continue; }
+    const para = [ln]; i++;
+    while (i < lines.length && lines[i].trim() !== "" && !/^(#|```|>|\||\s*(\d+\.|[-*]) )/.test(lines[i])) para.push(lines[i++]);
+    out.push(`<p>${inline(para.join(" "))}</p>`);
+  }
+  return out.join("\n");
+}
+function flowSections() {
+  const md = FLOW[flowLang], parts = md.split(/\n(?=## )/), secs = [];
+  parts.forEach((p, k) => { if (k === 0) secs.push({ title: flowLang === "vi" ? "Giới thiệu và ký hiệu" : "Introduction and notation", md: p.replace(/^# .*\n/, "") }); else secs.push({ title: p.split("\n")[0].replace(/^## /, ""), md: p }); });
+  return secs;
+}
+function loadMermaid() {
+  if (mermaidReady) return mermaidReady;
+  mermaidReady = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js";
+    s.onload = () => { mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default", flowchart: { useMaxWidth: true, htmlLabels: true } }); res(); };
+    s.onerror = () => rej(new Error("no mermaid"));
+    document.head.appendChild(s);
+  });
+  return mermaidReady;
+}
+function renderFlow(i) {
+  const secs = flowSections(); flowIndex = Math.min(i, secs.length - 1);
+  const toc = $("#flToc"); toc.innerHTML = "";
+  secs.forEach((s, k) => { const b = document.createElement("button"); b.textContent = s.title.replace(/`/g, ""); b.setAttribute("aria-current", k === flowIndex ? "true" : "false"); b.onclick = () => { renderFlow(k); window.scrollTo(0, 0); }; toc.appendChild(b); });
+  const body = $("#flBody"); body.innerHTML = mdToHtml(secs[flowIndex].md);
+  loadMermaid().then(() => mermaid.run({ nodes: body.querySelectorAll("pre.mermaid") })).catch(() => {
+    body.querySelectorAll("pre.mermaid").forEach((p) => { p.classList.remove("mermaid"); p.insertAdjacentHTML("afterbegin", "<i>(không tải được thư viện Mermaid, đây là mã nguồn sơ đồ)</i>\n"); });
+  });
+}
+$("#flVi").addEventListener("click", () => { flowLang = "vi"; $("#flVi").setAttribute("aria-pressed", "true"); $("#flEn").setAttribute("aria-pressed", "false"); renderFlow(flowIndex); });
+$("#flEn").addEventListener("click", () => { flowLang = "en"; $("#flEn").setAttribute("aria-pressed", "true"); $("#flVi").setAttribute("aria-pressed", "false"); renderFlow(flowIndex); });
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key === "F9") { e.preventDefault(); if (!$("#single").hidden) scTick(true); else if (!$("#pipe").hidden) plTick(); }
+});
+(function () {
+  const q = new URLSearchParams(location.search), n = +(q.get("t") || 0), pr = q.get("prog");
+  if (q.get("s")) flowIndex = +q.get("s");
+  if (pr && PROGRAMS[pr]) { $("#scProg").value = pr; $("#plProg").value = pr; scLoad(pr); plLoad(pr); }
+  for (let i = 0; i < n; i++) { scTick(); plStep(); }
+  if (n) plDraw();
+})();
+showTab((location.hash || "#intro").slice(1));
+</script>
+</body>
+</html>

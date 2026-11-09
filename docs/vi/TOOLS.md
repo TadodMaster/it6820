@@ -158,6 +158,17 @@ Quá trình build thoát với mã lỗi nếu có mạch nào không đạt.
 
 ---
 
+## 5b. `tools/web/` và `tools/build_web.py` - bản web trực quan
+
+* `tools/web/engine.js` là mô hình JavaScript của cả hai CPU (single-cycle `main` và pipeline 5 tầng `Pipeline`) với tên khối và tên tín hiệu giống mạch.  `tools/web/template.html` là trang web; `python tools/build_web.py` nhúng engine, các chương trình đã assemble (`tools/web/dump_programs.py`) và `docs/FLOWCHARTS.md` / `docs/vi/FLOWCHARTS.md` vào một file duy nhất `docs/web/index.html`.
+* Tab pipeline mở đầu bằng **băng chuyền** hoạt ảnh (`tools/web/pipeline_conveyor.js`): mỗi lệnh là một thẻ tiến qua năm tầng, thẻ nhấp nháy khi stall, thẻ đỏ khi bị flush, mũi tên hoạt ảnh cho forwarding và cho lần nhảy PC, cùng các nút nhảy tới forwarding / stall / flush đầu tiên và nút lùi 1 tick (trang chạy lại từ đầu).  Ở tab single-cycle, datapath sáng lên lần lượt từng tầng sau mỗi lần Tick thủ công (có ô tắt).
+* Bên dưới băng chuyền là sơ đồ datapath chi tiết của circuit `Pipeline` (`tools/web/pipeline_detail.js`, được build nhúng vào): bốn thanh ghi pipeline cùng các trường, HazardUnit, ForwardingUnit với các mux và đường forwarding, ALU, BranchUnit, logic tính đích nhảy, Memory và write-back, tất cả có giá trị thật; bảng bên dưới cho thấy từ điều khiển đi cùng lệnh qua ID, EX, MEM, WB.
+* Trang có năm tab: giới thiệu, single-cycle, pipeline, biểu đồ hiệu năng (đo trực tiếp 8 chương trình ngay trên trình duyệt: số chu kỳ, CPI, phân tích chi phí) và sơ đồ luồng.  Các biểu đồ là SVG thuần do một thư viện nhỏ trong template vẽ (không dùng thư viện biểu đồ bên ngoài).
+* `node tools/web/test_engine.js` kiểm engine: thanh ghi và bộ nhớ cuối của 8 chương trình trên cả hai CPU so với bộ mô phỏng tham chiếu Python, vết probe single-cycle của `demo.s`, vết probe pipeline của `hazards_demo.s` và trạng thái pipeline sau 20 tick của `demo.s` (đều đo trên mạch Logisim).
+* Trang nhận `?prog=<tên>&t=<số tick>#single|#pipe|#flow` để mở sẵn ở một trạng thái; sơ đồ flowchart do Mermaid vẽ, tải từ CDN (chỉ phần này cần mạng).
+
+---
+
 ## 6. Các trình chạy kiểm thử
 
 * `tests/run_tests.ps1 [file.circ]` - với mỗi module chạy `java -jar logisim.jar --test-vector <circuit> tests/<module>.vec <file>` và in `passed N, failed M`.
