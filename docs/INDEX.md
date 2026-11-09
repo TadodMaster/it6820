@@ -13,6 +13,8 @@
 | [DEMO_EXPLAIN.md](DEMO_EXPLAIN.md) | the presenter, teammates | everything that happens in the demo: every instruction, every tick, the pipeline cycle by cycle |
 | [LEARNING_PLAN.md](LEARNING_PLAN.md) | learners | 12-session plan to learn every circuit: what is inside, why, experiments, self-check questions |
 | [latex/KienTruc_RV32I.tex](latex/KienTruc_RV32I.tex) | learners (Vietnamese) | the same plan as a LaTeX document in Vietnamese with TikZ figures (compile with pdfLaTeX) |
+| [FLOWCHARTS.md](FLOWCHARTS.md) | learners | a Mermaid flowchart of each of the 14 circuits with step-by-step explanation, real examples and special cases |
+| [web/index.html](web/index.html) | everyone | interactive web visualisation: step the single-cycle CPU and the pipeline in the browser, flowcharts of every circuit (open the file in a browser; built by `python tools/build_web.py`) |
 | [TEAM_SPLIT.md](TEAM_SPLIT.md) | the team of three | who learns which circuits, what to explain, likely questions |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | everyone | the assignment (Vietnamese) with the status of every item |
 | [../commands.txt](../commands.txt) | everyone | copy-paste commands |

@@ -9506,16 +9506,6 @@
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="8"/>
     </comp>
-    <comp lib="0" loc="(130,260)" name="Clock">
-      <a name="appearance" val="NewPins"/>
-      <a name="labelfont" val="Monospaced plain 12"/>
-    </comp>
-    <comp lib="0" loc="(130,360)" name="Pin">
-      <a name="appearance" val="classic"/>
-      <a name="label" val="RESET"/>
-      <a name="labelfont" val="Monospaced bold 12"/>
-    </comp>
-    <comp lib="0" loc="(130,460)" name="Constant"/>
     <comp lib="0" loc="(1330,760)" name="Tunnel">
       <a name="label" val="instr_if"/>
       <a name="labelfont" val="Monospaced bold 12"/>
@@ -9595,22 +9585,6 @@
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="32"/>
     </comp>
-    <comp lib="0" loc="(160,260)" name="Tunnel">
-      <a name="label" val="CLK"/>
-      <a name="labelfont" val="Monospaced bold 12"/>
-    </comp>
-    <comp lib="0" loc="(160,360)" name="Tunnel">
-      <a name="label" val="RESET"/>
-      <a name="labelfont" val="Monospaced bold 12"/>
-    </comp>
-    <comp lib="0" loc="(160,460)" name="Tunnel">
-      <a name="label" val="one"/>
-      <a name="labelfont" val="Monospaced bold 12"/>
-    </comp>
-    <comp lib="0" loc="(160,540)" name="Tunnel">
-      <a name="label" val="CLK_n"/>
-      <a name="labelfont" val="Monospaced bold 12"/>
-    </comp>
     <comp lib="0" loc="(1870,2380)" name="Constant">
       <a name="value" val="0x0"/>
       <a name="width" val="13"/>
@@ -9653,6 +9627,11 @@
       <a name="label" val="rs2_id"/>
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="5"/>
+    </comp>
+    <comp lib="0" loc="(200,390)" name="Tunnel">
+      <a name="facing" val="east"/>
+      <a name="label" val="CLK"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
     </comp>
     <comp lib="0" loc="(2000,1480)" name="Tunnel">
       <a name="facing" val="east"/>
@@ -9935,6 +9914,16 @@
       <a name="label" val="IsJALR_id"/>
       <a name="labelfont" val="Monospaced bold 12"/>
     </comp>
+    <comp lib="0" loc="(260,110)" name="Clock">
+      <a name="appearance" val="NewPins"/>
+      <a name="labelfont" val="Monospaced plain 12"/>
+    </comp>
+    <comp lib="0" loc="(260,210)" name="Pin">
+      <a name="appearance" val="classic"/>
+      <a name="label" val="RESET"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(260,310)" name="Constant"/>
     <comp lib="0" loc="(2760,2760)" name="Probe">
       <a name="appearance" val="NewPins"/>
       <a name="label" val="pc_src_ex"/>
@@ -10124,6 +10113,22 @@
     <comp lib="0" loc="(2840,940)" name="Tunnel">
       <a name="facing" val="east"/>
       <a name="label" val="CLK"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(290,110)" name="Tunnel">
+      <a name="label" val="CLK"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(290,210)" name="Tunnel">
+      <a name="label" val="RESET"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(290,310)" name="Tunnel">
+      <a name="label" val="one"/>
+      <a name="labelfont" val="Monospaced bold 12"/>
+    </comp>
+    <comp lib="0" loc="(290,390)" name="Tunnel">
+      <a name="label" val="CLK_n"/>
       <a name="labelfont" val="Monospaced bold 12"/>
     </comp>
     <comp lib="0" loc="(2980,1030)" name="Tunnel">
@@ -11153,11 +11158,6 @@
       <a name="labelfont" val="Monospaced bold 12"/>
       <a name="width" val="3"/>
     </comp>
-    <comp lib="0" loc="(70,540)" name="Tunnel">
-      <a name="facing" val="east"/>
-      <a name="label" val="CLK"/>
-      <a name="labelfont" val="Monospaced bold 12"/>
-    </comp>
     <comp lib="0" loc="(7000,340)" name="Splitter">
       <a name="bit2" val="1"/>
       <a name="incoming" val="3"/>
@@ -11306,8 +11306,8 @@
       <a name="width" val="32"/>
     </comp>
     <comp lib="1" loc="(1060,1400)" name="NOT Gate"/>
-    <comp lib="1" loc="(130,540)" name="NOT Gate"/>
     <comp lib="1" loc="(2250,2120)" name="OR Gate"/>
+    <comp lib="1" loc="(260,390)" name="NOT Gate"/>
     <comp lib="1" loc="(4930,460)" name="AND Gate">
       <a name="width" val="32"/>
     </comp>
@@ -11511,18 +11511,6 @@
       <a name="showInTab" val="true"/>
       <a name="width" val="32"/>
     </comp>
-    <comp lib="9" loc="(100,300)" name="Text">
-      <a name="font" val="Monospaced plain 12"/>
-      <a name="text" val="Clock: Ctrl+F9 = 1 full cycle"/>
-    </comp>
-    <comp lib="9" loc="(100,590)" name="Text">
-      <a name="font" val="Monospaced plain 12"/>
-      <a name="text" val="CLK_n: the register file writes on the falling edge,"/>
-    </comp>
-    <comp lib="9" loc="(100,620)" name="Text">
-      <a name="font" val="Monospaced plain 12"/>
-      <a name="text" val="so WB can write and ID can read in the same cycle"/>
-    </comp>
     <comp lib="9" loc="(1040,510)" name="Text">
       <a name="font" val="Monospaced plain 12"/>
       <a name="text" val="PC + 4"/>
@@ -11563,22 +11551,6 @@
       <a name="font" val="Monospaced plain 10"/>
       <a name="text" val="Lệnh dài 4 byte nên 2 bit thấp luôn 0"/>
     </comp>
-    <comp lib="9" loc="(110,220)" name="Text">
-      <a name="font" val="Monospaced plain 10"/>
-      <a name="text" val="Xung nhịp (Clock): 0 -&gt; 1 -&gt; 0"/>
-    </comp>
-    <comp lib="9" loc="(110,230)" name="Text">
-      <a name="font" val="Monospaced plain 10"/>
-      <a name="text" val="Bấm Ctrl+F9 = một chu kỳ"/>
-    </comp>
-    <comp lib="9" loc="(110,240)" name="Text">
-      <a name="font" val="Monospaced plain 10"/>
-      <a name="text" val="Mọi thanh ghi đổi trạng thái theo xung này"/>
-    </comp>
-    <comp lib="9" loc="(110,400)" name="Text">
-      <a name="font" val="Monospaced plain 12"/>
-      <a name="text" val="RESET = 1 holds PC at 0"/>
-    </comp>
     <comp lib="9" loc="(1120,580)" name="Text">
       <a name="font" val="Monospaced plain 10"/>
       <a name="text" val="Bộ cộng PC + 4 ở tầng IF"/>
@@ -11598,14 +11570,6 @@
     <comp lib="9" loc="(1180,870)" name="Text">
       <a name="font" val="Monospaced plain 10"/>
       <a name="text" val="Chương trình nằm sẵn trong ROM (kiểu Harvard)"/>
-    </comp>
-    <comp lib="9" loc="(120,490)" name="Text">
-      <a name="font" val="Monospaced plain 10"/>
-      <a name="text" val="Hằng số 1 (cho phép ghi mọi chu kỳ)"/>
-    </comp>
-    <comp lib="9" loc="(120,500)" name="Text">
-      <a name="font" val="Monospaced plain 10"/>
-      <a name="text" val="Các thanh ghi pipeline luôn nạp, trừ PC và IF/ID"/>
     </comp>
     <comp lib="9" loc="(1520,250)" name="Text">
       <a name="font" val="Monospaced plain 10"/>
@@ -11775,6 +11739,18 @@
       <a name="font" val="Monospaced plain 10"/>
       <a name="text" val="Đây là chỗ chèn bubble vào pipeline"/>
     </comp>
+    <comp lib="9" loc="(230,150)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="Clock: Ctrl+F9 = 1 full cycle"/>
+    </comp>
+    <comp lib="9" loc="(230,440)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="CLK_n: the register file writes on the falling edge,"/>
+    </comp>
+    <comp lib="9" loc="(230,470)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="so WB can write and ID can read in the same cycle"/>
+    </comp>
     <comp lib="9" loc="(2360,1600)" name="Text">
       <a name="font" val="Monospaced plain 10"/>
       <a name="text" val="HazardUnit: phát hiện load-use, phát tín hiệu stall"/>
@@ -11790,6 +11766,30 @@
     <comp lib="9" loc="(2360,1975)" name="Text">
       <a name="font" val="Monospaced plain 10"/>
       <a name="text" val="Điều khiển sinh một lần ở ID rồi đi cùng lệnh"/>
+    </comp>
+    <comp lib="9" loc="(240,250)" name="Text">
+      <a name="font" val="Monospaced plain 12"/>
+      <a name="text" val="RESET = 1 holds PC at 0"/>
+    </comp>
+    <comp lib="9" loc="(240,70)" name="Text">
+      <a name="font" val="Monospaced plain 10"/>
+      <a name="text" val="Xung nhịp (Clock): 0 -&gt; 1 -&gt; 0"/>
+    </comp>
+    <comp lib="9" loc="(240,80)" name="Text">
+      <a name="font" val="Monospaced plain 10"/>
+      <a name="text" val="Bấm Ctrl+F9 = một chu kỳ"/>
+    </comp>
+    <comp lib="9" loc="(240,90)" name="Text">
+      <a name="font" val="Monospaced plain 10"/>
+      <a name="text" val="Mọi thanh ghi đổi trạng thái theo xung này"/>
+    </comp>
+    <comp lib="9" loc="(250,340)" name="Text">
+      <a name="font" val="Monospaced plain 10"/>
+      <a name="text" val="Hằng số 1 (cho phép ghi mọi chu kỳ)"/>
+    </comp>
+    <comp lib="9" loc="(250,350)" name="Text">
+      <a name="font" val="Monospaced plain 10"/>
+      <a name="text" val="Các thanh ghi pipeline luôn nạp, trừ PC và IF/ID"/>
     </comp>
     <comp lib="9" loc="(2810,2700)" name="Text">
       <a name="font" val="Monospaced plain 12"/>
@@ -12699,10 +12699,6 @@
     <wire from="(1060,1400)" to="(1090,1400)"/>
     <wire from="(1060,540)" to="(1090,540)"/>
     <wire from="(1080,270)" to="(1110,270)"/>
-    <wire from="(130,260)" to="(160,260)"/>
-    <wire from="(130,360)" to="(160,360)"/>
-    <wire from="(130,460)" to="(160,460)"/>
-    <wire from="(130,540)" to="(160,540)"/>
     <wire from="(1300,760)" to="(1330,760)"/>
     <wire from="(1440,300)" to="(1480,300)"/>
     <wire from="(1440,330)" to="(1490,330)"/>
@@ -12730,6 +12726,7 @@
     <wire from="(1990,1240)" to="(2020,1240)"/>
     <wire from="(1990,1270)" to="(2030,1270)"/>
     <wire from="(1990,1300)" to="(2040,1300)"/>
+    <wire from="(200,390)" to="(230,390)"/>
     <wire from="(2000,1480)" to="(2040,1480)"/>
     <wire from="(2000,1510)" to="(2050,1510)"/>
     <wire from="(2000,1540)" to="(2030,1540)"/>
@@ -12833,6 +12830,10 @@
     <wire from="(2320,650)" to="(2360,650)"/>
     <wire from="(2320,700)" to="(2320,710)"/>
     <wire from="(2320,710)" to="(2360,710)"/>
+    <wire from="(260,110)" to="(290,110)"/>
+    <wire from="(260,210)" to="(290,210)"/>
+    <wire from="(260,310)" to="(290,310)"/>
+    <wire from="(260,390)" to="(290,390)"/>
     <wire from="(2760,2760)" to="(2790,2760)"/>
     <wire from="(2760,2980)" to="(2790,2980)"/>
     <wire from="(2760,3200)" to="(2790,3200)"/>
@@ -13205,7 +13206,6 @@
     <wire from="(670,350)" to="(670,360)"/>
     <wire from="(670,350)" to="(680,350)"/>
     <wire from="(6970,340)" to="(7000,340)"/>
-    <wire from="(70,540)" to="(100,540)"/>
     <wire from="(7000,540)" to="(7030,540)"/>
     <wire from="(7020,300)" to="(7050,300)"/>
     <wire from="(7020,330)" to="(7050,330)"/>

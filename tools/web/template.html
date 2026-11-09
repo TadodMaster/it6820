@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RV32I - mô phỏng trực quan</title>
+<style>
+:root{
+  --bg:#f3f5f9; --panel:#ffffff; --ink:#18202c; --muted:#5f6c7e; --line:#dde3ec; --accent:#2f6df6; --accent2:#e8870c;
+  --box:#f4f7fd; --boxon:#dbe8ff; --ctl:#fff3de; --mem:#e4f7ea; --reg:#fff9d6; --good:#178a3e; --bad:#d63a3a; --wire:#a3afc0; --code:#eef1f6;
+  --if:#3b82f6; --id:#10b981; --ex:#f59e0b; --mm:#ef4444; --wb:#8b5cf6;
+  --shadow:0 1px 2px rgba(20,30,50,.06),0 4px 14px rgba(20,30,50,.06);
+  --hero1:#1d4ed8; --hero2:#7c3aed;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1218; --panel:#161d27; --ink:#e8edf4; --muted:#93a1b4; --line:#273140; --accent:#6aa7ff; --accent2:#ffb454;
+    --box:#1c2736; --boxon:#25477a; --ctl:#3a2e1a; --mem:#17301f; --reg:#38340f; --good:#56d364; --bad:#ff7b72; --wire:#526074; --code:#212c3a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1218; --panel:#161d27; --ink:#e8edf4; --muted:#93a1b4; --line:#273140; --accent:#6aa7ff; --accent2:#ffb454;
+  --box:#1c2736; --boxon:#25477a; --ctl:#3a2e1a; --mem:#17301f; --reg:#38340f; --good:#56d364; --bad:#ff7b72; --wire:#526074; --code:#212c3a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.hero{background:linear-gradient(120deg,var(--hero1),var(--hero2));color:#fff;padding:20px 16px 0}
+.hero .in{max-width:1500px;margin:0 auto}
+.hero h1{font-size:23px;margin:0 0 2px;letter-spacing:-.01em}
+.hero p{margin:0 0 14px;opacity:.9;font-size:13.5px}
+.hero code{background:rgba(255,255,255,.18);color:#fff;border-radius:4px;padding:0 5px}
+nav{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end}
+nav button{background:rgba(255,255,255,.14);border:0;border-radius:10px 10px 0 0;color:#fff;padding:9px 16px;font:inherit;cursor:pointer;opacity:.85;transition:background .15s,opacity .15s}
+nav button:hover{background:rgba(255,255,255,.24);opacity:1}
+nav button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1;font-weight:650}
+nav .sp{flex:1}
+nav button.theme{border-radius:8px;margin-bottom:6px;font-size:12.5px;padding:5px 10px}
+main{max-width:1500px;margin:0 auto;padding:14px 16px 50px}
+section[hidden]{display:none}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 12px}
+.bar label{font-size:13px;color:var(--muted)}
+.bar select,.bar button,.bar input[type=range]{font:inherit;color:var(--ink)}
+.bar select,.bar button{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 11px;box-shadow:var(--shadow)}
+.bar button{cursor:pointer;transition:transform .08s}
+.bar button:active{transform:scale(.97)}
+.bar button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:650}
+.bar .tk{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;box-shadow:var(--shadow)}
+.kpi b{display:block;font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.if b{color:var(--if)}.kpi.id b{color:var(--id)}.kpi.ex b{color:var(--ex)}.kpi.mm b{color:var(--mm)}.kpi.wb b{color:var(--wb)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}}
+.stack>*+*{margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 8px;font-size:12.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+svg{width:100%;height:auto;display:block}
+svg text{font:11px "Inter",system-ui,"Segoe UI",sans-serif;fill:var(--ink)}
+svg .band{opacity:.09}
+svg .bandlab{font-weight:800;font-size:12px;letter-spacing:.04em}
+svg .box{fill:var(--box);stroke:var(--line);stroke-width:1.3;transition:fill .25s,stroke .25s}
+svg .box.on{fill:var(--boxon);stroke:var(--accent);stroke-width:2.2;filter:drop-shadow(0 2px 6px rgba(47,109,246,.28))}
+svg .box.ctl{fill:var(--ctl)} svg .box.mem{fill:var(--mem)} svg .box.reg{fill:var(--reg)}
+svg .box.ctl.on{fill:var(--ctl);stroke:var(--accent2);stroke-width:2.4;filter:drop-shadow(0 2px 6px rgba(232,135,12,.3))}
+svg .box.mem.on{fill:var(--mem);stroke:var(--good);stroke-width:2.4;filter:drop-shadow(0 2px 6px rgba(23,138,62,.3))}
+svg .box.reg.on{fill:var(--reg);stroke:var(--accent2);stroke-width:2.4;filter:drop-shadow(0 2px 6px rgba(232,135,12,.3))}
+svg .box.bad{stroke:var(--bad);stroke-width:2.4}
+svg .title{font-weight:750;font-size:11.5px}
+svg .val{font:10.5px ui-monospace,"Cascadia Mono",Consolas,monospace;fill:var(--muted)}
+svg .val.hot{fill:var(--ink);font-weight:700}
+svg .wire{fill:none;stroke:var(--wire);stroke-width:1.5;opacity:.5}
+svg .wire.on{stroke:var(--accent);stroke-width:3;opacity:1;stroke-dasharray:9 6;animation:flow .7s linear infinite}
+svg .wire.ctl.on{stroke:var(--accent2)}
+svg .wire.ctl{stroke-dasharray:4 4}
+@keyframes flow{to{stroke-dashoffset:-15}}
+@media (prefers-reduced-motion: reduce){svg .wire.on{animation:none}}
+svg .tag{font:10px ui-monospace,Consolas,monospace;fill:var(--muted)}
+svg .tag.on{fill:var(--accent);font-weight:800}
+svg .wire.hide{visibility:hidden}
+svg .wire.fwd.on{stroke:var(--good)}
+svg .wire.fwd{stroke:var(--good);opacity:.25;stroke-dasharray:3 4}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--accent);vertical-align:middle;margin-right:4px}
+.legend i.c{border-top:3px dashed var(--accent2)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left}
+th{color:var(--muted);font-weight:650}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+code,.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
+.listing{font:12px/1.55 ui-monospace,"Cascadia Mono",Consolas,monospace;max-height:262px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.listing div{padding:1px 10px;white-space:pre}
+.listing div.cur{background:var(--boxon);font-weight:700;box-shadow:inset 3px 0 var(--accent)}
+.listing div.cur2{background:var(--ctl);box-shadow:inset 3px 0 var(--accent2)}
+.regs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 8px;font:12px ui-monospace,Consolas,monospace}
+.regs span.ch{background:var(--boxon);border-radius:4px;font-weight:700}
+.regs span.z{color:var(--muted)}
+.explain{font-size:14px;line-height:1.6}
+.explain b{color:var(--accent)}
+.badge{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;color:#fff;margin:0 4px 3px 0}
+.badge.stall{background:#c47f00}.badge.flush{background:var(--bad)}.badge.fwd{background:var(--accent)}.badge.ok{background:var(--good)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;font:12.5px ui-monospace,Consolas,monospace}
+.kv span:nth-child(odd){color:var(--muted)}
+.gantt{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+.gantt table{width:auto;font:11.5px ui-monospace,Consolas,monospace}
+.gantt td{text-align:center;min-width:34px;border:1px solid var(--line);padding:2px 4px}
+.gantt td.lab{text-align:left;min-width:210px;position:sticky;left:0;background:var(--panel)}
+.gantt td.IF{background:#cfe0ff;color:#14305f}.gantt td.ID{background:#c9f0dc;color:#0b4a30}.gantt td.EX{background:#ffe9b8;color:#5c3b00}.gantt td.MEM{background:#ffd3d3;color:#6a1414}.gantt td.WB{background:#e0d4ff;color:#3a1a7a}
+.gantt td.X{background:var(--bad);color:#fff;font-weight:800}.gantt td.st{background:#f0b94a;color:#3b2500;font-weight:800}
+.chartgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px}
+.chart svg text{font-size:10.5px}
+.chart .ctitle{font-weight:750;font-size:12.5px}
+.chart .axis{stroke:var(--line);stroke-width:1}
+.chart .gridl{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3;opacity:.7}
+.chart .lg{font-size:11px}
+.prose h2{font-size:19px;margin:22px 0 6px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.prose h3{font-size:16px;margin:14px 0 4px}
+.prose p,.prose li{max-width:95ch}
+.prose pre{background:var(--code);padding:8px 10px;border-radius:8px;overflow:auto}
+.prose code{background:var(--code);padding:0 4px;border-radius:4px;font-size:.92em}
+.prose pre.mermaid{background:var(--panel);border:1px solid var(--line);text-align:center;padding:10px}
+.prose table{margin:8px 0;display:block;overflow:auto}
+.prose blockquote{margin:6px 0;padding:2px 12px;border-left:3px solid var(--line);color:var(--muted)}
+.flowwrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px}
+@media (max-width:900px){.flowwrap{grid-template-columns:1fr}}
+.toc{position:sticky;top:8px;align-self:start;max-height:90vh;overflow:auto}
+.toc button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:5px 9px;font:inherit;color:var(--ink);cursor:pointer}
+.toc button:hover{background:var(--code)}
+.toc button[aria-current="true"]{background:var(--boxon);font-weight:650}
+.tip{color:var(--muted);font-size:12.5px}
+.tabs-mini{display:flex;gap:6px;margin-bottom:8px}
+.tabs-mini button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:3px 12px;cursor:pointer;font:inherit}
+.tabs-mini button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cv{position:relative}
+.cvtrack{position:relative;height:172px;border-radius:12px;background:var(--code);overflow:hidden}
+.cvcol{position:absolute;top:0;bottom:0;width:20%;border-left:1px dashed var(--line);padding:6px 8px;color:var(--c);display:flex;align-items:flex-end}
+.cvcol:first-of-type{border-left:0}
+.cvcol::before{content:"";position:absolute;inset:0;background:var(--c);opacity:.07}
+.cvcol b{position:relative;font-size:12px}
+.cvcard{position:absolute;top:58px;width:18%;margin-left:1%;height:92px;border-radius:12px;padding:6px 10px 6px 14px;background:var(--panel);border:2px solid var(--c);box-shadow:var(--shadow);transition:left .6s cubic-bezier(.4,0,.2,1),opacity .45s,transform .4s;font-family:ui-monospace,Consolas,monospace;overflow:hidden}
+.cvcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
+.cvcard b{display:block;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvcard i{display:block;font-style:normal;font-size:11px;color:var(--muted)}
+.cvcard u{display:block;text-decoration:none;font-size:11.5px;margin-top:8px;color:var(--c);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvcard.stall{animation:pulse 1s infinite;border-color:#d99a1c}
+.cvcard.held{border-style:dashed}
+.cvcard.doomed,.cvcard.flush{border-color:var(--bad);background:rgba(214,58,58,.14)}
+.cvcard.flush b{color:var(--bad)}
+.cvcard.dead{transform:scale(.6)}
+.cvcard.redirect{box-shadow:0 0 0 3px rgba(47,109,246,.4)}
+@keyframes pulse{50%{box-shadow:0 0 0 4px rgba(217,154,28,.45)}}
+.cvbub{position:absolute;top:58px;width:18%;margin-left:1%;height:92px;border-radius:12px;border:2px dashed var(--line);color:var(--muted);padding:8px;opacity:0;transition:opacity .4s;text-align:center;font:12px ui-monospace,Consolas,monospace}
+.cvbub b{display:block;margin-top:20px}
+.cvbub u{text-decoration:none;font-size:11px}
+.cvfwdsvg{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none}
+.cvarrow{fill:none;stroke-width:3;stroke-dasharray:9 6;animation:flow .7s linear infinite}
+.cvarrow.fwd{stroke:var(--good)}.cvarrow.flushA{stroke:var(--bad)}.cvarrow.stallA{stroke:#d99a1c}
+.cvlab{font:700 12px ui-monospace,Consolas,monospace;paint-order:stroke;stroke:var(--code);stroke-width:5px;stroke-linejoin:round}
+.cvlab.fwd{fill:var(--good)}.cvlab.flushA{fill:var(--bad)}.cvlab.stallA{fill:#d99a1c}
+@media (prefers-reduced-motion: reduce){.cvcard,.cvbub{transition:none}.cvarrow,.cvcard.stall{animation:none}}
+.legendrow{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="hero"><div class="in">
+  <h1>Máy tính RISC-V 32-bit (RV32I) - mô phỏng trực quan</h1>
+  <p>Cùng chương trình, cùng khối và tên tín hiệu như mạch Logisim (<code>main</code> và <code>Pipeline</code>). Bấm <b>Tick</b> để chạy từng chu kỳ và xem dữ liệu chạy qua từng khối.</p>
+  <nav role="tablist" id="tabs">
+    <button role="tab" data-tab="intro" aria-selected="true">Giới thiệu</button>
+    <button role="tab" data-tab="single">Single-cycle</button>
+    <button role="tab" data-tab="pipe">Pipeline</button>
+    <button role="tab" data-tab="perf">Biểu đồ hiệu năng</button>
+    <button role="tab" data-tab="flow">Sơ đồ luồng</button>
+    <span class="sp"></span>
+    <button class="theme" id="themeBtn" title="Đổi giao diện sáng / tối">Sáng / tối</button>
+  </nav>
+</div></div>
+<main>
+
+<!-- ============================================================ intro -->
+<section id="intro">
+  <div class="card prose">
+    <h2 style="margin-top:0">Trang này là gì?</h2>
+    <p>Đây là bản <b>chạy trên web</b> của dự án máy tính RV32I trong Logisim Evolution. Bộ mô phỏng viết lại đúng hành vi của hai CPU (single-cycle và pipeline 5 tầng), khối nào ra khối đó, và đã được đối chiếu với bộ mô phỏng tham chiếu Python cùng các vết đo trên mạch thật. Dùng nó để <b>nhìn thấy</b> dữ liệu chạy qua từng khối, rồi mở Logisim để xem chính mạch đó.</p>
+    <h3>Cách dùng nhanh</h3>
+    <ol>
+      <li><b>Single-cycle:</b> chọn chương trình (<code>demo.s</code> là chương trình chính), bấm <b>Tick</b> hoặc <b>Chạy</b>. Khối và dây đang dùng sáng lên lần lượt theo tầng IF, ID, EX, MEM, WB (có thể tắt hoạt ảnh), có dòng chảy; bảng bên phải giải thích lệnh; các biểu đồ bên dưới vẽ PC, thanh ghi và loại lệnh theo từng tick.</li>
+      <li><b>Pipeline:</b> chọn <code>hazards_demo.s</code>, bấm <b>Tick</b> từng bước (có nút <b>Lùi 1 tick</b> và các nút nhảy thẳng tới sự kiện forwarding, stall, flush). Băng chuyền ở đầu tab cho thấy mỗi lệnh là một thẻ tiến qua năm tầng: thẻ đứng yên khi stall, thẻ đỏ bị hủy khi flush, mũi tên xanh là forwarding. Sơ đồ chi tiết ở đầu tab vẽ từng khối của mạch <code>Pipeline</code> (bốn thanh ghi pipeline, HazardUnit, ForwardingUnit, các mux forwarding, ALU, BranchUnit, bộ nhớ, write-back) với giá trị thật và các đường đang dùng; bảng bên dưới cho thấy từ điều khiển đi cùng lệnh qua từng tầng. Xem <span class="badge stall">stall</span>, <span class="badge fwd">forward</span>, <span class="badge flush">flush</span>; biểu đồ thời gian cho thấy mỗi lệnh đang ở tầng nào.</li>
+      <li><b>Biểu đồ hiệu năng:</b> so sánh số chu kỳ và CPI của hai CPU trên cả 8 chương trình, và phân tích chi phí của pipeline.</li>
+      <li><b>Sơ đồ luồng:</b> flowchart và lời giải thích của cả 14 circuit.</li>
+    </ol>
+    <h3>Các từ viết tắt</h3>
+    <table>
+      <tr><th>Từ</th><th>Đầy đủ</th><th>Nghĩa</th></tr>
+      <tr><td><span class="dot" style="background:var(--if)"></span>IF</td><td>Instruction Fetch</td><td>nạp lệnh từ ROM</td></tr>
+      <tr><td><span class="dot" style="background:var(--id)"></span>ID</td><td>Instruction Decode</td><td>giải mã lệnh, đọc thanh ghi, dựng hằng số</td></tr>
+      <tr><td><span class="dot" style="background:var(--ex)"></span>EX</td><td>Execute</td><td>thực thi ở ALU, quyết định rẽ nhánh</td></tr>
+      <tr><td><span class="dot" style="background:var(--mm)"></span>MEM</td><td>Memory access</td><td>truy cập RAM dữ liệu (load / store)</td></tr>
+      <tr><td><span class="dot" style="background:var(--wb)"></span>WB</td><td>Write Back</td><td>ghi kết quả vào thanh ghi <code>rd</code></td></tr>
+      <tr><td>PC</td><td>Program Counter</td><td>bộ đếm chương trình: địa chỉ lệnh đang chạy</td></tr>
+      <tr><td>ALU</td><td>Arithmetic Logic Unit</td><td>khối số học - logic</td></tr>
+      <tr><td>imm</td><td>immediate</td><td>hằng số nằm trong lệnh</td></tr>
+      <tr><td>rd, rs1, rs2</td><td>destination / source register</td><td>thanh ghi đích / nguồn 1 / nguồn 2</td></tr>
+      <tr><td>CPI</td><td>Cycles Per Instruction</td><td>số chu kỳ trung bình cho một lệnh</td></tr>
+      <tr><td>hazard</td><td>-</td><td>xung đột giữa các lệnh chạy chồng nhau trong pipeline</td></tr>
+      <tr><td>forwarding</td><td>-</td><td>chuyển kết quả từ tầng sau về EX mà không chờ ghi vào thanh ghi</td></tr>
+      <tr><td>stall / bubble</td><td>-</td><td>dừng một chu kỳ / lệnh rỗng (NOP) chèn vào</td></tr>
+      <tr><td>flush</td><td>-</td><td>hủy các lệnh đã nạp nhầm sau một lệnh rẽ nhánh</td></tr>
+    </table>
+    <p class="tip">Tính chính xác: engine JavaScript của trang này được kiểm bằng <code>node tools/web/test_engine.js</code>: cùng kết quả với bộ mô phỏng Python trên 8 chương trình (cả hai CPU) và khớp các giá trị probe đo trên mạch Logisim.</p>
+  </div>
+</section>
+
+<!-- ============================================================ single-cycle -->
+<section id="single" hidden>
+  <div class="bar">
+    <label>Chương trình <select id="scProg"></select></label>
+    <button id="scBack">Lùi 1 tick</button>
+    <button id="scReset">Đặt lại</button>
+    <button id="scTick" class="primary">Tick (Ctrl+F9)</button>
+    <button id="scRun">Chạy</button>
+    <label>Tốc độ <input type="range" id="scSpeed" min="1" max="12" value="4"></label>
+    <label><input type="checkbox" id="scAnim" checked> hoạt ảnh từng tầng</label>
+    <span class="tk" id="scInfo"></span>
+  </div>
+  <div class="kpis" id="scKpis"></div>
+  <div class="grid">
+    <div class="stack">
+      <div class="card">
+        <h3>Đường dữ liệu single-cycle - một lệnh trong một chu kỳ</h3>
+        <svg id="scSvg" viewBox="0 0 1120 600" role="img" aria-label="Sơ đồ khối CPU single-cycle"></svg>
+        <div class="legend"><span><i></i>dữ liệu đang chạy</span><span><i class="c"></i>tín hiệu điều khiển</span><span>nét mờ = không dùng trong lệnh này</span></div>
+      </div>
+      <div class="card"><h3>Giải thích lệnh sắp chạy</h3><div class="explain" id="scExplain"></div></div>
+      <div class="chartgrid">
+        <div class="card chart" id="scChartPc"></div>
+        <div class="card chart" id="scChartReg"></div>
+        <div class="card chart" id="scChartMix"></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Chương trình (ROM)</h3><div class="listing" id="scListing"></div></div>
+      <div class="card"><h3>Probe (như hàng probe trong Logisim)</h3><div class="kv" id="scProbes"></div></div>
+      <div class="card"><h3>Thanh ghi x0..x31</h3><div class="regs" id="scRegs"></div>
+        <p class="tip" style="margin:6px 0 0">Ô sáng = vừa đổi ở tick trước. Bộ nhớ dữ liệu khác 0: <span class="mono" id="scMem">-</span></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ pipeline -->
+<section id="pipe" hidden>
+  <div class="bar">
+    <label>Chương trình <select id="plProg"></select></label>
+    <button id="plBack">Lùi 1 tick</button>
+    <button id="plReset">Đặt lại</button>
+    <button id="plTick" class="primary">Tick</button>
+    <button id="plRun">Chạy</button>
+    <label>Tốc độ <input type="range" id="plSpeed" min="1" max="12" value="4"></label>
+    <span class="tk" id="plInfo"></span>
+  </div>
+  <div class="kpis" id="plKpis"></div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>Băng chuyền lệnh - mỗi thẻ là một lệnh, mỗi tick thẻ tiến một tầng</h3>
+    <div class="cv">
+      <div class="cvtrack" id="cvTrack"><svg class="cvfwdsvg" id="cvFwd" viewBox="0 -70 1400 100" aria-hidden="true"></svg></div>
+    </div>
+    <div class="explain" id="cvStatus" style="margin-top:8px"></div>
+    <div class="bar" id="cvJump" style="margin:8px 0 0"></div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>Chi tiết datapath pipeline - từng khối, từng thanh ghi pipeline, hazard unit và forwarding</h3>
+    <svg id="pdSvg" viewBox="0 0 1500 630" role="img" aria-label="Sơ đồ chi tiết datapath pipeline"></svg>
+    <div class="legend"><span><i></i>dữ liệu đang chạy</span><span><i class="c"></i>tín hiệu điều khiển</span><span><i style="border-color:var(--good)"></i>forwarding</span><span>hộp đỏ = stall / flush ở khối đó</span><span>dòng chữ trên cùng = lệnh đang ở từng tầng</span></div>
+    <div id="pdCtrl" style="margin-top:10px;overflow:auto"></div>
+  </div>
+  <div class="grid">
+    <div class="stack">
+      <div class="card">
+        <h3>Năm tầng, bốn thanh ghi pipeline</h3>
+        <svg id="plSvg" viewBox="0 -30 1000 372" role="img" aria-label="Sơ đồ pipeline 5 tầng"></svg>
+        <div class="legend"><span>mỗi tầng hiện lệnh đang ở đó</span><span>mũi tên xanh = forwarding</span><span>X đỏ = lệnh bị flush</span></div>
+      </div>
+      <div class="card"><h3>Điều gì sẽ xảy ra ở tick kế tiếp</h3><div class="explain" id="plExplain"></div></div>
+      <div class="card">
+        <h3>Biểu đồ thời gian: mỗi hàng là một lệnh, mỗi cột là một trạng thái sau tick</h3>
+        <div class="gantt" id="plGantt"></div>
+        <div class="legendrow"><span><span class="dot" style="background:var(--if)"></span>IF</span><span><span class="dot" style="background:var(--id)"></span>ID</span><span><span class="dot" style="background:var(--ex)"></span>EX</span><span><span class="dot" style="background:var(--mm)"></span>MEM</span><span><span class="dot" style="background:var(--wb)"></span>WB</span><span><span class="dot" style="background:#f0b94a"></span>stall (ID lặp)</span><span><span class="dot" style="background:var(--bad)"></span>X = flush</span></div>
+      </div>
+      <div class="chartgrid">
+        <div class="card chart" id="plChartCpi"></div>
+        <div class="card chart" id="plChartEv"></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Chương trình (ROM)</h3><div class="listing" id="plListing"></div></div>
+      <div class="card"><h3>Probe (như hàng probe trong Logisim)</h3><div class="kv" id="plProbes"></div></div>
+      <div class="card"><h3>Thanh ghi x0..x31</h3><div class="regs" id="plRegs"></div>
+        <p class="tip" style="margin:6px 0 0">Bộ nhớ dữ liệu khác 0: <span class="mono" id="plMem">-</span></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ performance -->
+<section id="perf" hidden>
+  <div class="kpis" id="pfKpis"></div>
+  <div class="chartgrid">
+    <div class="card chart" id="pfCycles"></div>
+    <div class="card chart" id="pfCpi"></div>
+    <div class="card chart" id="pfBreak"></div>
+    <div class="card chart" id="pfRatio"></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Số liệu chi tiết (tính trực tiếp bằng engine trong trình duyệt)</h3><div id="pfTable"></div>
+    <p class="tip" style="margin:8px 0 0">Biểu đồ chi phí: lệnh + 2 chu kỳ cho mỗi lần flush + 1 chu kỳ cho mỗi stall + phần còn lại là làm đầy/xả pipeline (vài chu kỳ; lần nhảy của vòng <code>halt</code> ở cuối cũng được tính là một lần flush). Số chu kỳ = số chu kỳ cho đến khi lần ghi thanh ghi cuối cùng hoàn tất (cùng cách đo với <code>tests/run_cpu_tests.py</code> và bảng trong báo cáo). Pipeline không nhanh hơn trong mô phỏng vì Logisim không có độ trễ cổng; lợi ích thật là chu kỳ xung nhịp ngắn hơn (mỗi tầng chỉ làm một việc).</p></div>
+</section>
+
+<!-- ============================================================ flowcharts -->
+<section id="flow" hidden>
+  <div class="tabs-mini"><button id="flVi" aria-pressed="true">Tiếng Việt</button><button id="flEn" aria-pressed="false">English</button></div>
+  <div class="flowwrap">
+    <div class="card toc" id="flToc"></div>
+    <div class="card prose" id="flBody"></div>
+  </div>
+  <p class="tip">Các sơ đồ do Mermaid vẽ (cần kết nối mạng để tải thư viện). Nếu không hiện hình, xem mã nguồn Mermaid ngay trong trang hoặc dán vào mermaid.live.</p>
+</section>
+
+</main>
+
+<script>
+/*__ENGINE__*/
+</script>
+<script>
+const PROGRAMS = /*__PROGRAMS__*/{};
+const FLOW = { vi: /*__FLOW_VI__*/"", en: /*__FLOW_EN__*/"" };
+</script>
+<script>
+"use strict";
+const $ = (s, r) => (r || document).querySelector(s);
+const hx = (v, n) => RV.hex(v, n);
+const SVGNS = "http://www.w3.org/2000/svg";
+const COL = { IF: "#3b82f6", ID: "#10b981", EX: "#f59e0b", MEM: "#ef4444", WB: "#8b5cf6", acc: "#2f6df6", acc2: "#e8870c", good: "#178a3e", bad: "#d63a3a", gray: "#8a97a8" };
+function el(name, attrs, parent, text) {
+  const e = document.createElementNS(SVGNS, name);
+  for (const k in attrs || {}) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+/* ================================================================= small SVG chart library */
+const Chart = {
+  frame(box, title, w, h) {
+    box.innerHTML = "";
+    const svg = el("svg", { viewBox: `0 0 ${w} ${h}` }, box);
+    el("text", { class: "ctitle", x: 4, y: 14 }, svg, title);
+    return svg;
+  },
+  niceMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; },
+  legend(svg, items, x, y) {
+    let cx = x;
+    items.forEach(([name, color]) => {
+      el("rect", { x: cx, y: y - 8, width: 10, height: 10, rx: 2, fill: color }, svg);
+      el("text", { class: "lg", x: cx + 14, y: y }, svg, name);
+      cx += 14 + name.length * 6.1 + 12;
+    });
+  },
+  bars(box, cfg) {
+    const w = cfg.w || 560, h = cfg.h || 300, m = { l: 44, r: 10, t: 40, b: 46 };
+    const svg = Chart.frame(box, cfg.title, w, h);
+    const n = cfg.labels.length, S = cfg.series.length;
+    let maxv = 0;
+    for (let i = 0; i < n; i++) {
+      if (cfg.stacked) maxv = Math.max(maxv, cfg.series.reduce((a, s) => a + s.values[i], 0));
+      else cfg.series.forEach((s) => { maxv = Math.max(maxv, s.values[i]); });
+    }
+    const top = Chart.niceMax(maxv * 1.05), pw = w - m.l - m.r, ph = h - m.t - m.b;
+    for (let k = 0; k <= 4; k++) {
+      const y = m.t + ph - (ph * k) / 4;
+      el("line", { class: "gridl", x1: m.l, x2: w - m.r, y1: y, y2: y }, svg);
+      el("text", { x: m.l - 5, y: y + 3, "text-anchor": "end" }, svg, (+(top * k / 4).toFixed(2)).toString());
+    }
+    el("line", { class: "axis", x1: m.l, x2: w - m.r, y1: m.t + ph, y2: m.t + ph }, svg);
+    const gw = pw / Math.max(n, 1);
+    for (let i = 0; i < n; i++) {
+      const gx = m.l + gw * i;
+      if (cfg.stacked) {
+        let acc = 0; const bw = gw * 0.56;
+        cfg.series.forEach((s) => {
+          const v = s.values[i], hh = (v / top) * ph;
+          if (v > 0) { const r = el("rect", { x: gx + (gw - bw) / 2, y: m.t + ph - ((acc + v) / top) * ph, width: bw, height: hh, fill: s.color, rx: 2 }, svg); el("title", {}, r, `${cfg.labels[i]} - ${s.name}: ${v}`); }
+          acc += v;
+        });
+        if (gw > 22) el("text", { x: gx + gw / 2, y: m.t + ph - (acc / top) * ph - 4, "text-anchor": "middle", style: "font-weight:700" }, svg, String(acc));
+      } else {
+        const bw = (gw * 0.78) / S;
+        cfg.series.forEach((s, j) => {
+          const v = s.values[i], hh = (v / top) * ph, x = gx + gw * 0.11 + bw * j;
+          const r = el("rect", { x, y: m.t + ph - hh, width: bw - 1.5, height: hh, fill: s.color, rx: 2 }, svg); el("title", {}, r, `${cfg.labels[i]} - ${s.name}: ${v}`);
+          if (gw > 50) el("text", { x: x + bw / 2 - 0.7, y: m.t + ph - hh - 3, "text-anchor": "middle", style: "font-size:9px" }, svg, cfg.fmt ? cfg.fmt(v) : String(v));
+        });
+      }
+      if (n <= 14 || i % Math.ceil(n / 14) === 0) {
+        const lab = el("text", { x: gx + gw / 2, y: m.t + ph + 14, "text-anchor": "middle" }, svg, cfg.labels[i]);
+        if (cfg.labels[i].length > 6) lab.setAttribute("transform", `rotate(-18 ${gx + gw / 2} ${m.t + ph + 14})`);
+      }
+    }
+    Chart.legend(svg, cfg.series.map((s) => [s.name, s.color]), m.l, 30);
+  },
+  lines(box, cfg) {
+    const w = cfg.w || 560, h = cfg.h || 260, m = { l: 50, r: 12, t: 40, b: 34 };
+    const svg = Chart.frame(box, cfg.title, w, h);
+    let xmax = cfg.xmax || 1, ymax = 0, ymin = cfg.ymin !== undefined ? cfg.ymin : 0;
+    cfg.series.forEach((s) => s.pts.forEach(([x, y]) => { xmax = Math.max(xmax, x); ymax = Math.max(ymax, y); ymin = Math.min(ymin, y); }));
+    const top = cfg.ytop || Chart.niceMax(ymax * 1.08), pw = w - m.l - m.r, ph = h - m.t - m.b;
+    const X = (x) => m.l + (x / xmax) * pw, Y = (y) => m.t + ph - ((y - ymin) / (top - ymin || 1)) * ph;
+    for (let k = 0; k <= 4; k++) {
+      const yv = ymin + ((top - ymin) * k) / 4, y = Y(yv);
+      el("line", { class: "gridl", x1: m.l, x2: w - m.r, y1: y, y2: y }, svg);
+      el("text", { x: m.l - 5, y: y + 3, "text-anchor": "end" }, svg, cfg.yfmt ? cfg.yfmt(yv) : (+yv.toFixed(2)).toString());
+    }
+    el("line", { class: "axis", x1: m.l, x2: w - m.r, y1: m.t + ph, y2: m.t + ph }, svg);
+    for (let k = 0; k <= 5; k++) { const xv = (xmax * k) / 5; el("text", { x: X(xv), y: m.t + ph + 14, "text-anchor": "middle" }, svg, String(Math.round(xv))); }
+    cfg.series.forEach((s) => {
+      if (!s.pts.length) return;
+      let d = "";
+      s.pts.forEach(([x, y], i) => { if (i === 0) d += `M${X(x)},${Y(y)}`; else if (s.step) d += `H${X(x)}V${Y(y)}`; else d += `L${X(x)},${Y(y)}`; });
+      el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+      if (s.pts.length < 60 && !s.nodots) s.pts.forEach(([x, y]) => el("circle", { cx: X(x), cy: Y(y), r: 2.4, fill: s.color }, svg));
+    });
+    Chart.legend(svg, cfg.series.map((s) => [s.name, s.color]), m.l, 30);
+    if (cfg.xLabel) el("text", { x: w - m.r, y: h - 3, "text-anchor": "end", style: "fill:var(--muted)" }, svg, cfg.xLabel);
+  },
+  donut(box, cfg) {
+    const w = 560, h = 260, svg = Chart.frame(box, cfg.title, w, h);
+    const total = cfg.parts.reduce((a, p) => a + p.value, 0);
+    if (!total) { el("text", { x: w / 2, y: h / 2, "text-anchor": "middle", style: "fill:var(--muted)" }, svg, "bấm Tick để bắt đầu"); return; }
+    const cx = 140, cy = 142, R = 82, r = 50;
+    let a0 = -Math.PI / 2;
+    cfg.parts.forEach((p) => {
+      if (!p.value) return;
+      const a1 = a0 + (p.value / total) * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0;
+      const pt = (rad, a) => `${cx + rad * Math.cos(a)},${cy + rad * Math.sin(a)}`;
+      const path = p.value === total ? `M${cx - R},${cy}A${R},${R} 0 1 1 ${cx + R},${cy}A${R},${R} 0 1 1 ${cx - R},${cy}Z M${cx - r},${cy}A${r},${r} 0 1 0 ${cx + r},${cy}A${r},${r} 0 1 0 ${cx - r},${cy}Z`
+        : `M${pt(R, a0)}A${R},${R} 0 ${big} 1 ${pt(R, a1)}L${pt(r, a1)}A${r},${r} 0 ${big} 0 ${pt(r, a0)}Z`;
+      const e = el("path", { d: path, fill: p.color, "fill-rule": "evenodd" }, svg); el("title", {}, e, `${p.name}: ${p.value}`);
+      a0 = a1;
+    });
+    el("text", { x: cx, y: cy + 5, "text-anchor": "middle", style: "font-size:20px;font-weight:800" }, svg, String(total));
+    cfg.parts.filter((p) => p.value).forEach((p, i) => {
+      el("rect", { x: 270, y: 54 + i * 21, width: 12, height: 12, rx: 3, fill: p.color }, svg);
+      el("text", { x: 288, y: 64 + i * 21, style: "font-size:12px" }, svg, `${p.name}: ${p.value} (${Math.round((p.value * 100) / total)}%)`);
+    });
+  },
+};
+
+/* ----------------------------------------------------------------- tabs */
+const tabs = ["intro", "single", "pipe", "perf", "flow"];
+function showTab(t) {
+  if (!tabs.includes(t)) t = "intro";
+  tabs.forEach((n) => { $("#" + n).hidden = n !== t; });
+  document.querySelectorAll("#tabs [data-tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false"));
+  if (location.hash !== "#" + t) history.replaceState(null, "", location.search + "#" + t);
+  if (t === "flow") renderFlow(flowIndex);
+  if (t === "perf") drawPerf();
+}
+document.querySelectorAll("#tabs [data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+$("#themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.dataset.theme;
+  const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+});
+
+/* ----------------------------------------------------------------- common helpers */
+const keys = Object.keys(PROGRAMS);
+function fillProgSelect(sel, preferred) {
+  keys.forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = PROGRAMS[k].title; sel.appendChild(o); });
+  sel.value = preferred;
+}
+function progText(p) { const m = {}; p.listing.forEach(([pc, , t]) => { m[pc] = t; }); return m; }
+function renderListing(box, p) {
+  box.innerHTML = "";
+  p.listing.forEach(([pc, w, t]) => {
+    const d = document.createElement("div");
+    d.textContent = `${hx(pc, 4).slice(2)}  ${hx(w).slice(2)}  ${t}`;
+    d.dataset.pc = pc;
+    box.appendChild(d);
+  });
+}
+function markListing(box, pcs) {
+  box.querySelectorAll("div").forEach((d) => { const pc = +d.dataset.pc; d.className = pcs.includes(pc) ? (pcs[0] === pc ? "cur" : "cur2") : ""; });
+  const cur = box.querySelector(".cur");
+  if (cur) box.scrollTop = Math.max(0, cur.offsetTop - box.clientHeight / 2);
+}
+function renderRegs(box, regs, changed) {
+  box.innerHTML = "";
+  for (let i = 0; i < 32; i++) {
+    const s = document.createElement("span");
+    s.textContent = `x${i}`.padEnd(4) + hx(regs[i], 8).slice(2);
+    if (changed === i) s.className = "ch"; else if (!regs[i]) s.className = "z";
+    box.appendChild(s);
+  }
+}
+function memText(ram) {
+  const parts = [];
+  ram.forEach((v, i) => { if (v) parts.push(`[${hx(i * 4, 3).slice(2)}]=${hx(v)}`); });
+  return parts.length ? parts.join("  ") : "-";
+}
+function kv(box, pairs) {
+  box.innerHTML = "";
+  pairs.forEach(([k, v]) => { const a = document.createElement("span"), b = document.createElement("span"); a.textContent = k; b.textContent = v; box.append(a, b); });
+}
+function kpis(box, items) {
+  box.innerHTML = items.map(([cls, v, l]) => `<div class="kpi ${cls || ""}"><b>${v}</b><span>${l}</span></div>`).join("");
+}
+function makeRunner(btn, tickFn, speedEl) {
+  let timer = null;
+  const stop = () => { if (timer) clearInterval(timer); timer = null; btn.textContent = "Chạy"; };
+  btn.addEventListener("click", () => {
+    if (timer) { stop(); return; }
+    btn.textContent = "Dừng";
+    const run = () => { if (!tickFn()) stop(); };
+    const start = () => { if (timer) clearInterval(timer); timer = setInterval(run, 1100 - speedEl.value * 85); };
+    start(); speedEl.oninput = () => { if (timer) start(); };
+  });
+  return stop;
+}
+function classOf(op) {
+  return op === 0x33 ? "R (add, sub...)" : op === 0x13 ? "I (addi...)" : op === 0x03 ? "load" : op === 0x23 ? "store" : op === 0x63 ? "branch" : op === 0x6f || op === 0x67 ? "jal / jalr" : "lui / auipc";
+}
+const CLASS_COL = { "R (add, sub...)": "#3b82f6", "I (addi...)": "#10b981", load: "#f59e0b", store: "#ef4444", branch: "#8b5cf6", "jal / jalr": "#ec4899", "lui / auipc": "#14b8a6" };
+
+/* ================================================================= SINGLE-CYCLE VIEW */
+const SC = { cpu: null, prog: null, svg: $("#scSvg"), els: {}, hist: [], mix: {} };
+const B = {
+  PC: [24, 330, 64, 52, "PC", "reg", "reg"], ADD4: [24, 190, 64, 40, "PC + 4", "", ""], ROM: [150, 318, 100, 76, "ROM lệnh", "mem", ""],
+  NPC: [48, 490, 190, 48, "Chọn PC kế tiếp", "", ""],
+  DEC: [300, 70, 150, 48, "InstructionDecode", "", ""], CTRL: [300, 130, 150, 48, "MainControl", "ctl", ""], IMM: [300, 190, 150, 48, "ImmGen", "", ""],
+  RF: [300, 262, 150, 150, "RegisterFile", "reg", ""],
+  MUXA: [580, 286, 30, 70, "", "", "mux"], MUXB: [580, 380, 30, 70, "", "", "mux"],
+  ALUC: [660, 120, 130, 44, "ALUControl", "ctl", ""], ALU: [660, 270, 130, 190, "ALU", "", "alu"],
+  ADDT: [560, 490, 120, 46, "PC + imm", "", ""], BR: [700, 490, 130, 46, "BranchUnit", "", ""],
+  MEM: [905, 270, 90, 190, "Memory", "mem", ""], WB: [1040, 300, 36, 130, "", "", "mux"],
+};
+const BANDS = [["IF", "IF - Nạp lệnh", 8, 262, COL.IF], ["ID", "ID - Giải mã", 278, 268, COL.ID], ["EX", "EX - Thực thi", 554, 326, COL.EX], ["MEM", "MEM - Bộ nhớ", 888, 124, COL.MEM], ["WB", "WB", 1020, 92, COL.WB]];
+const W = {
+  pcrom: ["", [88, 356], [150, 356]], pcadd: ["", [56, 330], [56, 230]],
+  bus: ["", [250, 356], [272, 356], [272, 94]], bus1: ["", [272, 94], [300, 94]], bus2: ["", [272, 154], [300, 154]], bus3: ["", [272, 214], [300, 214]], bus4: ["", [272, 356], [300, 356]],
+  rfa: ["", [450, 304], [580, 304]], rfb: ["", [450, 376], [500, 376], [500, 398], [580, 398]], immb: ["", [450, 214], [530, 214], [530, 420], [580, 420]],
+  muxa: ["", [610, 321], [636, 321], [636, 330], [660, 330]], muxb: ["", [610, 415], [636, 415], [636, 410], [660, 410]],
+  aluc: ["ctl", [725, 164], [725, 270]], ctrlalu: ["ctl", [450, 154], [620, 154], [620, 142], [660, 142]],
+  alumem: ["", [790, 365], [905, 365]], memwb: ["", [995, 365], [1040, 365]], alwb: ["", [800, 365], [850, 365], [850, 236], [1020, 236], [1020, 330], [1040, 330]],
+  rfbr: ["", [450, 340], [480, 340], [480, 513], [700, 513]], addtnpc: ["", [560, 525], [540, 525], [540, 586], [140, 586], [140, 538]],
+  wbrf: ["", [1076, 365], [1090, 365], [1090, 574], [280, 574], [280, 318], [300, 318]], npcpc: ["", [48, 514], [16, 514], [16, 356], [24, 356]],
+  add4npc: ["", [88, 214], [104, 214], [104, 500], [140, 500], [140, 490]], addtwb: ["", [88, 204], [120, 204], [120, 30], [1102, 30], [1102, 400], [1076, 400]],
+};
+function shapePath(x, y, w, h, shape) {
+  if (shape === "mux") return `M${x},${y}L${x + w},${y + 10}L${x + w},${y + h - 10}L${x},${y + h}Z`;
+  if (shape === "alu") return `M${x},${y}L${x + w},${y + h * 0.22}L${x + w},${y + h * 0.78}L${x},${y + h}L${x},${y + h * 0.56}L${x + 16},${y + h / 2}L${x},${y + h * 0.44}Z`;
+  return null;
+}
+function buildSC() {
+  const s = SC.svg; s.innerHTML = ""; SC.els = {};
+  BANDS.forEach(([k, label, x, w, c]) => {
+    el("rect", { class: "band", x, y: 40, width: w, height: 540, rx: 14, fill: c }, s);
+    el("text", { class: "bandlab", x: x + 10, y: 58, style: `fill:${c}` }, s, label);
+  });
+  for (const id in W) { const [k, ...pts] = W[id]; SC.els["w_" + id] = el("polyline", { class: "wire " + k, points: pts.map((p) => p.join(",")).join(" ") }, s); }
+  for (const id in B) {
+    const [x, y, w, h, title, kind, shape] = B[id];
+    const g = el("g", {}, s), sp = shapePath(x, y, w, h, shape);
+    SC.els["b_" + id] = sp ? el("path", { class: "box " + kind, d: sp }, g) : el("rect", { class: "box " + kind, x, y, width: w, height: h, rx: shape === "reg" ? 4 : 8 }, g);
+    if (shape === "reg") el("path", { d: `M${x},${y + h - 12}L${x + 8},${y + h - 6}L${x},${y + h}`, fill: "none", stroke: "var(--muted)", "stroke-width": 1.2 }, g);
+    const tx = shape === "alu" ? x + w / 2 + 6 : x + w / 2;
+    if (title) el("text", { class: "title", x: tx, y: y + 16, "text-anchor": "middle" }, g, title);
+    const base = shape === "mux" ? y + h / 2 - 2 : shape === "alu" ? y + h / 2 - 22 : y + 30;
+    SC.els["v_" + id] = el("text", { class: "val", x: tx, y: base, "text-anchor": "middle" }, g, "");
+    SC.els["v2_" + id] = el("text", { class: "val", x: tx, y: base + 12, "text-anchor": "middle" }, g, "");
+    SC.els["v3_" + id] = el("text", { class: "val", x: tx, y: base + 24, "text-anchor": "middle" }, g, "");
+  }
+  const tag = (id, x, y, text, anchor) => { SC.els["t_" + id] = el("text", { class: "tag", x, y, "text-anchor": anchor || "start" }, s, text); };
+  tag("pcA", 574, 325, "PC", "end"); tag("zeroA", 574, 342, "0", "end"); tag("rs1A", 574, 308, "rs1", "end");
+  tag("rs2B", 574, 402, "rs2", "end"); tag("immB", 574, 424, "imm", "end");
+  tag("rs2mem", 899, 444, "rs2_data", "end"); tag("wbin1", 1034, 334, "ALU", "end"); tag("wbin2", 1034, 369, "RAM", "end"); tag("wbin3", 1034, 404, "PC+4", "end");
+  tag("br", 836, 517, "branch_taken", "start"); tag("jalr", 244, 520, "alu_result (jalr)", "start");
+  SC.els.t_nextpc = el("text", { class: "tag on", x: 150, y: 560, "text-anchor": "start" }, s, "");
+}
+function scExplain(s) {
+  const op = s.opcode, rd = "x" + s.rd, a = "x" + s.rs1, b = "x" + s.rs2, nm = RV.ALU_NAMES[s.ALUCtrl];
+  const nxt = `PC kế tiếp = <b>${hx(s.next_pc)}</b>.`;
+  const si = (v) => (v | 0);
+  let t;
+  if (op === 0x33) t = `Lệnh kiểu <b>R</b>: đọc ${a} = ${hx(s.rs1_data)} và ${b} = ${hx(s.rs2_data)}; ALUControl chọn <b>${nm}</b>; ALU ra <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x13) t = `Lệnh <b>I</b> (ALU với hằng số): đọc ${a} = ${hx(s.rs1_data)}, imm = ${si(s.imm)} (${hx(s.imm)}); ALU <b>${nm}</b> cho <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x03) t = `<b>Load</b>: địa chỉ = ${a} + imm = ${hx(s.rs1_data)} + ${si(s.imm)} = <b>${hx(s.alu_result)}</b>; RAM trả từ ${hx(s.ram_word)}, LoadExtract (funct3 = ${s.f3}) cho <b>${hx(s.mem_rdata)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x23) t = `<b>Store</b>: địa chỉ = ${a} + imm = <b>${hx(s.alu_result)}</b>; ghi ${b} = ${hx(s.rs2_data)}; StoreMerge dựng từ mới ${hx(s.new_word)} (cho phép byte ${s.byte_en.toString(2).padStart(4, "0")}); không ghi thanh ghi. ${nxt}`;
+  else if (op === 0x63) t = `<b>Branch</b>: so ${a} = ${hx(s.rs1_data)} với ${b} = ${hx(s.rs2_data)} (funct3 = ${s.f3}) -> <b>${s.branch_taken ? "RẼ" : "không rẽ"}</b>. ${s.branch_taken ? `PC = PC + imm = ${hx(s.pc)} + ${si(s.imm)} = <b>${hx(s.next_pc)}</b>.` : nxt} Không ghi thanh ghi.`;
+  else if (op === 0x37) t = `<b>lui</b>: ASel = 10 chọn số 0, B = imm = ${hx(s.imm)}; ALU cộng cho <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x17) t = `<b>auipc</b>: ASel = 01 chọn PC = ${hx(s.pc)}, B = imm = ${hx(s.imm)}; ALU cộng cho <b>${hx(s.alu_result)}</b>; ghi vào ${rd}. ${nxt}`;
+  else if (op === 0x6f) t = `<b>jal</b>: ghi PC + 4 = <b>${hx(s.pc_plus4)}</b> (địa chỉ trả về) vào ${rd}; nhảy tới PC + imm = ${hx(s.pc)} + ${si(s.imm)} = <b>${hx(s.next_pc)}</b>.`;
+  else if (op === 0x67) t = `<b>jalr</b>: đích = (${a} + imm) bỏ bit 0 = (${hx(s.rs1_data)} + ${si(s.imm)}) & ~1 = <b>${hx(s.next_pc)}</b>; ghi PC + 4 = ${hx(s.pc_plus4)} vào ${rd}${s.rd === 0 ? " (rd = x0 nên không ghi gì)" : ""}.`;
+  else t = `Lệnh rỗng (opcode ${hx(op, 2)}): mọi tín hiệu điều khiển bằng 0, CPU không làm gì. ${nxt}`;
+  if (s.RegWrite && s.rd === 0) t += " <i>(rd = x0: ghi vào x0 không có tác dụng)</i>";
+  return t;
+}
+const SC_STAGE = [
+  { b: ["PC", "ADD4", "ROM", "NPC"], w: ["pcrom", "pcadd", "npcpc", "add4npc"] },
+  { b: ["DEC", "CTRL", "IMM", "RF"], w: ["bus", "bus1", "bus2", "bus3", "bus4", "rfa", "rfb", "immb"] },
+  { b: ["MUXA", "MUXB", "ALUC", "ALU", "BR", "ADDT"], w: ["muxa", "muxb", "aluc", "ctrlalu", "rfbr", "addtnpc"] },
+  { b: ["MEM"], w: ["alumem"] },
+  { b: ["WB"], w: ["memwb", "alwb", "addtwb", "wbrf"] },
+];
+let scTimers = [];
+function scApply(bOn, wOn, anim) {
+  scTimers.forEach(clearTimeout); scTimers = [];
+  const setB = (id, f) => SC.els["b_" + id].classList.toggle("on", !!f), setW = (id, f) => SC.els["w_" + id].classList.toggle("on", !!f);
+  if (!anim) { for (const id in B) setB(id, bOn[id]); for (const id in W) setW(id, wOn[id]); return; }
+  for (const id in B) setB(id, 0); for (const id in W) setW(id, 0);
+  SC_STAGE.forEach((st, i) => scTimers.push(setTimeout(() => { st.b.forEach((id) => setB(id, bOn[id])); st.w.forEach((id) => setW(id, wOn[id])); }, i * 340)));
+}
+function scDraw(anim) {
+  const cpu = SC.cpu, s = cpu.peek(), E = SC.els, last = cpu.last;
+  const on = (id, f) => { E[id].classList.toggle("on", !!f); };
+  const mem = s.MemRead || s.MemWrite;
+  const bOn = { PC: 1, ADD4: 1, ROM: 1, DEC: 1, CTRL: 1, IMM: 1, RF: 1, MUXA: 1, MUXB: 1, ALUC: 1, ALU: 1, BR: s.IsBranch, ADDT: s.take_target && !s.IsJALR, NPC: 1, MEM: mem, WB: s.RegWrite };
+  const wOn = { pcrom: 1, pcadd: 1, bus: 1, bus1: 1, bus2: 1, bus3: 1, bus4: 1,
+    rfa: s.ASel === 0, rfb: !s.ALUSrc, immb: s.ALUSrc, muxa: 1, muxb: 1, aluc: 1, ctrlalu: 1, alumem: mem, memwb: s.RegWrite && s.WBSel === 1,
+    alwb: s.RegWrite && s.WBSel === 0, rfbr: s.IsBranch, addtnpc: s.take_target && !s.IsJALR, wbrf: s.RegWrite, npcpc: 1, add4npc: !s.take_target && !s.IsJALR,
+    addtwb: s.RegWrite && s.WBSel === 2 };
+  scApply(bOn, wOn, anim && $("#scAnim").checked);
+  const set = (id, a, b, c) => { E["v_" + id].textContent = a || ""; E["v2_" + id].textContent = b || ""; E["v3_" + id].textContent = c || ""; E["v_" + id].classList.add("hot"); };
+  set("PC", hx(s.pc)); set("ADD4", hx(s.pc_plus4)); set("ROM", hx(s.instr), `op ${hx(s.opcode, 2)}`);
+  set("DEC", `rd=${s.rd} rs1=${s.rs1} rs2=${s.rs2}`, `funct3=${s.f3} funct7=${hx(s.f7, 2)}`);
+  set("CTRL", `RW=${s.RegWrite} AS=${s.ALUSrc} MW=${s.MemWrite} MR=${s.MemRead}`, `ALUOp=${s.ALUOp} Imm=${s.ImmSel} WB=${s.WBSel}`);
+  set("IMM", hx(s.imm)); set("RF", `rs1_data`, hx(s.rs1_data), `rs2_data ${hx(s.rs2_data)}`);
+  set("MUXA", ""); set("MUXB", "");
+  set("ALUC", RV.ALU_NAMES[s.ALUCtrl], `ALUCtrl = ${s.ALUCtrl}`);
+  set("ALU", `A ${hx(s.alu_a)}`, `B ${hx(s.alu_b)}`, `= ${hx(s.alu_result)}`);
+  set("BR", s.IsBranch ? (s.branch_taken ? "RẼ" : "không rẽ") : "-"); set("ADDT", hx(s.pc_target));
+  set("NPC", hx(s.next_pc), s.IsJALR ? "jalr" : s.take_target ? "PC + imm" : "PC + 4");
+  set("MEM", s.MemWrite ? "ghi" : s.MemRead ? "đọc" : "-", mem ? `từ[${(s.alu_result >>> 2) & 255}]` : "", s.MemWrite ? hx(s.new_word) : s.MemRead ? hx(s.mem_rdata) : "");
+  set("WB", "");
+  const tg = (id, f) => E["t_" + id].classList.toggle("on", !!f);
+  tg("rs1A", s.ASel === 0); tg("pcA", s.ASel === 1); tg("zeroA", s.ASel === 2); tg("rs2B", !s.ALUSrc); tg("immB", s.ALUSrc);
+  tg("wbin1", s.RegWrite && s.WBSel === 0); tg("wbin2", s.RegWrite && s.WBSel === 1); tg("wbin3", s.RegWrite && s.WBSel === 2);
+  tg("rs2mem", s.MemWrite); tg("br", s.branch_taken); tg("jalr", s.IsJALR);
+  E.t_nextpc.textContent = `next_pc = ${hx(s.next_pc)}   wb_data = ${hx(s.wb_data)}`;
+  $("#scExplain").innerHTML = scExplain(s);
+  markListing($("#scListing"), [s.pc]);
+  renderRegs($("#scRegs"), cpu.regs, last && last.reg_changed ? last.reg_written : -1);
+  $("#scMem").textContent = memText(cpu.ram);
+  $("#scInfo").textContent = `tick ${cpu.tick}`;
+  kv($("#scProbes"), [["PC", hx(s.pc)], ["instr", hx(s.instr)], ["alu_result", hx(s.alu_result)], ["branch_taken", s.branch_taken], ["wb_data", hx(s.wb_data)],
+    ["RegWrite", s.RegWrite], ["MemWrite", s.MemWrite], ["ALUSrc", s.ALUSrc], ["ALUCtrl", s.ALUCtrl + " " + RV.ALU_NAMES[s.ALUCtrl]], ["WBSel", s.WBSel.toString(2).padStart(2, "0")],
+    ["rs1_data", hx(s.rs1_data)], ["rs2_data", hx(s.rs2_data)], ["imm", hx(s.imm)], ["mem_rdata", hx(s.mem_rdata)], ["next_pc", hx(s.next_pc)]]);
+  scCharts();
+}
+function scCharts() {
+  const cpu = SC.cpu, H = SC.hist;
+  const total = Object.values(SC.mix).reduce((a, b) => a + b, 0);
+  kpis($("#scKpis"), [["", cpu.tick, "tick đã chạy"], ["if", hx(cpu.pc, 4), "PC hiện tại"], ["id", total, "lệnh đã thực thi"], ["ex", total ? "1.00" : "-", "CPI (luôn bằng 1)"],
+    ["mm", SC.mix.branch || 0, "branch đã chạy"], ["wb", cpu.regs.filter((v, i) => i && v).length, "thanh ghi khác 0"]]);
+  Chart.lines($("#scChartPc"), { title: "PC theo tick (vòng lặp hiện thành bậc thang lùi)", xLabel: "tick", nodots: true, series: [{ name: "PC", color: COL.IF, step: true, nodots: true, pts: H.map((h) => [h.tick, h.pc]) }], xmax: Math.max(10, cpu.tick), ytop: Chart.niceMax(Math.max(...H.map((h) => h.pc), 16) * 1.05), yfmt: (v) => "0x" + Math.round(v).toString(16) });
+  const regSeries = []; const palette = [COL.acc, COL.acc2, COL.good, COL.WB, COL.MEM, "#14b8a6", "#ec4899"];
+  for (let r = 1; r < 32 && regSeries.length < 6; r++) if (H.some((h) => h.regs[r] !== 0)) regSeries.push({ name: "x" + r, color: palette[regSeries.length], step: true, nodots: true, pts: H.map((h) => [h.tick, h.regs[r] > 0x7fffffff ? h.regs[r] - 4294967296 : h.regs[r]]) });
+  Chart.lines($("#scChartReg"), { title: "Giá trị các thanh ghi theo tick", xLabel: "tick", series: regSeries, xmax: Math.max(10, cpu.tick), ymin: Math.min(0, ...regSeries.flatMap((s) => s.pts.map((p) => p[1]))) });
+  Chart.donut($("#scChartMix"), { title: "Các loại lệnh đã chạy", parts: Object.keys(CLASS_COL).map((k) => ({ name: k, color: CLASS_COL[k], value: SC.mix[k] || 0 })) });
+}
+function scLoad(key) {
+  SC.key = key; SC.prog = PROGRAMS[key]; SC.cpu = new RV.SingleCycle(SC.prog.words); SC.hist = []; SC.mix = {};
+  SC.hist.push({ tick: 0, pc: 0, regs: SC.cpu.regs.slice() });
+  renderListing($("#scListing"), SC.prog);
+  scDraw();
+}
+function scAdvance() {
+  const before = SC.cpu.pc, st = SC.cpu.peek();
+  SC.cpu.step();
+  const c = classOf(st.opcode); SC.mix[c] = (SC.mix[c] || 0) + 1;
+  SC.hist.push({ tick: SC.cpu.tick, pc: SC.cpu.pc, regs: SC.cpu.regs.slice() });
+  return SC.cpu.pc !== before;
+}
+function scTick(anim) { const moved = scAdvance(); scDraw(anim === true); return moved; }
+function scJump(t) { stopSC(); scLoad(SC.key); for (let i = 0; i < t; i++) scAdvance(); scDraw(false); }
+buildSC();
+fillProgSelect($("#scProg"), "demo");
+$("#scProg").addEventListener("change", () => { stopSC(); scLoad($("#scProg").value); });
+$("#scReset").addEventListener("click", () => { stopSC(); scLoad($("#scProg").value); });
+$("#scTick").addEventListener("click", () => { scTick(true); });
+$("#scBack").addEventListener("click", () => scJump(Math.max(0, SC.cpu.tick - 1)));
+const stopSC = makeRunner($("#scRun"), scTick, $("#scSpeed"));
+scLoad("demo");
+
+/*__PDETAIL__*/
+/*__PCONV__*/
+/* ================================================================= PIPELINE VIEW */
+const PL = { cpu: null, prog: null, svg: $("#plSvg"), text: {}, els: {}, ev: [] };
+const STAGES = [["IF", "Nạp lệnh", 20, COL.IF], ["ID", "Giải mã", 220, COL.ID], ["EX", "Thực thi", 420, COL.EX], ["MEM", "Bộ nhớ", 620, COL.MEM], ["WB", "Ghi lại", 820, COL.WB]];
+const REGX = [[198, "IF/ID"], [398, "ID/EX"], [598, "EX/MEM"], [798, "MEM/WB"]];
+function buildPL() {
+  const s = PL.svg; s.innerHTML = ""; PL.els = {};
+  STAGES.forEach(([k, name, x, c]) => {
+    el("rect", { x, y: 36, width: 172, height: 158, rx: 12, fill: c, opacity: 0.1 }, s);
+    el("rect", { x, y: 36, width: 172, height: 6, rx: 3, fill: c }, s);
+    PL.els["b_" + k] = el("rect", { class: "box", x, y: 36, width: 172, height: 158, rx: 12, style: "fill:none" }, s);
+    el("text", { class: "title", x: x + 86, y: 62, "text-anchor": "middle", style: `fill:${c};font-size:13px` }, s, `${k} - ${name}`);
+    PL.els["i_" + k] = el("text", { class: "val hot", x: x + 86, y: 94, "text-anchor": "middle", style: "font-size:13px" }, s, "");
+    PL.els["p_" + k] = el("text", { class: "val", x: x + 86, y: 113, "text-anchor": "middle" }, s, "");
+    PL.els["q_" + k] = el("text", { class: "val", x: x + 86, y: 133, "text-anchor": "middle" }, s, "");
+    PL.els["r_" + k] = el("text", { class: "val", x: x + 86, y: 151, "text-anchor": "middle" }, s, "");
+    PL.els["s_" + k] = el("text", { class: "val", x: x + 86, y: 169, "text-anchor": "middle" }, s, "");
+  });
+  REGX.forEach(([x, name]) => {
+    el("rect", { class: "box reg", x, y: 36, width: 22, height: 158, rx: 5 }, s);
+    el("text", { class: "tag", x: x + 11, y: 210, "text-anchor": "middle" }, s, name);
+    el("polyline", { class: "wire on", points: `${x - 6},115 ${x},115` }, s);
+    el("polyline", { class: "wire on", points: `${x + 22},115 ${x + 28},115` }, s);
+  });
+  PL.els.fwdMem = el("path", { class: "wire", d: "M609,196 C609,262 440,262 440,198", style: "stroke:var(--accent)" }, s);
+  PL.els.fwdWb = el("path", { class: "wire", d: "M809,196 C809,300 450,300 450,198", style: "stroke:var(--accent)" }, s);
+  PL.els.fwdMemT = el("text", { class: "tag", x: 520, y: 258, "text-anchor": "middle" }, s, "");
+  PL.els.fwdWbT = el("text", { class: "tag", x: 620, y: 310, "text-anchor": "middle" }, s, "");
+  PL.els.flush = el("path", { class: "wire", d: "M520,32 C520,-24 120,-24 120,32", style: "stroke:var(--bad)" }, s);
+  PL.els.flushT = el("text", { class: "tag", x: 320, y: -22, "text-anchor": "middle", style: "fill:var(--bad)" }, s, "");
+  PL.els.stallT = el("text", { class: "tag", x: 106, y: 226, "text-anchor": "middle", style: "fill:var(--bad);font-weight:700" }, s, "");
+  PL.els.hold = el("rect", { class: "box bad", x: 20, y: 36, width: 172, height: 158, rx: 12, style: "fill:none", visibility: "hidden" }, s);
+}
+function plName(id) { if (id < 0) return "bubble"; const f = PL.cpu.fetched[id]; return f ? (PL.text[f.pc] || "?") : "?"; }
+function plPc(id) { const f = PL.cpu.fetched[id]; return f ? hx(f.pc, 4) : ""; }
+function plDraw() {
+  const cpu = PL.cpu, k = cpu.comb(), E = PL.els;
+  const fi = cpu.ifid, ie = cpu.idex, em = cpu.exmem, mw = cpu.memwb;
+  const ins = (stage, id, flush, lines) => {
+    E["i_" + stage].textContent = flush ? "X (flush)" : plName(id);
+    E["i_" + stage].style.fill = flush ? "var(--bad)" : id < 0 ? "var(--muted)" : "var(--ink)";
+    E["p_" + stage].textContent = id >= 0 ? "PC " + plPc(id) : "";
+    lines.slice(0, 3).forEach((t, i) => { E[["q_", "r_", "s_"][i] + stage].textContent = t || ""; });
+    E["b_" + stage].classList.toggle("on", id >= 0 && !flush);
+    E["b_" + stage].classList.toggle("bad", !!flush);
+  };
+  ins("IF", cpu.fid, false, [`PC = ${hx(cpu.pc)}`, `instr = ${hx(k.instr_if)}`, k.pc_src_ex ? "(sẽ bị flush)" : k.stall ? "(giữ nguyên)" : ""]);
+  ins("ID", fi.id, fi.flush, [`instr = ${hx(fi.instr)}`, `rs1_data = ${hx(k.rs1_data_id)}`, `rs2_data = ${hx(k.rs2_data_id)}`]);
+  ins("EX", ie.id, ie.flush, [`opA = ${hx(k.opA)}`, `opB = ${hx(k.opB)}`, `ALU ${RV.ALU_NAMES[k.ALUCtrl]} = ${hx(k.alu_result_ex)}`]);
+  ins("MEM", em.id, false, [`addr = ${hx(em.alu_result)}`, em.MemWrite ? `ghi ${hx(em.store_data)}` : em.MemRead ? `đọc ${hx(k.mem_rdata_mem)}` : "-", ""]);
+  ins("WB", mw.id, false, [mw.RegWrite && mw.rd ? `x${mw.rd} <- ${hx(k.wb_data)}` : "không ghi", ["ALU", "RAM", "PC+4", "0"][mw.WBSel], ""]);
+  const fwdA = k.ForwardA, fwdB = k.ForwardB, fm = fwdA === 2 || fwdB === 2, fw = fwdA === 1 || fwdB === 1;
+  E.fwdMem.classList.toggle("on", fm); E.fwdWb.classList.toggle("on", fw); E.fwdMem.classList.toggle("hide", !fm); E.fwdWb.classList.toggle("hide", !fw);
+  E.fwdMemT.classList.toggle("on", fm); E.fwdWbT.classList.toggle("on", fw);
+  E.fwdMemT.textContent = fm ? `forward từ EX/MEM (${fwdA === 2 ? "A" : ""}${fwdB === 2 ? "B" : ""})` : "";
+  E.fwdWbT.textContent = fw ? `forward từ MEM/WB (${fwdA === 1 ? "A" : ""}${fwdB === 1 ? "B" : ""})` : "";
+  E.flush.classList.toggle("on", !!k.pc_src_ex); E.flush.classList.toggle("hide", !k.pc_src_ex);
+  E.flushT.textContent = k.pc_src_ex ? "pc_src_ex = 1: PC nhảy tới đích, flush IF/ID và ID/EX" : "";
+  E.hold.setAttribute("visibility", k.stall ? "visible" : "hidden");
+  E.stallT.textContent = k.stall ? "STALL: PC và IF/ID đứng yên" : "";
+  const parts = [];
+  if (k.stall) parts.push(`<span class="badge stall">stall</span> Lệnh ở ID dùng thanh ghi mà lệnh <b>load</b> ở EX chưa đọc xong: PC và IF/ID đứng yên một chu kỳ, ID/EX nhận <b>bubble</b>.`);
+  if (k.pc_src_ex) parts.push(`<span class="badge flush">flush</span> Lệnh ở EX (<b>${plName(ie.id)}</b>) chuyển hướng PC tới <b>${hx(k.target_ex)}</b>; hai lệnh đã nạp phía sau bị hủy thành bubble (mất 2 chu kỳ).`);
+  if (k.ForwardA) parts.push(`<span class="badge fwd">forward A</span> Toán hạng A của EX lấy từ <b>${k.ForwardA === 2 ? "EX/MEM" : "MEM/WB"}</b> (= ${hx(k.opA)}) thay vì register file.`);
+  if (k.ForwardB) parts.push(`<span class="badge fwd">forward B</span> Toán hạng B của EX lấy từ <b>${k.ForwardB === 2 ? "EX/MEM" : "MEM/WB"}</b> (= ${hx(k.opB)}) thay vì register file.`);
+  if (!parts.length) parts.push(`<span class="badge ok">bình thường</span> Không có hazard: mỗi tầng chuyển lệnh sang tầng kế.`);
+  if (cpu.wbWritten > 0) parts.push(`Cạnh xuống xung nhịp vừa rồi: register file ghi <b>x${cpu.wbWritten}</b> = ${hx(cpu.regs[cpu.wbWritten])} (lệnh ở WB).`);
+  $("#plExplain").innerHTML = parts.join("<br>");
+  markListing($("#plListing"), [fi.id >= 0 && cpu.fetched[fi.id] ? cpu.fetched[fi.id].pc : -1, ...(ie.id >= 0 && cpu.fetched[ie.id] ? [cpu.fetched[ie.id].pc] : [])]);
+  renderRegs($("#plRegs"), cpu.regs, cpu.wbWritten);
+  $("#plMem").textContent = memText(cpu.ram);
+  $("#plInfo").textContent = `tick ${cpu.tick}`;
+  kv($("#plProbes"), [["PC", hx(cpu.pc)], ["instr_id", hx(fi.instr)], ["stall", k.stall], ["pc_src_ex", k.pc_src_ex], ["ForwardA", k.ForwardA.toString(2).padStart(2, "0")],
+    ["ForwardB", k.ForwardB.toString(2).padStart(2, "0")], ["alu_result_ex", hx(k.alu_result_ex)], ["wb_data", hx(k.wb_data)], ["run", k.run], ["bubble", k.bubble],
+    ["opA", hx(k.opA)], ["opB", hx(k.opB)], ["target_ex", hx(k.target_ex)], ["rd_ex", ie.rd], ["rd_mem", em.rd], ["rd_wb", mw.rd]]);
+  cvUpdate(); pdDraw(); plGantt(); plCharts();
+}
+function plCharts() {
+  const cpu = PL.cpu, ev = PL.ev;
+  const retired = ev.reduce((a, e) => a + e.ret, 0), stalls = ev.reduce((a, e) => a + e.stall, 0), flushes = ev.reduce((a, e) => a + e.flush, 0), fwds = ev.reduce((a, e) => a + (e.fwd ? 1 : 0), 0);
+  kpis($("#plKpis"), [["", cpu.tick, "tick đã chạy"], ["wb", retired, "lệnh đã hoàn tất (qua WB)"], ["ex", retired ? (cpu.tick / retired).toFixed(2) : "-", "CPI tích lũy"], ["mm", stalls, "chu kỳ stall"], ["mm", flushes, "lần flush (x2 chu kỳ)"], ["id", fwds, "tick có forwarding"]]);
+  let cum = 0; const cpi = ev.map((e, i) => { cum += e.ret; return [i + 1, cum ? (i + 1) / cum : 0]; }).filter((p) => p[1] > 0 && p[0] >= 5);
+  Chart.lines($("#plChartCpi"), { title: "CPI tích lũy (số tick / số lệnh đã hoàn tất)", xLabel: "tick", series: [{ name: "pipeline", color: COL.EX, pts: cpi }, { name: "lý tưởng = 1", color: COL.gray, nodots: true, pts: [[5, 1], [Math.max(10, cpu.tick), 1]] }], xmax: Math.max(10, cpu.tick), ymin: 0, ytop: Math.max(2, Chart.niceMax(Math.max(...cpi.map((p) => p[1]), 1) * 1.05)) });
+  Chart.bars($("#plChartEv"), { title: "Sự kiện theo tick (1 = có xảy ra)", labels: ev.map((e, i) => String(i + 1)), stacked: true,
+    series: [{ name: "stall", color: "#d99a1c", values: ev.map((e) => e.stall) }, { name: "flush", color: COL.bad, values: ev.map((e) => e.flush) }, { name: "forward", color: COL.acc, values: ev.map((e) => (e.fwd ? 1 : 0)) }], w: 560, h: 260 });
+}
+function plGantt() {
+  const cpu = PL.cpu, H = cpu.history, box = $("#plGantt");
+  const rows = new Map();
+  const put = (id, tick, st) => { if (id < 0) return; if (!rows.has(id)) rows.set(id, { id, cells: {} }); rows.get(id).cells[tick] = st; };
+  H.forEach((h) => { put(h.IF, h.tick, "IF"); put(h.ID, h.tick, h.IDflush ? "X" : "ID"); put(h.EX, h.tick, h.EXflush ? "X" : "EX"); put(h.MEM, h.tick, "MEM"); put(h.WB, h.tick, "WB"); });
+  const ids = [...rows.keys()].sort((a, b) => a - b);
+  const last = H.length ? H[H.length - 1].tick : 0;
+  let html = "<table><tr><td class='lab'>lệnh (đã fetch)</td>";
+  for (let t = 0; t <= last; t++) html += `<td class="hd">${t}</td>`;
+  html += "</tr>";
+  const stalled = new Set();
+  H.forEach((h, i) => { if (i > 0 && H[i - 1].ID === h.ID && h.ID >= 0 && !h.IDflush && H[i - 1].stall) stalled.add(h.ID + ":" + h.tick); });
+  ids.forEach((id) => {
+    const r = rows.get(id), f = cpu.fetched[id];
+    html += `<tr><td class="lab">${esc(f ? (PL.text[f.pc] || "?") : "?")} <span style="color:var(--muted)">@${f ? hx(f.pc, 4).slice(2) : ""}</span></td>`;
+    for (let t = 0; t <= last; t++) { const st = r.cells[t]; html += st ? `<td class="${st}${stalled.has(id + ":" + t) ? " st" : ""}">${st}</td>` : "<td></td>"; }
+    html += "</tr>";
+  });
+  box.innerHTML = html + "</table>";
+  box.scrollLeft = box.scrollWidth; box.scrollTop = box.scrollHeight;
+}
+function plLoad(key) {
+  PL.key = key; PL.prog = PROGRAMS[key]; PL.text = progText(PL.prog); PL.ev = [];
+  PL.cpu = new RV.Pipeline(PL.prog.words);
+  renderListing($("#plListing"), PL.prog);
+  cvReset(); cvEvents(key);
+  plDraw();
+}
+function plJump(t) {
+  stopPL(); plLoad(PL.key);
+  for (let i = 0; i < t; i++) plStep();
+  plDraw();
+}
+function plStep() {
+  const c = PL.cpu, k = c.comb(), before = c.memwb;
+  c.step();
+  PL.ev.push({ stall: k.stall, flush: k.pc_src_ex ? 1 : 0, fwd: k.ForwardA || k.ForwardB ? 1 : 0, ret: before.id >= 0 ? 1 : 0 });
+}
+function plTick() { plStep(); plDraw(); return PL.cpu.tick < 400; }
+buildPL();
+fillProgSelect($("#plProg"), "hazards_demo");
+$("#plProg").addEventListener("change", () => { stopPL(); plLoad($("#plProg").value); });
+$("#plReset").addEventListener("click", () => { stopPL(); plLoad($("#plProg").value); });
+$("#plBack").addEventListener("click", () => plJump(Math.max(0, PL.cpu.tick - 1)));
+$("#plTick").addEventListener("click", plTick);
+const stopPL = makeRunner($("#plRun"), plTick, $("#plSpeed"));
+plLoad("hazards_demo");
+
+/* ================================================================= PERFORMANCE (all programs, computed live) */
+let PERF = null;
+function computePerf() {
+  const out = [];
+  Object.keys(PROGRAMS).forEach((k) => {
+    const p = PROGRAMS[k];
+    const s = new RV.SingleCycle(p.words); let lastS = 0;
+    for (let i = 1; i <= p.steps + 5; i++) { const b = s.regs.slice(); s.step(); if (s.regs.some((v, j) => v !== b[j])) lastS = i; }
+    const q = new RV.Pipeline(p.words); let lastP = 0; const ev = [];
+    for (let i = 1; i <= p.steps * 3 + 60; i++) {
+      const b = q.regs.slice(), c = q.comb(); q.step();
+      ev.push({ stall: c.stall, flush: c.pc_src_ex ? 1 : 0, fwd: c.ForwardA || c.ForwardB ? 1 : 0 });
+      if (q.regs.some((v, j) => v !== b[j])) lastP = i;
+    }
+    const use = ev.slice(0, lastP);
+    const stalls = use.reduce((a, e) => a + e.stall, 0), flushes = use.reduce((a, e) => a + e.flush, 0), fwds = use.reduce((a, e) => a + e.fwd, 0);
+    out.push({ key: k, name: k.replace("_demo", ""), instr: lastS, single: lastS, pipe: lastP, stalls, flushes, fwds, fill: lastP - lastS - stalls - 2 * flushes });
+  });
+  return out;
+}
+function drawPerf() {
+  if (!PERF) PERF = computePerf();
+  const P = PERF, names = P.map((p) => p.key);
+  const tot = P.reduce((a, p) => ({ i: a.i + p.instr, p: a.p + p.pipe }), { i: 0, p: 0 });
+  kpis($("#pfKpis"), [["", P.length, "chương trình đã đo"], ["id", tot.i, "tổng lệnh (= tổng chu kỳ single-cycle)"], ["ex", tot.p, "tổng chu kỳ pipeline"], ["mm", (tot.p / tot.i).toFixed(2), "CPI trung bình của pipeline"],
+    ["wb", P.reduce((a, p) => a + p.flushes, 0), "lần flush (branch/jump được rẽ)"], ["if", P.reduce((a, p) => a + p.stalls, 0), "chu kỳ stall load-use"]]);
+  Chart.bars($("#pfCycles"), { title: "Số chu kỳ để hoàn tất (thấp hơn = nhanh hơn)", labels: names, series: [{ name: "single-cycle", color: COL.IF, values: P.map((p) => p.single) }, { name: "pipeline", color: COL.EX, values: P.map((p) => p.pipe) }], h: 320 });
+  Chart.bars($("#pfCpi"), { title: "CPI = chu kỳ / lệnh (single-cycle luôn bằng 1)", labels: names, fmt: (v) => v.toFixed(2), series: [{ name: "single-cycle", color: COL.IF, values: P.map(() => 1) }, { name: "pipeline", color: COL.EX, values: P.map((p) => +(p.pipe / p.instr).toFixed(2)) }], h: 320 });
+  Chart.bars($("#pfBreak"), { title: "Chi phí của pipeline: các chu kỳ đến từ đâu", labels: names, stacked: true, h: 320,
+    series: [{ name: "lệnh", color: COL.IF, values: P.map((p) => p.instr) }, { name: "flush x2", color: COL.bad, values: P.map((p) => 2 * p.flushes) }, { name: "stall", color: "#d99a1c", values: P.map((p) => p.stalls) }, { name: "làm đầy/xả", color: COL.gray, values: P.map((p) => Math.max(0, p.fill)) }] });
+  Chart.bars($("#pfRatio"), { title: "Tỉ lệ chu kỳ pipeline / single-cycle (1.00 = bằng nhau)", labels: names, fmt: (v) => v.toFixed(2), h: 320, series: [{ name: "pipeline / single", color: COL.WB, values: P.map((p) => +(p.pipe / p.single).toFixed(2)) }] });
+  let t = "<table><tr><th>chương trình</th><th class='n'>lệnh</th><th class='n'>single-cycle</th><th class='n'>pipeline</th><th class='n'>CPI pipeline</th><th class='n'>lần flush</th><th class='n'>stall</th><th class='n'>tick có forward</th><th>vì sao</th></tr>";
+  const why = { alu: "không có branch được rẽ, forwarding che hết phụ thuộc", mem: "ít branch", hazard: "có stall load-use và branch được rẽ", jump: "nhiều lệnh nhảy", branch: "nhiều branch được rẽ", fib: "vòng lặp: 1 branch được rẽ mỗi 4 lệnh", demo: "vòng lặp 10 lần + một lần gọi hàm", hazards_demo: "chương trình nhỏ để xem hazard" };
+  P.forEach((p) => { t += `<tr><td><b>${p.key}</b></td><td class="n">${p.instr}</td><td class="n">${p.single}</td><td class="n">${p.pipe}</td><td class="n">${(p.pipe / p.instr).toFixed(2)}</td><td class="n">${p.flushes}</td><td class="n">${p.stalls}</td><td class="n">${p.fwds}</td><td>${why[p.key] || ""}</td></tr>`; });
+  $("#pfTable").innerHTML = t + "</table>";
+}
+
+/* ================================================================= FLOWCHARTS */
+let flowLang = "vi", flowIndex = 0, mermaidReady = null;
+function mdToHtml(md) {
+  const lines = md.split("\n"), out = [];
+  let i = 0;
+  const inline = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\*([^*]+)\*/g, "<i>$1</i>");
+  while (i < lines.length) {
+    const ln = lines[i];
+    if (ln.startsWith("```mermaid")) { const code = []; i++; while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]); i++; out.push(`<pre class="mermaid">${esc(code.join("\n"))}</pre>`); continue; }
+    if (ln.startsWith("```")) { const code = []; i++; while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]); i++; out.push(`<pre>${esc(code.join("\n"))}</pre>`); continue; }
+    const h = /^(#{1,4}) (.*)$/.exec(ln);
+    if (h) { out.push(`<h${Math.min(h[1].length + 1, 4)}>${inline(h[2])}</h${Math.min(h[1].length + 1, 4)}>`); i++; continue; }
+    if (ln.startsWith(">")) { out.push(`<blockquote>${inline(ln.replace(/^>\s?/, ""))}</blockquote>`); i++; continue; }
+    if (/^\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
+      const rows = []; while (i < lines.length && /^\|.*\|\s*$/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const head = cells(rows[0]); const body = rows.slice(2).map(cells);
+      out.push("<table><tr>" + head.map((c) => `<th>${inline(c)}</th>`).join("") + "</tr>" + body.map((r) => "<tr>" + r.map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") + "</table>");
+      continue;
+    }
+    if (/^\s*(\d+\.|[-*]) /.test(ln)) {
+      const ord = /^\s*\d+\./.test(ln), items = [];
+      while (i < lines.length && /^\s*(\d+\.|[-*]) /.test(lines[i])) { items.push(lines[i].replace(/^\s*(\d+\.|[-*]) /, "")); i++; }
+      out.push(`<${ord ? "ol" : "ul"}>` + items.map((t) => `<li>${inline(t)}</li>`).join("") + `</${ord ? "ol" : "ul"}>`); continue;
+    }
+    if (ln.trim() === "" || /^---+$/.test(ln.trim())) { i++; continue; }
+    const para = [ln]; i++;
+    while (i < lines.length && lines[i].trim() !== "" && !/^(#|```|>|\||\s*(\d+\.|[-*]) )/.test(lines[i])) para.push(lines[i++]);
+    out.push(`<p>${inline(para.join(" "))}</p>`);
+  }
+  return out.join("\n");
+}
+function flowSections() {
+  const md = FLOW[flowLang], parts = md.split(/\n(?=## )/), secs = [];
+  parts.forEach((p, k) => { if (k === 0) secs.push({ title: flowLang === "vi" ? "Giới thiệu và ký hiệu" : "Introduction and notation", md: p.replace(/^# .*\n/, "") }); else secs.push({ title: p.split("\n")[0].replace(/^## /, ""), md: p }); });
+  return secs;
+}
+function loadMermaid() {
+  if (mermaidReady) return mermaidReady;
+  mermaidReady = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js";
+    s.onload = () => { mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default", flowchart: { useMaxWidth: true, htmlLabels: true } }); res(); };
+    s.onerror = () => rej(new Error("no mermaid"));
+    document.head.appendChild(s);
+  });
+  return mermaidReady;
+}
+function renderFlow(i) {
+  const secs = flowSections(); flowIndex = Math.min(i, secs.length - 1);
+  const toc = $("#flToc"); toc.innerHTML = "";
+  secs.forEach((s, k) => { const b = document.createElement("button"); b.textContent = s.title.replace(/`/g, ""); b.setAttribute("aria-current", k === flowIndex ? "true" : "false"); b.onclick = () => { renderFlow(k); window.scrollTo(0, 0); }; toc.appendChild(b); });
+  const body = $("#flBody"); body.innerHTML = mdToHtml(secs[flowIndex].md);
+  loadMermaid().then(() => mermaid.run({ nodes: body.querySelectorAll("pre.mermaid") })).catch(() => {
+    body.querySelectorAll("pre.mermaid").forEach((p) => { p.classList.remove("mermaid"); p.insertAdjacentHTML("afterbegin", "<i>(không tải được thư viện Mermaid, đây là mã nguồn sơ đồ)</i>\n"); });
+  });
+}
+$("#flVi").addEventListener("click", () => { flowLang = "vi"; $("#flVi").setAttribute("aria-pressed", "true"); $("#flEn").setAttribute("aria-pressed", "false"); renderFlow(flowIndex); });
+$("#flEn").addEventListener("click", () => { flowLang = "en"; $("#flEn").setAttribute("aria-pressed", "true"); $("#flVi").setAttribute("aria-pressed", "false"); renderFlow(flowIndex); });
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key === "F9") { e.preventDefault(); if (!$("#single").hidden) scTick(true); else if (!$("#pipe").hidden) plTick(); }
+});
+(function () {
+  const q = new URLSearchParams(location.search), n = +(q.get("t") || 0), pr = q.get("prog");
+  if (q.get("s")) flowIndex = +q.get("s");
+  if (pr && PROGRAMS[pr]) { $("#scProg").value = pr; $("#plProg").value = pr; scLoad(pr); plLoad(pr); }
+  for (let i = 0; i < n; i++) { scTick(); plStep(); }
+  if (n) plDraw();
+})();
+showTab((location.hash || "#intro").slice(1));
+</script>
+</body>
+</html>

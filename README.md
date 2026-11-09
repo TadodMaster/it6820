@@ -1,5 +1,7 @@
 # RV32I computer in Logisim Evolution
 
+> **Web visualisation:** open [docs/web/index.html](docs/web/index.html) in a browser (step the CPUs with an animated datapath, see hazards, performance charts, flowcharts); rebuild with `python tools/build_web.py`, test with `node tools/web/test_engine.js`.
+
 > Tiếng Việt: [docs/vi/README.md](docs/vi/README.md) (all docs are also available in Vietnamese in `docs/vi/`).
 
 A 32-bit RISC-V (RV32I) computer built in **Logisim Evolution 4.1.0** for the course project
