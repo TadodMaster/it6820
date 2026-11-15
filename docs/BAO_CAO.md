@@ -227,7 +227,6 @@ Ghi-sau-ghi và ghi-sau-đọc không thể xảy ra vì các lệnh hoàn thàn
 | `tools/rv.py sim` | **bộ mô phỏng tham chiếu** có cùng bộ nhớ dữ liệu 256 từ: chuẩn độc lập cho mọi bài test |
 | `tools/java/Run.java` | chạy chương trình trên một circuit không cần GUI: nạp ROM, đảo xung nhịp, đọc `PC`, `x0..x31` và RAM |
 | `tools/build/` | sinh các circuit từ netlist và kiểm tra kết quả |
-| `logisim-mcp/` | MCP server cho phép trợ lý AI xem và kiểm thử các circuit |
 
 Nạp chương trình: nhấp phải vào ROM > *Load Image...* rồi chọn file `.hex`, hoặc `python tools/rv.py asm prog.s -o prog.hex`.
 
@@ -391,7 +390,7 @@ tăng performance cho pipeline (predictor/cache/forwarding nâng cao), floating 
 | Toàn bộ source/project (`.circ`, `.vhd`, `.sv`, testbench, chương trình test) | đạt: `RiscVComputer.circ`, `tools/`, `tests/`, `programs/` |
 | Báo cáo kỹ thuật ~10–20 trang: kiến trúc, từng module, pipeline, hazard, kiểm thử, kết quả, mở rộng | **bản nháp đầy đủ** ở [REPORT.md](BAO_CAO.md) (tiếng Anh); nhóm cần đọc lại, bổ sung và xuất ra PDF / Word |
 | Bộ test cho từng module và cho toàn CPU | đạt: 9 file test module, 7 chương trình test, fuzz ngẫu nhiên (`tests/`) |
-| Demo video hoặc demo trực tiếp (chạy chương trình, quan sát register/memory/pipeline) | kịch bản ở [DEMO.md](TRINH_BAY.md); **nhóm cần quay video** |
+| Demo video hoặc demo trực tiếp (chạy chương trình, quan sát register/memory/pipeline) | **nhóm cần quay video**; cách chạy xem [HUONG_DAN_CHAY.md](HUONG_DAN_CHAY.md) |
 | README mô tả cách mở project, chạy simulation, nạp chương trình, chạy test | đạt: [../README.md](../README.md) |
 
 ---

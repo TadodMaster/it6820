@@ -39,7 +39,7 @@ java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
    `instr` và `wb_data` được hiển thị bằng các probe màu vàng trong circuit.
 
 Kết quả mong đợi của chương trình demo: `x10 = 55`, `x12 = 110`, `x13 = 55`, `x14 = 1`; CPU single-cycle xong sau 39 chu kỳ, pipeline sau 64.
-Xem [docs/TRINH_BAY.md](docs/TRINH_BAY.md) để có kịch bản demo.
+Xem [docs/HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md) để biết cách chạy.
 
 ## Các file
 
@@ -52,18 +52,16 @@ Xem [docs/TRINH_BAY.md](docs/TRINH_BAY.md) để có kịch bản demo.
 | `tools/build/` | các bộ sinh circuit (`build_all.py`), xem [Dựng lại các mạch](#dựng-lại-các-mạch) |
 | `tests/` | test vector của module, chương trình test, bộ chạy test |
 | `docs/` | tài liệu, xem mục lục bên dưới |
-| `logisim-mcp/` | MCP server để Claude Code đọc / test circuit (xem `commands.txt`) |
 
 ## Tài liệu
 
-Toàn bộ tài liệu nằm trong `docs/` (tiếng Việt), gộp thành 5 file. **Mới vào repo thì đọc [docs/SU_DUNG_REPO.md](docs/SU_DUNG_REPO.md) trước.**
+Toàn bộ tài liệu nằm trong `docs/` (tiếng Việt), gộp thành 4 file. **Mới vào repo thì đọc [docs/HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md) trước.**
 
 | Tài liệu | Đọc để ... |
 |---|---|
-| [docs/SU_DUNG_REPO.md](docs/SU_DUNG_REPO.md) | **cách dùng repo**: cài gì, chạy Logisim, file `.hex` và mã test ở đâu, chạy test, sửa gì thì chạy lại gì |
+| [docs/HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md) | **cách dùng repo**: cài gì, chạy Logisim, file `.hex` và mã test ở đâu, chạy test, sửa gì thì chạy lại gì |
 | [docs/HUONG_DAN.md](docs/HUONG_DAN.md) | **hiểu và dùng mọi thứ**: CPU làm gì, từng khối, giá trị tín hiệu thực tế, pipeline, test, xử lý sự cố; cùng các công cụ (assembler, mô phỏng, bộ sinh mạch, kiểm thử) |
 | [docs/KIEN_TRUC.md](docs/KIEN_TRUC.md) | cấu hình từng component và lý do, bảng kê vật tư (BOM), nhật ký thiết kế, sơ đồ luồng của 14 circuit |
-| [docs/TRINH_BAY.md](docs/TRINH_BAY.md) | **trình bày cho thầy**: hướng dẫn ngắn, kịch bản demo, giải thích từng tick, kịch bản quay video, kịch bản hazard của pipeline (có bản [PDF](docs/TRINH_BAY.pdf)) |
 | [docs/BAO_CAO.md](docs/BAO_CAO.md) | báo cáo kỹ thuật, đề bài kèm trạng thái từng mục, phân công nhóm |
 
 Ngoài ra: [docs/web/index.html](docs/web/index.html) (bản web trực quan) và [docs/LEARNING_PLAN.md](docs/LEARNING_PLAN.md) (kế hoạch học, tiếng Anh).
@@ -163,9 +161,9 @@ chỉ tại các điểm đầu cuối (không có ngã ba chữ T trong file), 
 * Không có dự đoán nhánh, cache, bộ nhân / chia, ngắt, GPIO / UART hay dấu phẩy động (các phần mở rộng tùy chọn).
 * Các lệnh `fence`, `ecall`, `ebreak`, CSR chưa được cài đặt (xử lý như `nop`).
 * ROM lệnh và RAM dữ liệu đều 256 từ; RAM dữ liệu tách biệt với ROM (chương trình không thể tự sửa mình).
-* Báo cáo đã được soạn thảo trong [docs/BAO_CAO.md](docs/BAO_CAO.md) (nhóm cần đọc soát và xuất file); video demo vẫn cần được quay ([docs/TRINH_BAY.md](docs/TRINH_BAY.md) là kịch bản).
+* Báo cáo đã được soạn thảo trong [docs/BAO_CAO.md](docs/BAO_CAO.md) (nhóm cần đọc soát và xuất file); video demo vẫn cần được quay.
 
 ## Công cụ
 
-Java 21 (JDK 21.0.12 tại `C:\Program Files\Java\jdk-21.0.12.1`), Python 3.10, MCP server `logisim-mcp` (venv cần `mcp<2`).
+Java 21 (JDK 21.0.12 tại `C:\Program Files\Java\jdk-21.0.12.1`), Python 3.10.
 `commands.txt` liệt kê các lệnh.

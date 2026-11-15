@@ -77,8 +77,8 @@ Step 'Live proof (the screen you will show)' {
 Write-Host ''
 if ($results -notcontains $false) {
     Write-Host 'READY: everything passed.' -ForegroundColor Green
-    Write-Host 'Before you start: close other Logisim windows, close chat / mail apps (notifications pop up over the screen), then follow docs\TRINH_BAY.md.'
+    Write-Host 'Before you start: close other Logisim windows, close chat / mail apps (notifications pop up over the screen), then follow docs\HUONG_DAN_CHAY.md.'
 } else {
-    Write-Host 'NOT READY: fix the FAIL lines first (docs\TRINH_BAY.md, section "If something goes wrong").' -ForegroundColor Red
+    Write-Host 'NOT READY: fix the FAIL lines first (docs\HUONG_DAN_CHAY.md, section "If something goes wrong").' -ForegroundColor Red
     exit 1
 }

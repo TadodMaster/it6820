@@ -34,13 +34,7 @@ RV32I COMPUTER IN LOGISIM EVOLUTION - COMMANDS (PowerShell, run from D:\hust\log
 7. HEADLESS TEST OF ONE MODULE
    java -jar .\logisim-evolution-4.1.0-all.jar --test-vector ALU tests\alu.vec .\RiscVComputer.circ
 
-8. MCP SERVER (logisim-mcp; restart Claude Code to load its tools)
-   claude mcp list
-   claude mcp remove logisim -s user
-   claude mcp add logisim --scope user --env "LOGISIM_JAR=D:\hust\logisim\logisim-evolution-4.1.0-all.jar" --env "JAVA=C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe" --env "LOGISIM_WORKDIR=D:\hust\logisim" -- "D:\hust\logisim\logisim-mcp\.venv\Scripts\python.exe" -m logisim_mcp
-   (the venv must keep "mcp<2": D:\hust\logisim\logisim-mcp\.venv\Scripts\python.exe -m pip install "mcp<2")
-
-9. IF JAVA IS TOO OLD
+8. IF JAVA IS TOO OLD
    Error "UnsupportedClassVersionError ... class file version 65.0" means Java < 21.
    winget is blocked by the proxy on this network: download the JDK 21 .msi in a browser, or call it by full path:
    & "C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe" -jar .\logisim-evolution-4.1.0-all.jar

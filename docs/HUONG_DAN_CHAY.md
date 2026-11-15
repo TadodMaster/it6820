@@ -1,4 +1,4 @@
-# Cách dùng repo này
+# Hướng dẫn chạy: cách dùng repo này
 
 File này trả lời nhanh: **cài gì, chạy Logisim thế nào, file `.hex` ở đâu, mã test ở đâu, chạy test ra sao, sửa gì thì chạy lại gì**. Lệnh viết cho PowerShell trên Windows, chạy ở thư mục gốc của repo (thư mục chứa `RiscVComputer.circ`).
 
@@ -28,7 +28,6 @@ tests/                    mã kiểm thử (xem mục 5)
 tools/                    công cụ: assembler, chạy mạch không giao diện, bộ sinh mạch, trang web (mục 6)
 docs/                     tài liệu (mục 7), hình mạch (docs/img), bản web (docs/web)
 commands.txt              các lệnh hay dùng để copy/paste
-logisim-mcp/              MCP server cho trợ lý AI đọc/kiểm thử mạch (không cần cho việc chạy bình thường)
 ```
 
 **File `.hex` nằm ở `programs\`:**
@@ -116,7 +115,6 @@ Phải thấy dòng cuối `READY: everything passed.`
 | `README.md` (gốc) | tổng quan, bắt đầu nhanh, kết quả |
 | `docs\HUONG_DAN.md` | hiểu CPU hoạt động thế nào, và các công cụ |
 | `docs\KIEN_TRUC.md` | cấu hình từng component, bảng kê, nhật ký thiết kế, sơ đồ luồng 14 mạch |
-| `docs\TRINH_BAY.md` (và `.pdf`) | cách trình bày cho thầy, kịch bản demo, quay video, kịch bản hazard |
 | `docs\BAO_CAO.md` | báo cáo kỹ thuật, đề bài, phân công nhóm |
 | `docs\web\index.html` | mở bằng trình duyệt: chạy từng tick CPU, xem hazard, biểu đồ |
 | `docs\img\` | ảnh của từng mạch |
