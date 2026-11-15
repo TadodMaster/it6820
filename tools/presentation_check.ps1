@@ -25,7 +25,7 @@ foreach ($c in @($env:JAVA, 'java', (Get-ChildItem 'C:\Program Files\Java\jdk-21
         if ($v -match '"(\d+)') { if ([int]$Matches[1] -ge 21) { $java = $c; break } }
     } catch { }
 }
-Step 'Java 21 or newer' { @{ Ok = [bool]$java; Note = $(if ($java) { "$java" } else { 'not found: install JDK 21 (see commands.txt)' }) } }
+Step 'Java 21 or newer' { @{ Ok = [bool]$java; Note = $(if ($java) { "$java" } else { 'not found: install JDK 21 (see docs/HUONG_DAN_CHAY.md)' }) } }
 if (-not $java) { Write-Host 'Cannot continue without Java 21.' -ForegroundColor Red; exit 1 }
 $env:JAVA = $java
 $env:Path = (Split-Path $java) + ';' + $env:Path

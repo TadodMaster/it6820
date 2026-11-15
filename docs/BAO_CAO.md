@@ -462,5 +462,5 @@ Cả 14 circuit đều có người phụ trách: A có 5, B có 6, C có 3 (nh�
 ### 4. Cả ba cùng nắm (họp chung 30 phút)
 
 * Tổng quan kiến trúc: `docs/vi/REPORT.md` mục 2 và hai hình mức trên cùng `docs/img/main.png`, `docs/img/Pipeline.png`.
-* Các lệnh trong `commands.txt` và bước kiểm tra trước buổi trình bày `tools\presentation_check.ps1`.
+* Các lệnh trong `docs/HUONG_DAN_CHAY.md` và bước kiểm tra trước buổi trình bày `tools\presentation_check.ps1`.
 * Một buổi tập đầy đủ theo `docs/vi/PRESENTATION.md`, mỗi người trình bày các bước của mình (A: 1-5, B: 6, 9, 11, 12, C: 7, 8, 10).

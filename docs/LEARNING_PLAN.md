@@ -23,7 +23,7 @@ Time: 12 sessions (about 18 hours), or 6 days with two sessions a day.
 
 **Read:** `README.md`, `docs/GUIDE.md` section 2 ("The project at a glance"), `docs/REPORT.md` sections 1-2.
 **Do:**
-1. Open the project: `java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ` (needs Java 21; see `commands.txt`).
+1. Open the project: `java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ` (needs Java 21; see `docs/HUONG_DAN_CHAY.md`).
 2. In the left tree list the 14 circuits and sort them into three groups: the two CPUs (`main`, `Pipeline`), the datapath blocks (`InstructionDecode`, `MainControl`, `ImmGen`, `RegisterFile`, `ALUControl`, `ALU`, `BranchUnit`, `Memory`, `LoadExtract`, `StoreMerge`), the pipeline-only blocks (`ForwardingUnit`, `HazardUnit`).
 3. Learn the Logisim controls: Ctrl+R (reset), Ctrl+F9 (one full clock cycle), the State tab (PC and x0..x31), tunnels (same name = same wire), zoom.
 4. Run `python tools\live_proof.py` once and read the output: this is the "does it work" proof you will understand fully at the end.

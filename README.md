@@ -166,4 +166,4 @@ chỉ tại các điểm đầu cuối (không có ngã ba chữ T trong file), 
 ## Công cụ
 
 Java 21 (JDK 21.0.12 tại `C:\Program Files\Java\jdk-21.0.12.1`), Python 3.10.
-`commands.txt` liệt kê các lệnh.
+Các lệnh chạy xem [docs/HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md).

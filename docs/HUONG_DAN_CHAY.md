@@ -27,7 +27,6 @@ programs/                 chương trình mẫu: demo.s, hazards_demo.s và các
 tests/                    mã kiểm thử (xem mục 5)
 tools/                    công cụ: assembler, chạy mạch không giao diện, bộ sinh mạch, trang web (mục 6)
 docs/                     tài liệu (mục 7), hình mạch (docs/img), bản web (docs/web)
-commands.txt              các lệnh hay dùng để copy/paste
 ```
 
 **File `.hex` nằm ở `programs\`:**
