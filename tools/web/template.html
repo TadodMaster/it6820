@@ -136,16 +136,20 @@ code,.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
 .tabs-mini button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:3px 12px;cursor:pointer;font:inherit}
 .tabs-mini button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
 .cv{position:relative}
-.cvtrack{position:relative;height:172px;border-radius:12px;background:var(--code);overflow:hidden}
-.cvcol{position:absolute;top:0;bottom:0;width:20%;border-left:1px dashed var(--line);padding:6px 8px;color:var(--c);display:flex;align-items:flex-end}
+.cvtrack{position:relative;height:236px;border-radius:12px;background:var(--code);overflow:hidden}
+.cvcol{position:absolute;top:0;bottom:0;width:20%;border-left:1px dashed var(--line);padding:6px 8px;color:var(--c);display:flex;align-items:flex-start;flex-direction:column}
 .cvcol:first-of-type{border-left:0}
 .cvcol::before{content:"";position:absolute;inset:0;background:var(--c);opacity:.07}
 .cvcol b{position:relative;font-size:12px}
-.cvcard{position:absolute;top:58px;width:18%;margin-left:1%;height:92px;border-radius:12px;padding:6px 10px 6px 14px;background:var(--panel);border:2px solid var(--c);box-shadow:var(--shadow);transition:left .6s cubic-bezier(.4,0,.2,1),opacity .45s,transform .4s;font-family:ui-monospace,Consolas,monospace;overflow:hidden}
+.cvcol small{position:relative;font-size:10.5px;color:var(--muted);line-height:1.25}
+.cvtab{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}.cvtab th,.cvtab td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left}.cvtab .mut{color:var(--muted)}
+.cvcard em{display:block;font-style:normal;font-size:10.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.cvdots{position:absolute;left:14px;right:8px;bottom:5px;display:flex;gap:3px}.cvdots s{flex:1;text-decoration:none;text-align:center;font-size:8.5px;border-radius:4px;background:var(--line);color:var(--muted)}.cvdots s.done{background:var(--c);opacity:.45;color:#fff}.cvdots s.now{background:var(--c);color:#fff;font-weight:700}
+.cvcard{position:absolute;top:66px;width:18%;margin-left:1%;height:158px;border-radius:12px;padding:6px 10px 6px 14px;background:var(--panel);border:2px solid var(--c);box-shadow:var(--shadow);transition:left .6s cubic-bezier(.4,0,.2,1),opacity .45s,transform .4s;font-family:ui-monospace,Consolas,monospace;overflow:hidden}
 .cvcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
 .cvcard b{display:block;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cvcard i{display:block;font-style:normal;font-size:11px;color:var(--muted)}
-.cvcard u{display:block;text-decoration:none;font-size:11.5px;margin-top:8px;color:var(--c);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvcard u{display:block;text-decoration:none;font-size:11.5px;margin-top:6px;color:var(--c);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cvcard.stall{animation:pulse 1s infinite;border-color:#d99a1c}
 .cvcard.held{border-style:dashed}
 .cvcard.doomed,.cvcard.flush{border-color:var(--bad);background:rgba(214,58,58,.14)}
@@ -153,7 +157,7 @@ code,.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
 .cvcard.dead{transform:scale(.6)}
 .cvcard.redirect{box-shadow:0 0 0 3px rgba(47,109,246,.4)}
 @keyframes pulse{50%{box-shadow:0 0 0 4px rgba(217,154,28,.45)}}
-.cvbub{position:absolute;top:58px;width:18%;margin-left:1%;height:92px;border-radius:12px;border:2px dashed var(--line);color:var(--muted);padding:8px;opacity:0;transition:opacity .4s;text-align:center;font:12px ui-monospace,Consolas,monospace}
+.cvbub{position:absolute;top:66px;width:18%;margin-left:1%;height:158px;border-radius:12px;border:2px dashed var(--line);color:var(--muted);padding:8px;opacity:0;transition:opacity .4s;text-align:center;font:12px ui-monospace,Consolas,monospace}
 .cvbub b{display:block;margin-top:20px}
 .cvbub u{text-decoration:none;font-size:11px}
 .cvfwdsvg{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none}
@@ -223,6 +227,8 @@ code,.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
     <button id="scReset">Đặt lại</button>
     <button id="scTick" class="primary">Tick (Ctrl+F9)</button>
     <button id="scRun">Chạy</button>
+    <button id="scAuto" class="primary" title="Đặt lại, rồi tự chạy từ đầu đến hết, không cần bấm Tick">▶ Chạy tự động đến hết</button>
+    <button id="scEnd" title="Chạy ngay tới cuối, không hoạt ảnh">⏭ Tới cuối</button>
     <label>Tốc độ <input type="range" id="scSpeed" min="1" max="12" value="4"></label>
     <label><input type="checkbox" id="scAnim" checked> hoạt ảnh từng tầng</label>
     <span class="tk" id="scInfo"></span>
@@ -259,6 +265,8 @@ code,.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
     <button id="plReset">Đặt lại</button>
     <button id="plTick" class="primary">Tick</button>
     <button id="plRun">Chạy</button>
+    <button id="plAuto" class="primary" title="Đặt lại, rồi tự chạy từ đầu đến hết, không cần bấm Tick">▶ Chạy tự động đến hết</button>
+    <button id="plEnd" title="Chạy ngay tới cuối, không hoạt ảnh">⏭ Tới cuối</button>
     <label>Tốc độ <input type="range" id="plSpeed" min="1" max="12" value="4"></label>
     <span class="tk" id="plInfo"></span>
   </div>
@@ -269,6 +277,8 @@ code,.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
       <div class="cvtrack" id="cvTrack"><svg class="cvfwdsvg" id="cvFwd" viewBox="0 -70 1400 100" aria-hidden="true"></svg></div>
     </div>
     <div class="explain" id="cvStatus" style="margin-top:8px"></div>
+    <div id="cvTable" style="overflow:auto"></div>
+    <div class="explain" id="plDone" style="margin-top:6px"></div>
     <div class="bar" id="cvJump" style="margin:8px 0 0"></div>
   </div>
   <div class="card" style="margin-bottom:12px">
@@ -682,13 +692,20 @@ function scAdvance() {
   SC.hist.push({ tick: SC.cpu.tick, pc: SC.cpu.pc, regs: SC.cpu.regs.slice() });
   return SC.cpu.pc !== before;
 }
-function scTick(anim) { const moved = scAdvance(); scDraw(anim === true); return moved; }
+function scTick(anim) {
+  const moved = scAdvance(); scDraw(anim === true);
+  if (!moved) $("#scInfo").textContent += "  - hoàn tất (PC dừng ở vòng halt)";
+  return moved;
+}
+function scToEnd() { stopSC(); let n = 0; while (n++ < 20000 && scAdvance()); scDraw(false); $("#scInfo").textContent += "  - hoàn tất (PC dừng ở vòng halt)"; }
 function scJump(t) { stopSC(); scLoad(SC.key); for (let i = 0; i < t; i++) scAdvance(); scDraw(false); }
 buildSC();
 fillProgSelect($("#scProg"), "demo");
 $("#scProg").addEventListener("change", () => { stopSC(); scLoad($("#scProg").value); });
 $("#scReset").addEventListener("click", () => { stopSC(); scLoad($("#scProg").value); });
 $("#scTick").addEventListener("click", () => { scTick(true); });
+$("#scAuto").addEventListener("click", () => { stopSC(); scLoad($("#scProg").value); $("#scRun").click(); });
+$("#scEnd").addEventListener("click", () => { scLoad($("#scProg").value); scToEnd(); });
 $("#scBack").addEventListener("click", () => scJump(Math.max(0, SC.cpu.tick - 1)));
 const stopSC = makeRunner($("#scRun"), scTick, $("#scSpeed"));
 scLoad("demo");
@@ -801,9 +818,16 @@ function plGantt() {
   box.innerHTML = html + "</table>";
   box.scrollLeft = box.scrollWidth; box.scrollTop = box.scrollHeight;
 }
+function plSig() { const c = PL.cpu; let r = c.regs.join(","); c.ram.forEach((v, i) => { if (v) r += `|${i}:${v}`; }); return r; }
+function plFinished() { return PL.cpu.tick >= 12 && PL.cpu.tick - PL.lastChange >= 8; }
+function plShowDone() {
+  if (!PERF) PERF = computePerf();
+  const p = PERF.find((x) => x.key === PL.key); if (!p) return;
+  $("#plDone").innerHTML = `<span class="badge ok">hoàn tất</span> Chương trình chạy xong: lần ghi thanh ghi cuối cùng ở chu kỳ <b>${p.pipe}</b> (${p.instr} lệnh, CPI = <b>${(p.pipe / p.instr).toFixed(2)}</b>); ${p.flushes} lần flush, ${p.stalls} stall, ${p.fwds} tick có forwarding. Single-cycle cần <b>${p.single}</b> chu kỳ cho cùng kết quả (CPI = 1). Kết quả cuối nằm trong bảng thanh ghi.`;
+}
 function plLoad(key) {
-  PL.key = key; PL.prog = PROGRAMS[key]; PL.text = progText(PL.prog); PL.ev = [];
-  PL.cpu = new RV.Pipeline(PL.prog.words);
+  PL.key = key; PL.lastChange = 0; $("#plDone").innerHTML = ""; PL.prog = PROGRAMS[key]; PL.text = progText(PL.prog); PL.ev = [];
+  PL.cpu = new RV.Pipeline(PL.prog.words); PL.sig = plSig();
   renderListing($("#plListing"), PL.prog);
   cvReset(); cvEvents(key);
   plDraw();
@@ -816,13 +840,21 @@ function plJump(t) {
 function plStep() {
   const c = PL.cpu, k = c.comb(), before = c.memwb;
   c.step();
+  const sg = plSig(); if (sg !== PL.sig) { PL.sig = sg; PL.lastChange = c.tick; }
   PL.ev.push({ stall: k.stall, flush: k.pc_src_ex ? 1 : 0, fwd: k.ForwardA || k.ForwardB ? 1 : 0, ret: before.id >= 0 ? 1 : 0 });
 }
-function plTick() { plStep(); plDraw(); return PL.cpu.tick < 400; }
+function plTick() {
+  plStep(); plDraw();
+  if (plFinished()) { plShowDone(); return false; }
+  return PL.cpu.tick < 800;
+}
+function plToEnd() { stopPL(); for (let i = 0; i < 800 && !plFinished(); i++) plStep(); plDraw(); plShowDone(); }
 buildPL();
 fillProgSelect($("#plProg"), "hazards_demo");
 $("#plProg").addEventListener("change", () => { stopPL(); plLoad($("#plProg").value); });
 $("#plReset").addEventListener("click", () => { stopPL(); plLoad($("#plProg").value); });
+$("#plAuto").addEventListener("click", () => { stopPL(); plLoad($("#plProg").value); $("#plRun").click(); });
+$("#plEnd").addEventListener("click", () => { plLoad($("#plProg").value); plToEnd(); });
 $("#plBack").addEventListener("click", () => plJump(Math.max(0, PL.cpu.tick - 1)));
 $("#plTick").addEventListener("click", plTick);
 const stopPL = makeRunner($("#plRun"), plTick, $("#plSpeed"));

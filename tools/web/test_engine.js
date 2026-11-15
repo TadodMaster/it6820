@@ -60,5 +60,15 @@ const dp = new RV.Pipeline(demo);
 for (let t = 0; t < 20; t++) dp.step();
 check(dp.pc === 0x14 && dp.regs[10] === 0x1b && dp.regs[11] === 7, `pipeline demo after 20 ticks: PC ${dp.pc.toString(16)} x10 ${dp.regs[10].toString(16)} x11 ${dp.regs[11]}`);
 
+
+// ---- the page stops the automatic run when nothing changed for 8 ticks: that tick must be (last register/memory change) + 8
+for (const [name, p] of Object.entries(progs)) {
+  if (!p.halts) continue;
+  const q = new RV.Pipeline(p.words);
+  const sig = () => q.regs.join(",") + "|" + q.ram.join(",");
+  let last = 0, sg = sig(), n = 0;
+  while (n < 800 && !(q.tick >= 12 && q.tick - last >= 8)) { q.step(); n++; const g = sig(); if (g !== sg) { sg = g; last = q.tick; } }
+  check(q.tick - last === 8 && n < 800, `${name}: automatic run finishes (${q.tick} ticks, last change at ${last})`);
+}
 console.log(fails ? `${fails} FAILED` : "ALL PASSED");
 process.exit(fails ? 1 : 0);

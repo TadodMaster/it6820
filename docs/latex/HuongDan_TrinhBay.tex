@@ -1,0 +1,192 @@
+% =====================================================================
+%  Hướng dẫn trình bày cho thầy (bản LaTeX của docs/vi/HUONG_DAN_TRINH_BAY.md)
+%  Biên dịch:  pdflatex HuongDan_TrinhBay.tex      (hoặc Overleaf, compiler: pdfLaTeX)
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{lmodern}
+\usepackage[vietnamese]{babel}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\setlist{itemsep=2pt,topsep=3pt,parsep=0pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\renewcommand{\arraystretch}{1.2}
+
+% đường dẫn, tên file, phím: chữ đơn cách, ký tự đặc biệt an toàn
+\newcommand{\p}[1]{\texttt{\detokenize{#1}}}
+% mục menu của Logisim: Simulate -> ...
+\newcommand{\menu}[1]{\textbf{Simulate $\rightarrow$ #1}}
+
+% hộp "Làm gì / Cho thầy xem gì / Nói gì" cho từng bước
+\newcommand{\lamgi}[1]{\item[\textbf{Làm gì:}] #1}
+\newcommand{\xemgi}[1]{\item[\textbf{Cho thầy xem:}] #1}
+\newcommand{\noigi}[1]{\item[\textbf{Nói:}] \emph{#1}}
+\newenvironment{buoc}[2]{%
+  \subsection*{#1\hfill\normalfont\small\textcolor{gray}{#2}}
+  \begin{description}[leftmargin=2.8cm,style=sameline,labelwidth=2.6cm]}{\end{description}}
+
+\title{\textbf{Hướng dẫn trình bày cho thầy}\\[3pt]\large Máy tính RISC-V RV32I trên Logisim --- làm gì, cho thầy xem gì, nói gì}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+Tổng thời gian khoảng \textbf{10--12 phút}. Mỗi bước ghi rõ: \textbf{làm gì}, \textbf{cho thầy xem gì}, \textbf{nói gì}.
+
+% =====================================================================
+\section{Chuẩn bị (làm trước khi thầy vào)}
+% =====================================================================
+\begin{enumerate}
+  \item Mở terminal ở thư mục dự án và chạy kiểm tra một lần:
+\begin{verbatim}
+cd D:\hust\logisim
+powershell -ExecutionPolicy Bypass -File tools\presentation_check.ps1 -Quick
+\end{verbatim}
+  Phải thấy dòng \textbf{\texttt{READY: everything passed.}}
+  \item \textbf{Tắt thông báo} (Win+N $\rightarrow$ Không làm phiền), đóng Teams, Zalo, mail.
+  \item Mở Logisim (cần Java 21):
+\begin{verbatim}
+java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
+\end{verbatim}
+  \item Mở sẵn trong trình duyệt file \p{D:\hust\logisim\docs\web\index.html} (để dành cho bước 8).
+  \item Trong Logisim: nhấn \textbf{Ctrl+R}, bấm tab \textbf{State} (góc dưới bên trái) để thấy \texttt{PC} và \texttt{x0..x31}.
+\end{enumerate}
+
+% =====================================================================
+\section{Phím tắt Logisim dùng trong bài (và cách làm khi không dùng phím tắt)}
+% =====================================================================
+Mọi phím tắt đều nằm trong menu \textbf{Simulate} ở thanh menu trên cùng của Logisim, nên không nhớ phím vẫn làm được bằng chuột.
+
+\begin{center}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{7.2cm}>{\raggedright\arraybackslash}p{6.2cm}@{}}
+\toprule
+\textbf{Phím} & \textbf{Làm gì} & \textbf{Nếu không dùng phím tắt}\\
+\midrule
+\textbf{Ctrl+F9} & \textbf{Một chu kỳ xung nhịp} (một ``tick'' đầy đủ): CPU chạy đúng một lệnh. Dùng để chạy từng bước và quan sát. & Menu \menu{Manual Tick Full Cycle} (mỗi lần chọn là một chu kỳ).\\
+\addlinespace
+\textbf{Ctrl+K} & \textbf{Bật / tắt chạy tự động}: Logisim tự phát xung nhịp liên tục, không cần bấm. Bật một lần là chương trình chạy từ đầu đến cuối (mạch tự dừng ở \texttt{halt}, chân \texttt{DONE} $=1$). & Menu \menu{Auto-Tick Enabled} (có dấu tích là đang bật; chọn lần nữa để tắt). Chỉnh tốc độ ở \menu{Auto-Tick Frequency}.\\
+\addlinespace
+\textbf{Ctrl+R} & \textbf{Đặt lại mô phỏng}: PC và mọi thanh ghi về 0, mạch chạy lại từ đầu. & Menu \menu{Reset Simulation}.\\
+\addlinespace
+Ctrl+T & Nửa chu kỳ xung nhịp (ít dùng). & Menu \menu{Manual Tick Half Cycle}.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Cách làm không cần phím tắt, từng bước:}
+\begin{itemize}
+  \item \textbf{Chạy từng bước:} bấm menu \textbf{Simulate}, chọn \textbf{Manual Tick Full Cycle}; lặp lại cho mỗi lệnh.
+  \item \textbf{Chạy một lần bấm:} bấm menu \textbf{Simulate}, chọn \textbf{Auto-Tick Enabled} (chỉ một lần). Khi xong (đèn \texttt{DONE} $=1$) mở lại menu và bỏ dấu tích để tắt.
+  \item \textbf{Chạy lại từ đầu:} bấm menu \textbf{Simulate}, chọn \textbf{Reset Simulation}.
+\end{itemize}
+\emph{Mẹo:} bấm vào mạch trước (cho Logisim nhận phím); trên laptop có thể cần giữ thêm phím \textbf{Fn} để dùng F9.
+
+% =====================================================================
+\section{Các bước trình bày}
+% =====================================================================
+
+\begin{buoc}{Bước 1. Giới thiệu}{30 giây}
+  \lamgi{Ở cây bên trái chỉ vào \texttt{main} và \texttt{Pipeline}.}
+  \xemgi{Hai CPU dùng chung các khối: ALU, RegisterFile, MainControl\dots}
+  \noigi{Em làm máy tính RISC-V 32-bit, có bản single-cycle và bản pipeline 5 tầng.}
+\end{buoc}
+
+\begin{buoc}{Bước 2. Chương trình}{30 giây}
+  \lamgi{Mở mạch \texttt{main}, chỉ vào ROM; mở file \p{programs\demo.s}.}
+  \xemgi{Mã máy trong ROM và mã assembly tương ứng.}
+  \noigi{Chương trình cộng $10+9+\dots+1$, lưu vào bộ nhớ, đọc lại, gọi một hàm nhân đôi.}
+\end{buoc}
+
+\begin{buoc}{Bước 3. Chạy từng bước}{2 phút}
+  \lamgi{Nhấn \textbf{Ctrl+R}, rồi nhấn \textbf{Ctrl+F9} nhiều lần (mỗi lần $=$ 1 chu kỳ $=$ 1 lệnh).}
+  \xemgi{Tab State: sau tick 3 thì $x10=\texttt{0x0a}$; tick 6 thì $x10=\texttt{0x13}$; tick 12 thì $x10=\texttt{0x22}$. Hàng probe màu vàng dưới mạch cho thấy lệnh đang chạy.}
+  \noigi{Mỗi lần bấm là một lệnh. x10 là tổng cộng dồn, x11 là biến đếm.}
+\end{buoc}
+
+\begin{buoc}{Bước 4. Chạy một lần bấm}{1 phút}
+  \lamgi{Nhấn \textbf{Ctrl+R}, rồi bật \menu{Auto-Tick Enabled} (Ctrl+K) \textbf{một lần}.}
+  \xemgi{Chương trình tự chạy hết rồi tự dừng; chân \textbf{DONE $=1$}. Kết quả: $\mathrm{PC}=\texttt{0x28}$, $x10=\texttt{0x37}$ (55), $x12=\texttt{0x6e}$ (110), $x13=\texttt{0x37}$, $x14=1$.}
+  \noigi{Chỉ bật một lần là chạy từ đầu đến cuối; mạch tự dừng khi gặp lệnh halt. Chân PAUSE để tạm dừng.}
+  \item[] (Tắt Ctrl+K sau khi xong.)
+\end{buoc}
+
+\begin{buoc}{Bước 5. Nạp chương trình khác}{1 phút}
+  \lamgi{Chuột phải vào ROM $\rightarrow$ \textbf{Load Image\dots} $\rightarrow$ gõ \p{D:\hust\logisim\programs\hazards_demo.hex} $\rightarrow$ Enter. Nhấn \textbf{Ctrl+R}, rồi bấm \textbf{Ctrl+F9} 8 lần.}
+  \xemgi{Sau 8 tick: $\mathrm{PC}=\texttt{0x24}$, $x1=\texttt{0x64}$, $x3=\texttt{0x65}$, $x4=\texttt{0xc9}$, $x7=7$ và \textbf{$x5=x6=0$}.}
+  \noigi{Chương trình đi qua ROM, không gán thanh ghi trực tiếp. x5, x6 bằng 0 vì lệnh rẽ nhánh đã bỏ qua hai lệnh đó.}
+\end{buoc}
+
+\begin{buoc}{Bước 6. Pipeline}{3 phút}
+  \lamgi{Bấm tab \textbf{Design}, mở mạch \textbf{\texttt{Pipeline}}. Nạp \texttt{hazards\_demo.hex} vào \textbf{ROM của Pipeline} như bước 5. Nhấn \textbf{Ctrl+R}, bấm \textbf{Ctrl+F9} từng tick, nhìn hàng probe ở cuối mạch.}
+  \xemgi{\textbf{Tick 3:} \texttt{ForwardB = 10} (forwarding). \textbf{Tick 4:} \texttt{stall = 1}, tick 5 PC \textbf{đứng yên} ở \texttt{0x10} (stall load-use). \textbf{Tick 8:} \texttt{pc\_src\_ex = 1} (rẽ nhánh, hủy 2 lệnh). Cuối cùng vẫn $x5=x6=0$.}
+  \noigi{Năm lệnh chạy chồng nhau. Forwarding giải quyết phụ thuộc dữ liệu; load rồi dùng ngay thì stall 1 chu kỳ; rẽ nhánh thì hủy 2 lệnh.}
+\end{buoc}
+
+\begin{buoc}{Bước 7. Chứng minh đúng}{2 phút}
+  \lamgi{Ở terminal chạy: \p{python tools\live_proof.py}}
+  \xemgi{Bảng 3 cột: bộ mô phỏng tham chiếu, single-cycle, pipeline; mọi dòng ghi \textbf{OK}; dòng cuối \textbf{\texttt{VERDICT: both CPUs produce exactly the reference result}}.}
+  \noigi{Bộ mô phỏng tham chiếu viết độc lập bằng Python. Hai CPU cho kết quả giống hệt ở cả 32 thanh ghi và bộ nhớ.}
+\end{buoc}
+
+\begin{buoc}{Bước 8. Hình ảnh trực quan}{1--2 phút}
+  \lamgi{Chuyển sang trình duyệt (\p{docs\web\index.html}). Tab \textbf{Pipeline}: chọn \texttt{hazards\_demo}, bấm \textbf{$\blacktriangleright$ Chạy tự động đến hết}. Rồi mở tab \textbf{Biểu đồ hiệu năng}.}
+  \xemgi{Băng chuyền lệnh: thẻ đứng yên khi stall, thẻ đỏ khi bị hủy, mũi tên xanh là forwarding. Biểu đồ so sánh số chu kỳ của hai CPU.}
+  \noigi{Đây là bản mô phỏng trên web để dễ nhìn dữ liệu chạy qua từng tầng.}
+\end{buoc}
+
+\begin{buoc}{Bước 9. Kết quả}{30 giây}
+  \lamgi{Chỉ vào bảng ở tab Biểu đồ hiệu năng (hoặc phần Results của báo cáo).}
+  \xemgi{\texttt{demo.s}: single-cycle \textbf{39 chu kỳ}, pipeline \textbf{64 chu kỳ} (CPI $1{,}64$).}
+  \noigi{Trong mô phỏng pipeline không ít chu kỳ hơn vì Logisim không có độ trễ cổng; lợi ích thật là chu kỳ xung nhịp ngắn hơn, vì mỗi tầng chỉ làm một việc.}
+\end{buoc}
+
+% =====================================================================
+\section{Kết thúc (nói 20 giây)}
+% =====================================================================
+\emph{Em đã làm đủ tập lệnh RV32I, hai CPU (single-cycle và pipeline), kiểm thử từng module, chương trình mẫu, và so sánh với bộ mô phỏng độc lập.}
+
+% =====================================================================
+\section{Nếu có sự cố}
+% =====================================================================
+\begin{center}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{5.2cm}>{\raggedright\arraybackslash}p{10.4cm}@{}}
+\toprule
+\textbf{Sự cố} & \textbf{Cách xử lý nhanh}\\
+\midrule
+Bấm Ctrl+F9 mà không có gì xảy ra & Dùng menu \menu{Manual Tick Full Cycle}; nếu Auto-Tick đang bật thì tắt bằng Ctrl+K.\\
+Giá trị lệch so với bảng & Nhấn Ctrl+R, làm lại từ bước đó, bấm chậm từng lần.\\
+Mạch \texttt{Pipeline} quá rộng & Dùng nút thu phóng và thanh cuộn, xem lần lượt từng tầng từ trái sang phải.\\
+Mạch không chạy sau khi đã dừng & Nhấn Ctrl+R (Reset Simulation); kiểm tra chân \texttt{PAUSE} $=0$.\\
+Trình duyệt không hiện sơ đồ luồng & Cần mạng để tải thư viện; các phần khác vẫn chạy bình thường.\\
+Lệnh \texttt{java} báo lỗi phiên bản & Dùng đường dẫn đầy đủ tới Java 21: xem lệnh bên dưới.\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{verbatim}
+& "C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe" -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
+\end{verbatim}
+
+% =====================================================================
+\section{Thầy hay hỏi}
+% =====================================================================
+\begin{itemize}
+  \item \textbf{Pipeline khác single-cycle thế nào?} Single-cycle xong một lệnh trong một chu kỳ; pipeline chia thành 5 tầng để 5 lệnh chạy chồng nhau.
+  \item \textbf{Forwarding là gì?} Lấy kết quả của lệnh trước ngay từ thanh ghi pipeline thay vì chờ ghi vào register file.
+  \item \textbf{Vì sao load-use phải stall?} Dữ liệu của lệnh load chỉ có ở cuối tầng MEM, lệnh sau cần nó ở tầng EX nên phải chờ 1 chu kỳ.
+  \item \textbf{Branch mất bao nhiêu chu kỳ?} Rẽ nhánh được rẽ mất 2 chu kỳ (hủy 2 lệnh đã nạp); không rẽ thì không mất gì.
+  \item \textbf{Làm sao biết CPU đúng?} Test từng module bằng test-vector, 7 chương trình so với bộ mô phỏng độc lập, và chương trình ngẫu nhiên.
+\end{itemize}
+
+Giải thích đầy đủ hơn: \p{docs/vi/PRESENTATION.md} và \p{docs/vi/DEMO_EXPLAIN.md}.
+
+\end{document}

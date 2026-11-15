@@ -36,7 +36,7 @@ java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
    ```
    The ROM already contains `programs/demo.s` (sum 1..10, store/load, a function call).
 3. Poke `RESET` to 1 and back to 0 (puts PC at 0).
-4. Step: `Simulate > Manual Tick Full Cycle` (**Ctrl+F9**) once per clock cycle (`Auto-Tick Enabled`, Ctrl+K, free-runs; `Reset Simulation` is Ctrl+R).
+4. Step: `Simulate > Manual Tick Full Cycle` (**Ctrl+F9**) once per clock cycle (`Auto-Tick Enabled`, Ctrl+K, free-runs; `Reset Simulation` is Ctrl+R).  **One trigger:** enable Auto-Tick once (Ctrl+K) and the program runs from start to finish by itself; the clock stops at the final `halt: j halt` (output pin `DONE` = 1), and the input pin `PAUSE` = 1 freezes it at any time.
 5. Watch the registers live in the **State** tab (bottom-left, next to *Properties*): it lists `PC` and `x0`..`x31` and updates on every tick.
    `instr` and `wb_data` are shown by the yellow probes in the circuit.
 

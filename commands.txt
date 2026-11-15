@@ -49,3 +49,9 @@ RV32I COMPUTER IN LOGISIM EVOLUTION - COMMANDS (PowerShell, run from D:\hust\log
    backup\RiscVComputer.orig.circ          original file
    backup\RiscVComputer.layout-only.circ   after the first layout clean-up
    backup\RiscVComputer.before-cpus.circ   before the full RV32I / pipeline build
+
+
+cd D:\hust\logisim
+$env:JAVA = "C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe"
+python tools\live_proof.py
+python tools\live_proof.py programs\hazards_demo.s

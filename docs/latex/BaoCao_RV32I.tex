@@ -1,0 +1,898 @@
+% =====================================================================
+%  Báo cáo bài tập lớn: thiết kế máy tính RISC-V 32-bit trên Logisim Evolution
+%  Sinh bởi tools/build_report_tex.py (hình lấy từ KienTruc_RV32I.tex).
+%  Biên dịch: pdflatex BaoCao_RV32I.tex  (chạy 2 lần để có mục lục)  hoặc Overleaf (pdfLaTeX).
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{lmodern}
+\usepackage[vietnamese]{babel}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,longtable,array,enumitem,tabularx}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage[most]{tcolorbox}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usepackage[unicode,colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\setlist{itemsep=2pt,topsep=3pt,parsep=0pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\emergencystretch}{3em}
+
+% tên tín hiệu / lệnh (chữ đơn cách, gạch dưới an toàn)
+\newcommand{\sig}[1]{\texttt{\detokenize{#1}}}
+
+% hộp "Thí nghiệm", "Câu hỏi tự kiểm tra", "Lưu ý"
+\newtcolorbox{khung}[2]{enhanced,breakable,colback=#1!6,colframe=#1!70!black,
+  boxrule=0.6pt,arc=2pt,left=5pt,right=5pt,top=3pt,bottom=3pt,
+  fonttitle=\bfseries\small,coltitle=black,colbacktitle=#1!18,title={#2},
+  before skip=6pt,after skip=6pt}
+\newenvironment{thinghiem}{\begin{khung}{green}{Thí nghiệm}}{\end{khung}}
+\newenvironment{kiemtra}{\begin{khung}{orange}{Câu hỏi tự kiểm tra}}{\end{khung}}
+\newenvironment{luuy}{\begin{khung}{red}{Lưu ý}}{\end{khung}}
+
+% kiểu TikZ dùng chung
+\tikzset{
+  blk/.style={draw,rounded corners=2pt,minimum height=8mm,minimum width=16mm,
+              align=center,font=\footnotesize,fill=blue!6},
+  ctl/.style={blk,fill=orange!15},
+  mem/.style={blk,fill=green!10},
+  reg/.style={blk,fill=yellow!20,minimum width=4mm,minimum height=26mm},
+  % MUX: hình thang xoay 270 độ, nên "minimum width" là chiều CAO khi vẽ ra
+  mux/.style={draw,trapezium,trapezium angle=75,trapezium stretches=true,shape border rotate=270,
+              minimum width=12mm,minimum height=7mm,inner sep=1pt,align=center,font=\scriptsize,fill=gray!12},
+  ar/.style={-{Stealth[length=2mm]},thick},
+  bus/.style={-{Stealth[length=2mm]},line width=1.2pt},
+  cs/.style={-{Stealth[length=2mm]},thick,orange!70!black,dashed},
+  lab/.style={font=\scriptsize,inner sep=1pt},
+  stg/.style={draw,minimum width=14mm,minimum height=5mm,font=\scriptsize,inner sep=1pt}
+}
+
+
+
+\begin{document}
+
+% ===================================================================== trang bìa
+\begin{titlepage}
+\centering
+{\large TRƯỜNG ĐẠI HỌC \underline{\hspace{6cm}}}\\[2pt]
+{\large KHOA \underline{\hspace{6cm}}}\\[2.2cm]
+{\Large \textbf{BÁO CÁO BÀI TẬP LỚN}}\\[0.6cm]
+{\huge \textbf{THIẾT KẾ MÁY TÍNH RISC-V 32-BIT\\[4pt] TRÊN LOGISIM EVOLUTION}}\\[0.8cm]
+{\large Kiến trúc tập lệnh RV32I --- CPU đơn chu kỳ và CPU pipeline 5 tầng}\\[2.5cm]
+\begin{tabular}{rl}
+Môn học: & \underline{\hspace{7cm}}\\[6pt]
+Giảng viên hướng dẫn: & \underline{\hspace{7cm}}\\[6pt]
+Nhóm thực hiện: & \underline{\hspace{7cm}}\\[6pt]
+Thành viên: & \underline{\hspace{7cm}}\\[6pt]
+ & \underline{\hspace{7cm}}\\[6pt]
+ & \underline{\hspace{7cm}}\\
+\end{tabular}
+\vfill
+{\large \today}
+\end{titlepage}
+
+\section*{Tóm tắt}
+\addcontentsline{toc}{section}{Tóm tắt}
+Báo cáo trình bày việc thiết kế, mô phỏng và kiểm thử một máy tính 32-bit theo kiến trúc tập lệnh RISC-V RV32I trên Logisim Evolution 4.1.0.
+Dự án có hai CPU dùng chung các khối: một CPU \emph{đơn chu kỳ} (circuit \sig{main}) và một CPU \emph{pipeline 5 tầng} (circuit \sig{Pipeline}) xử lý
+hazard dữ liệu bằng forwarding và stall load-use, hazard điều khiển bằng flush. Toàn bộ tập lệnh RV32I (trừ các lệnh hệ thống) được cài đặt, kể cả các lệnh
+tùy chọn như \texttt{lb}, \texttt{lh}, \texttt{sb}, \texttt{sh}, \texttt{blt}, \texttt{bgeu}. Chương trình được nạp qua bộ nhớ lệnh nhờ một assembler tự viết.
+Tính đúng đắn được kiểm chứng ở ba mức: test-vector cho 9 module (106 hàng), 7 chương trình chạy trên cả hai CPU so với một bộ mô phỏng tham chiếu viết độc lập,
+và các chương trình ngẫu nhiên. Trên chương trình mẫu, CPU đơn chu kỳ cần 39 chu kỳ còn CPU pipeline cần 64 chu kỳ (CPI $=1{,}64$); sự chênh lệch đến từ mức phạt $2$ chu kỳ
+cho mỗi lệnh rẽ nhánh được thực hiện, còn lợi ích của pipeline là chu kỳ xung nhịp ngắn hơn mà mô phỏng không độ trễ cổng của Logisim không thể hiện.
+
+\tableofcontents
+\newpage
+
+% ===================================================================== 1
+\section{Giới thiệu}
+\subsection{Bối cảnh và mục tiêu}
+Đề bài yêu cầu thiết kế, mô phỏng và kiểm thử một máy tính 32-bit dùng kiến trúc tập lệnh RISC-V, gồm CPU, bộ nhớ chương trình, bộ nhớ dữ liệu và các thành phần điều khiển.
+Phiên bản cuối cùng phải là pipeline 5 tầng \textbf{IF} (nạp lệnh) $\rightarrow$ \textbf{ID} (giải mã) $\rightarrow$ \textbf{EX} (thực thi) $\rightarrow$ \textbf{MEM} (truy cập bộ nhớ)
+$\rightarrow$ \textbf{WB} (ghi lại) và xử lý đúng các hazard dữ liệu, hazard điều khiển cơ bản. Công cụ bắt buộc là Logisim Evolution.
+
+\subsection{Phạm vi và mức độ hoàn thành}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{5.6cm}X@{}}
+\toprule
+\textbf{Yêu cầu} & \textbf{Trạng thái}\\
+\midrule
+Dữ liệu 32 bit, lệnh 32 bit, 32 thanh ghi $\times$ 32 bit, PC 32 bit, RV32I & đạt (\texttt{x0} luôn bằng 0)\\
+ADD SUB AND OR XOR SLT SLTU SLL SRL SRA & đạt, có test\\
+ADDI ANDI ORI XORI SLTI SLTIU SLLI SRLI SRAI & đạt, có test\\
+LW, SW và các lệnh tùy chọn LB LH LBU LHU SB SH & đạt toàn bộ, có test\\
+BEQ BNE JAL JALR và BLT BGE BLTU BGEU & đạt toàn bộ, có test\\
+LUI, AUIPC & đạt, có test\\
+CPU đơn chu kỳ (\sig{main}) & đạt, CPI $=1$\\
+Pipeline 5 tầng, hazard dữ liệu và điều khiển (\sig{Pipeline}) & đạt: forwarding, stall load-use, flush\\
+Chương trình nạp qua bộ nhớ lệnh, không gán trực tiếp thanh ghi & đạt: ảnh ROM tạo từ assembler\\
+Assembler (nên có) & đạt: \texttt{tools/rv.py}\\
+Test cho từng module và toàn CPU & đạt: 9 file test module, 7 chương trình, bộ fuzz ngẫu nhiên\\
+Tính năng nâng cao (dự đoán rẽ nhánh, cache, nhân/chia, ngắt, GPIO/UART, số thực) & chưa làm (xem mục~\ref{sec:future})\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ===================================================================== 2
+\section{Cơ sở lý thuyết}
+\subsection{Tập lệnh RV32I}
+RISC-V là kiến trúc tập lệnh mở, kiểu RISC (tập lệnh rút gọn). RV32I là tập cơ sở 32 bit số nguyên: 32 thanh ghi \texttt{x0..x31} (\texttt{x0} luôn bằng 0), lệnh dài cố định 4 byte,
+chỉ các lệnh load/store mới truy cập bộ nhớ. Có sáu định dạng lệnh; các trường \texttt{opcode}, \texttt{rd}, \texttt{rs1}, \texttt{rs2} luôn nằm ở cùng vị trí bit, nhờ đó
+có thể đọc thanh ghi trong khi còn đang giải mã opcode.
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Kiểu} & \textbf{31--25} & \textbf{24--20} & \textbf{19--15} & \textbf{14--12} & \textbf{11--7} & \textbf{6--0}\\
+\hline
+R & funct7 & rs2 & rs1 & funct3 & rd & opcode\\
+\hline
+I & \multicolumn{2}{c|}{imm[11:0]} & rs1 & funct3 & rd & opcode\\
+\hline
+S & imm[11:5] & rs2 & rs1 & funct3 & imm[4:0] & opcode\\
+\hline
+B & imm[12$|$10:5] & rs2 & rs1 & funct3 & imm[4:1$|$11] & opcode\\
+\hline
+U & \multicolumn{4}{c|}{imm[31:12]} & rd & opcode\\
+\hline
+J & \multicolumn{4}{c|}{imm[20$|$10:1$|$11$|$19:12]} & rd & opcode\\
+\hline
+\end{tabular}
+\end{center}
+
+Chín opcode được dùng: \texttt{0x33} (R), \texttt{0x13} (I-ALU), \texttt{0x03} (load), \texttt{0x23} (store), \texttt{0x63} (branch), \texttt{0x37} (LUI),
+\texttt{0x17} (AUIPC), \texttt{0x6F} (JAL), \texttt{0x67} (JALR).
+
+\subsection{Pipeline và hazard}
+Pipeline chia việc thực thi một lệnh thành nhiều tầng để nhiều lệnh chạy chồng nhau; khi không có xung đột, mỗi chu kỳ hoàn thành một lệnh (CPI $=1$) với chu kỳ xung nhịp ngắn hơn.
+Các xung đột (hazard) gồm: \emph{hazard dữ liệu} (lệnh sau cần giá trị mà lệnh trước chưa ghi xong), giải quyết bằng \emph{forwarding}, và riêng trường hợp load rồi dùng ngay phải \emph{stall};
+\emph{hazard điều khiển} (lệnh rẽ nhánh/nhảy làm các lệnh đã nạp phía sau là sai), giải quyết bằng \emph{flush}. Hazard cấu trúc không xảy ra vì dùng hai bộ nhớ riêng (kiến trúc Harvard).
+
+% ===================================================================== 3
+\section{Kiến trúc tổng thể}
+\subsection{Tổ chức bộ nhớ và tín hiệu}
+Máy tính theo tổ chức Harvard: ROM lệnh 256 từ (chỉ đọc) và RAM dữ liệu 256 từ riêng. Địa chỉ từ bằng \texttt{địa chỉ byte / 4}; PC là thanh ghi 32 bit, chỉ \sig{PC[9:2]} đánh địa chỉ ROM;
+địa chỉ dữ liệu quấn vòng theo 1 KiB. Mọi tín hiệu giữa các khối đều có tên, và \textbf{các tunnel cùng tên là cùng một dây}; tên theo đặc tả RISC-V và giáo trình
+(\sig{rs1}, \sig{rs2}, \sig{rd}, \sig{funct3}, \sig{imm}, \dots).
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.4cm}X@{}}
+\toprule
+\textbf{Tín hiệu} & \textbf{Ý nghĩa}\\
+\midrule
+\sig{RegWrite} & ghi \sig{rd} trong register file\\
+\sig{ALUSrc} & toán hạng B của ALU: 0 là \sig{rs2}, 1 là hằng số \sig{imm}\\
+\sig{ASel} (2 bit) & toán hạng A: 00 \sig{rs1}, 01 PC (AUIPC), 10 số 0 (LUI)\\
+\sig{ALUOp} (2 bit) & 00 cộng, 01 trừ, 10 kiểu R, 11 kiểu I (\sig{ALUControl} tra tiếp theo \sig{funct3}/\sig{funct7})\\
+\sig{ImmSel} (3 bit) & kiểu hằng số: 0 I, 1 S, 2 B, 3 U, 4 J\\
+\sig{MemWrite}, \sig{MemRead} & store, load\\
+\sig{WBSel} (2 bit) & giá trị ghi vào \sig{rd}: 00 ALU, 01 bộ nhớ, 10 PC$+4$\\
+\sig{IsBranch}, \sig{IsJAL}, \sig{IsJALR} & lệnh rẽ nhánh / nhảy\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Các circuit của dự án}
+Dự án gồm 14 circuit trong file \texttt{RiscVComputer.circ}; hai CPU dùng chung các khối datapath.
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.7cm}X@{}}
+\toprule
+\textbf{Circuit} & \textbf{Nhiệm vụ}\\
+\midrule
+\sig{main} & CPU đơn chu kỳ\\
+\sig{Pipeline} & CPU pipeline 5 tầng\\
+\sig{InstructionDecode} & cắt lệnh thành \sig{opcode rd funct3 rs1 rs2 funct7}\\
+\sig{MainControl} & từ \sig{opcode} sinh mọi tín hiệu điều khiển\\
+\sig{ImmGen} & dựng hằng số 32 bit theo \sig{ImmSel}\\
+\sig{RegisterFile} & 32 thanh ghi, hai cổng đọc, một cổng ghi\\
+\sig{ALUControl} & đổi \sig{ALUOp}, \sig{funct3}, \sig{funct7} thành mã \sig{ALUCtrl}\\
+\sig{ALU} & tính kết quả theo \sig{ALUCtrl}\\
+\sig{BranchUnit} & quyết định lệnh rẽ nhánh có được rẽ hay không\\
+\sig{Memory} (cùng \sig{LoadExtract}, \sig{StoreMerge}) & RAM dữ liệu, truy cập byte, nửa từ, từ\\
+\sig{ForwardingUnit} & chọn nguồn mới nhất cho toán hạng ở tầng EX\\
+\sig{HazardUnit} & phát hiện load-use, phát tín hiệu stall\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Hình~\ref{fig:big} cho thấy ý tưởng chung: nạp lệnh, giải mã, thanh ghi, ALU, bộ nhớ rồi ghi lại.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=9mm]
+  \node[mem] (rom) {ROM lệnh\\256$\times$32};
+  \node[blk,right=of rom] (dec) {Giải mã\\+ điều khiển};
+  \node[blk,right=of dec] (rf) {Thanh ghi\\x0..x31};
+  \node[blk,right=of rf] (alu) {ALU};
+  \node[mem,right=of alu] (ram) {RAM dữ liệu\\256$\times$32};
+  \node[blk,above=10mm of rom] (pc) {PC};
+  \draw[ar] (pc) -- (rom);
+  \draw[ar] (rom) -- node[lab,above]{lệnh} (dec);
+  \draw[ar] (dec) -- (rf);
+  \draw[ar] (rf) -- (alu);
+  \draw[ar] (alu) -- (ram);
+  \draw[ar] (alu.north) |- ++(0,6mm) -| (pc.east) node[lab,pos=.25,above]{địa chỉ nhảy / PC+4};
+  \draw[ar] (ram.south) -- ++(0,-7mm) -| node[lab,pos=.25,below]{ghi kết quả (write-back)} (rf.south);
+\end{tikzpicture}
+\caption{Bức tranh lớn: nạp lệnh $\rightarrow$ giải mã $\rightarrow$ thanh ghi $\rightarrow$ ALU $\rightarrow$ bộ nhớ $\rightarrow$ ghi lại.}
+\label{fig:big}
+\end{figure}
+
+% ===================================================================== 4
+\section{Thiết kế các khối}
+Mỗi khối là một circuit riêng, có file test-vector riêng trong thư mục \texttt{tests/} (trừ \sig{InstructionDecode} chỉ gồm dây).
+
+\subsection{InstructionDecode}
+Một splitter duy nhất cắt lệnh 32 bit thành sáu trường theo vị trí bit cố định; không có cổng logic nào. Vì \texttt{rs1}, \texttt{rs2} luôn ở cùng chỗ, thanh ghi có thể được đọc song song với giải mã opcode.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1mm,y=1mm]
+  \draw (0,0) rectangle (112,8);
+  \foreach \x/\t in {0/{funct7 [31:25]},28/{rs2 [24:20]},48/{rs1 [19:15]},68/{funct3 [14:12]},88/{rd [11:7]}} {
+    \draw (\x,0) -- (\x,8);
+    \node[font=\tiny,anchor=west] at (\x+1,4) {\t};}
+  \node[font=\tiny,anchor=west] at (106,4) {};
+  \draw (104,0) -- (104,8);
+  \node[font=\tiny] at (108,4) {op};
+  \foreach \x in {14,38,58,78,96,108} \draw[ar] (\x,0) -- (\x,-7);
+  \node[lab,below] at (14,-7) {\sig{funct7}};
+  \node[lab,below] at (38,-7) {\sig{rs2}};
+  \node[lab,below] at (58,-7) {\sig{rs1}};
+  \node[lab,below] at (78,-7) {\sig{funct3}};
+  \node[lab,below] at (96,-7) {\sig{rd}};
+  \node[lab,below] at (108,-7) {\sig{opcode}};
+\end{tikzpicture}
+\caption{\sig{InstructionDecode}: chỉ là đi dây từ các trường bit cố định.}
+\label{fig:dec}
+\end{figure}
+
+\subsection{MainControl}
+Chín bộ so sánh 7 bit so \sig{opcode} với chín hằng số, mỗi bộ cho cờ của một nhóm lệnh; các cổng OR gộp cờ thành tín hiệu điều khiển. Opcode lạ làm mọi tín hiệu bằng 0 (lệnh rỗng an toàn).
+\[
+\mathtt{ALUOp}=\{\mathtt{IsR}\lor\mathtt{IsI},\ \mathtt{IsI}\lor\mathtt{IsBranch}\},\quad
+\mathtt{ASel}=\{\mathtt{IsLui},\ \mathtt{IsAuipc}\},\quad
+\mathtt{WBSel}=\{\mathtt{IsJAL}\lor\mathtt{IsJALR},\ \mathtt{IsLoad}\}.
+\]
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=7mm]
+  \node[lab] (op) {\sig{opcode}};
+  \node[blk,right=10mm of op,minimum height=24mm] (cmp) {9 bộ\\so sánh\\7 bit};
+  \node[blk,right=26mm of cmp,minimum height=24mm] (or) {cổng OR\\+ splitter};
+  \node[lab,right=12mm of or,align=left] (out) {\sig{RegWrite} \sig{ALUSrc}\\\sig{MemWrite} \sig{MemRead}\\\sig{IsBranch} \sig{IsJAL} \sig{IsJALR}\\\sig{ALUOp} \sig{ImmSel}\\\sig{ASel} \sig{WBSel}};
+  \draw[bus] (op) -- (cmp);
+  \draw[ar] (cmp) -- node[lab,above]{9 cờ lớp lệnh} (or);
+  \draw[bus] (or) -- (out);
+\end{tikzpicture}
+\caption{\sig{MainControl}: so sánh opcode $\rightarrow$ cờ lớp lệnh $\rightarrow$ OR $\rightarrow$ tín hiệu điều khiển.}
+\label{fig:ctl}
+\end{figure}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+\textbf{Lệnh} & RegWrite & ALUSrc & MemWrite & MemRead & ALUOp & ImmSel & ASel & WBSel\\
+\midrule
+\texttt{add} (R) & 1 & 0 & 0 & 0 & 10 & -- & 00 & 00\\
+\texttt{addi} (I) & 1 & 1 & 0 & 0 & 11 & 000 & 00 & 00\\
+\texttt{lw} & 1 & 1 & 0 & 1 & 00 & 000 & 00 & 01\\
+\texttt{sw} & 0 & 1 & 1 & 0 & 00 & 001 & 00 & --\\
+\texttt{beq} & 0 & 0 & 0 & 0 & 01 & 010 & 00 & --\\
+\texttt{lui} & 1 & 1 & 0 & 0 & 00 & 011 & 10 & 00\\
+\texttt{auipc} & 1 & 1 & 0 & 0 & 00 & 011 & 01 & 00\\
+\texttt{jal} & 1 & -- & 0 & 0 & -- & 100 & -- & 10\\
+\texttt{jalr} & 1 & 1 & 0 & 0 & 00 & 000 & 00 & 10\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{ImmGen}
+Hằng số bị xáo trộn có chủ đích trong lệnh; năm bộ splitter và bộ mở rộng dấu dựng lại hằng số theo từng kiểu, một multiplexer chọn theo \sig{ImmSel}. Kiểu U không mở rộng mà chèn 12 bit 0 (\texttt{imm}$\ll12$).
+Ví dụ \texttt{fe059ce3} (\texttt{bnez x11, loop}, kiểu B) cho hằng số \texttt{0xFFFFFFF8} $=-8$.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=7mm]
+  \node[lab] (in) {\sig{Instruction}};
+  \node[blk,right=8mm of in,yshift=12mm] (i) {I: 12 bit\\mở rộng dấu};
+  \node[blk,below=2mm of i] (s) {S: 12 bit\\mở rộng dấu};
+  \node[blk,below=2mm of s] (b) {B: 13 bit\\mở rộng dấu};
+  \node[blk,below=2mm of b] (u) {U: $\mathtt{imm}\ll12$};
+  \node[blk,below=2mm of u] (j) {J: 21 bit\\mở rộng dấu};
+  \node[mux,right=18mm of s,minimum width=40mm,minimum height=9mm,yshift=-8mm] (m) {MUX\\8:1};
+  \node[lab,right=8mm of m] (out) {\sig{Imm}};
+  \node[ctl,below=6mm of m] (sel) {\sig{ImmSel}};
+  \foreach \n in {i,s,b,u,j} {\draw[ar] (in.east) -- (\n.west); \draw[ar] (\n.east) -- (m.west);}
+  \draw[bus] (m) -- (out);
+  \draw[cs] (sel) -- (m);
+\end{tikzpicture}
+\caption{\sig{ImmGen}: năm cách dựng hằng số, multiplexer chọn theo \sig{ImmSel}.}
+\label{fig:imm}
+\end{figure}
+
+\subsection{RegisterFile}
+32 thanh ghi 32 bit có nhãn \texttt{x0..x31}; một demultiplexer đưa tín hiệu \sig{RegWrite} tới đúng thanh ghi \sig{rd}, hai multiplexer 32-ra-1 là hai cổng đọc \emph{bất đồng bộ}
+(CPU đơn chu kỳ cần toán hạng ngay trong chu kỳ). \texttt{x0} nhận hằng số 0 nên luôn bằng 0. Trong pipeline, khối này dùng xung nhịp đảo để ghi ở \emph{cạnh xuống}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=6mm]
+  \node[blk] (demux) {DEMUX\\1$\rightarrow$32\\(chọn \sig{rd})};
+  \node[blk,right=26mm of demux,minimum height=30mm] (regs) {32 thanh ghi\\\sig{x0}..\sig{x31}\\(x0 luôn 0)};
+  \node[mux,right=14mm of regs,yshift=8mm,minimum width=12mm,minimum height=8mm] (m1) {MUX\\32:1};
+  \node[mux,right=14mm of regs,yshift=-8mm,minimum width=12mm,minimum height=8mm] (m2) {MUX\\32:1};
+  \node[lab,right=8mm of m1] {\sig{rs1_data}};
+  \node[lab,right=8mm of m2] {\sig{rs2_data}};
+  \node[lab,left=8mm of demux,yshift=3mm] (rw) {\sig{RegWrite}};
+  \node[lab,left=8mm of demux,yshift=-3mm] (rd) {\sig{rd}};
+  \draw[ar] (rw) -- (demux); \draw[ar] (rd) -- (demux);
+  \draw[ar] (demux) -- node[lab,above,align=center]{32 tín hiệu\\WE} (regs);
+  \draw[ar] (regs.east) -- (m1.west); \draw[ar] (regs.east) -- (m2.west);
+  \node[ctl,above=4mm of m1] (r1) {\sig{rs1}}; \draw[cs] (r1) -- (m1);
+  \node[ctl,below=4mm of m2] (r2) {\sig{rs2}}; \draw[cs] (r2) -- (m2);
+  \node[lab,above=6mm of regs] (wd) {\sig{write_data}}; \draw[ar] (wd) -- (regs);
+\end{tikzpicture}
+\caption{\sig{RegisterFile}: demux dẫn WE tới \sig{rd}; hai multiplexer là hai cổng đọc.}
+\label{fig:rf}
+\end{figure}
+
+\subsection{ALUControl và ALU}
+\sig{ALUControl} biến \sig{ALUOp}, \sig{funct3}, \sig{funct7} thành mã 4 bit \sig{ALUCtrl}: 0 ADD, 1 SUB, 2 AND, 3 OR, 4 XOR, 5 SLL, 6 SRL, 7 SRA, 8 SLT, 9 SLTU.
+Bit \sig{funct7[5]} phân biệt ADD/SUB và SRL/SRA ở kiểu R; ở kiểu I chỉ các lệnh dịch xét bit này. ALU tính song song mọi phép (cộng, trừ, AND, OR, XOR, ba bộ dịch, hai phép so sánh có dấu/không dấu)
+rồi một multiplexer 16-ra-1 chọn kết quả theo \sig{ALUCtrl}. Kết quả SLT/SLTU 1 bit được mở rộng bằng 0 thành 32 bit.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=3mm]
+  \node[lab] (a) {\sig{rs1_data}\ (A)};
+  \node[lab,below=14mm of a] (b) {\sig{rs2_data}\ (B)};
+  \node[blk,right=18mm of a,yshift=18mm] (add) {ADD};
+  \node[blk,below=2mm of add] (sub) {SUB};
+  \node[blk,below=2mm of sub] (log) {AND / OR / XOR};
+  \node[blk,below=2mm of log] (sh) {SLL / SRL / SRA};
+  \node[blk,below=2mm of sh] (cmp) {SLT / SLTU\\(so sánh + mở rộng 0)};
+  \node[mux,right=22mm of log,minimum width=50mm,minimum height=10mm] (m) {MUX\\16:1};
+  \node[lab,right=8mm of m] (res) {\sig{result}};
+  \node[ctl,above=5mm of m] (c) {\sig{ALUCtrl}};
+  \foreach \n in {add,sub,log,sh,cmp} {\draw[ar] ($(a)!0.5!(b)+(10mm,0)$) -- (\n.west); \draw[ar] (\n.east) -- (m.west);}
+  \draw[ar] (a) -- ($(a)!0.5!(b)+(10mm,0)$);
+  \draw[ar] (b) -- ($(a)!0.5!(b)+(10mm,0)$);
+  \draw[bus] (m) -- (res);
+  \draw[cs] (c) -- (m);
+\end{tikzpicture}
+\caption{\sig{ALU}: tính song song mọi phép, multiplexer chọn theo \sig{ALUCtrl}.}
+\label{fig:alu}
+\end{figure}
+
+\subsection{BranchUnit}
+Một bộ so sánh không dấu và một bộ có dấu cho các quan hệ ``bằng'' và ``nhỏ hơn''; ba cổng NOT cho các phủ định; một multiplexer 8-ra-1 theo \sig{funct3} chọn điều kiện:
+000 \texttt{beq}, 001 \texttt{bne}, 100 \texttt{blt}, 101 \texttt{bge}, 110 \texttt{bltu}, 111 \texttt{bgeu}. Cổng AND với \sig{IsBranch} bảo đảm lệnh khác không bao giờ rẽ nhánh.
+
+\subsection{Memory, LoadExtract, StoreMerge}
+RAM $256\times32$ đọc bất đồng bộ và có một chân cho phép ghi. Vì RAM chỉ ghi nguyên từ, \sig{LoadExtract} cắt byte/nửa từ ra khỏi từ đọc được rồi mở rộng dấu hoặc mở rộng 0
+(\texttt{lb lh lw lbu lhu}), còn \sig{StoreMerge} thực hiện đọc--sửa--ghi: một ROM $16\times4$ đổi $\{\mathrm{size},\mathrm{addr}[1:0]\}$ thành bốn bit cho phép từng làn byte
+(\texttt{1 2 4 8} cho byte, \texttt{3 3 c c} cho nửa từ, \texttt{f} cho từ). Ví dụ từ cũ \texttt{0x11223344}, \texttt{sb} giá trị \texttt{0xAA} vào byte 1 cho từ mới \texttt{0x1122AA44}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=8mm]
+  \node[mem] (ram) {RAM\\256$\times$32};
+  \node[blk,right=16mm of ram,yshift=8mm] (le) {\sig{LoadExtract}\\chọn byte / nửa từ\\mở rộng dấu / 0};
+  \node[lab,right=8mm of le] (rd) {\sig{read_data}};
+  \node[blk,below=14mm of ram] (sm) {\sig{StoreMerge}\\(từ cũ + dữ liệu mới)};
+  \node[lab,left=10mm of sm] (wd) {\sig{write_data}};
+  \node[lab,left=10mm of ram,yshift=6mm] (ad) {\sig{Address}};
+  \draw[ar] (ad) -- (ram);
+  \draw[ar] (ram) -- node[lab,above]{từ cũ} (le);
+  \draw[bus] (le) -- (rd);
+  \draw[ar] (ram.south) -- node[lab,right]{từ cũ} (sm.north);
+  \draw[ar] (wd) -- (sm);
+  \draw[ar] (sm.east) -- ++(10mm,0) |- node[lab,pos=.2,right]{từ mới (ghi)} ($(ram.east)+(0,-4mm)$);
+\end{tikzpicture}
+\caption{\sig{Memory}: đọc đi qua \sig{LoadExtract}; ghi đi qua \sig{StoreMerge} (đọc--sửa--ghi).}
+\label{fig:mem}
+\end{figure}
+
+% ===================================================================== 5
+\section{CPU đơn chu kỳ}
+\label{sec:single}
+Mỗi lệnh đi qua cả năm tầng trong \emph{một} chu kỳ xung nhịp: ROM đọc lệnh tại PC, \sig{InstructionDecode}, \sig{MainControl}, \sig{ImmGen} và \sig{RegisterFile} làm việc song song,
+hai multiplexer chọn toán hạng A và B, ALU tính, \sig{BranchUnit} quyết định rẽ nhánh, \sig{Memory} chỉ hoạt động với load/store, và multiplexer \sig{WBSel} chọn giá trị ghi vào \sig{rd}.
+PC kế tiếp được chọn như sau:
+\[
+\mathtt{next\_pc}=
+\begin{cases}
+(\mathtt{rs1}+\mathtt{imm})\ \&\ \mathtt{0xFFFFFFFE} & \text{nếu } \mathtt{IsJALR}\\
+\mathtt{PC}+\mathtt{imm} & \text{nếu } \mathtt{branch\_taken}\lor\mathtt{IsJAL}\\
+\mathtt{PC}+4 & \text{còn lại.}
+\end{cases}
+\]
+Các lệnh \texttt{lui}, \texttt{auipc}, \texttt{jal}, \texttt{jalr} dùng lại ALU và đường write-back nhờ \sig{ASel} và \sig{WBSel}, không thêm phần cứng riêng.
+
+Hình~\ref{fig:main} là sơ đồ khối của CPU đơn chu kỳ (nét cam đứt là tín hiệu điều khiển).
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[x=10mm,y=10mm,scale=0.86,transform shape]
+  % IF
+  \node[blk,minimum width=10mm] (pc) at (0,0) {PC};
+  \node[blk,minimum width=10mm] (add4) at (0,-2) {+4};
+  \node[mem] (rom) at (2.3,0) {ROM lệnh};
+  % ID
+  \node[blk] (dec) at (4.6,0) {Giải mã};
+  \node[ctl] (ctl) at (4.6,1.6) {\sig{MainControl}};
+  \node[blk] (rf) at (7,0) {\sig{RegisterFile}};
+  \node[blk] (imm) at (7,-1.8) {\sig{ImmGen}};
+  % EX
+  \node[mux] (ma) at (9.1,0.4) {A};
+  \node[mux] (mb) at (9.1,-1.0) {B};
+  \node[blk,minimum height=22mm,minimum width=12mm] (alu) at (10.8,-0.3) {\sig{ALU}};
+  \node[ctl] (actl) at (10.8,1.6) {\sig{ALUControl}};
+  \node[blk] (br) at (10.8,-2.4) {\sig{BranchUnit}};
+  \node[blk] (addt) at (10.8,-3.5) {$\mathtt{PC}+\mathtt{imm}$};
+  % MEM / WB
+  \node[mem] (mem) at (14.0,-0.3) {\sig{Memory}};
+  \node[mux,minimum width=16mm] (wb) at (15.8,-0.3) {WB};
+  % IF
+  \draw[ar] (pc) -- (rom);
+  \draw[ar] (pc) -- (add4);
+  \draw[ar] (add4.west) -- ++(-0.6,0) |- node[lab,pos=.25,left]{\sig{next_pc}} (pc.west);
+  % ID
+  \draw[bus] (rom) -- node[lab,above]{lệnh} (dec);
+  \draw[ar] (dec) -- (ctl);
+  \draw[ar] (dec) -- (rf);
+  \draw[ar] (dec.south) |- (imm.west);
+  % EX
+  \draw[bus] (rf.east) -- ++(0.4,0) |- (ma.west);
+  \draw[bus] ($(rf.east)+(0.4,0)$) |- ($(mb.west)+(0,0.15)$);
+  \draw[bus] (imm.east) -- ++(0.9,0) |- ($(mb.west)+(0,-0.15)$);
+  \draw[bus] (ma.east) -- (ma.east -| alu.west);
+  \draw[bus] (mb.east) -- (mb.east -| alu.west);
+  \draw[cs] (actl) -- (alu);
+  \draw[ar] (br.east) -- ++(0.8,0) node[lab,right]{\sig{branch_taken}};
+  \draw[ar] (addt.east) -- ++(0.8,0) node[lab,right]{\sig{pc_target}};
+  % MEM / WB
+  \draw[bus] (alu) -- node[lab,above,pos=.45]{\sig{alu_result}} (mem);
+  \draw[bus] (mem) -- (wb);
+  \draw[bus] ($(alu.east)+(0.3,0)$) |- ++(0,-1.3) -| ($(wb.south)$);
+  \draw[bus] (wb.east) -- ++(0.3,0) |- (16.1,2.4) -| node[lab,pos=.3,above]{\sig{wb_data} ghi về \sig{RegisterFile}} (rf.north);
+  \draw[cs] (ctl.west) -- ++(-1.0,0) node[lab,left,align=right]{tín hiệu\\điều khiển};
+\end{tikzpicture}
+\caption{Sơ đồ khối CPU single-cycle (rút gọn): nạp lệnh $\rightarrow$ giải mã $\rightarrow$ thực thi $\rightarrow$ bộ nhớ $\rightarrow$ ghi lại. Nét cam đứt: tín hiệu điều khiển.}
+\label{fig:main}
+\end{figure}
+
+\textbf{Ví dụ:} lệnh \texttt{add x10,x10,x11} (\texttt{00b50533}) ở tick 3 của chương trình mẫu: \sig{opcode}=\texttt{0x33}, \sig{ALUOp}=10, \sig{ALUCtrl}=0 (ADD), ALU tính $0+\mathtt{0x0a}=\mathtt{0x0a}$
+và ghi vào \texttt{x10} ở cạnh xung nhịp; PC tăng $4$.
+
+% ===================================================================== 6
+\section{CPU pipeline 5 tầng}
+\label{sec:pipeline}
+CPU pipeline dùng đúng các khối của CPU đơn chu kỳ, cắt thành năm tầng bởi bốn thanh ghi pipeline IF/ID, ID/EX, EX/MEM, MEM/WB. Tín hiệu điều khiển được sinh một lần ở tầng ID,
+đóng gói thành ``từ điều khiển'' (13 bit ở ID/EX, 5 bit ở EX/MEM, 3 bit ở MEM/WB) và đi cùng lệnh; mỗi tầng chỉ tách phần mình cần.
+
+Hình~\ref{fig:pipe} cho thấy năm tầng, bốn thanh ghi pipeline và hai khối xử lý hazard.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=3mm]
+  \node[blk,minimum width=17mm] (sif) {IF\\nạp lệnh};
+  \node[reg,right=of sif] (r1) {};
+  \node[blk,minimum width=17mm,right=of r1] (id) {ID\\giải mã};
+  \node[reg,right=of id] (r2) {};
+  \node[blk,minimum width=17mm,right=of r2] (ex) {EX\\ALU};
+  \node[reg,right=of ex] (r3) {};
+  \node[blk,minimum width=17mm,right=of r3] (me) {MEM\\RAM};
+  \node[reg,right=of me] (r4) {};
+  \node[blk,minimum width=17mm,right=of r4] (wb) {WB\\ghi lại};
+  \foreach \a/\b in {sif/r1,r1/id,id/r2,r2/ex,ex/r3,r3/me,me/r4,r4/wb} \draw[ar] (\a) -- (\b);
+  \node[lab,below=2mm of r1] {IF/ID};
+  \node[lab,below=2mm of r2] {ID/EX};
+  \node[lab,below=2mm of r3] {EX/MEM};
+  \node[lab,below=2mm of r4] {MEM/WB};
+  \node[ctl,above=12mm of ex] (fu) {\sig{ForwardingUnit}};
+  \node[ctl,above=12mm of id] (hu) {\sig{HazardUnit}};
+  \draw[cs] (fu.south) -- (ex.north);
+  \draw[cs] (hu.south) -- (id.north);
+  \draw[cs] (r3.north) |- (fu.east);
+  \draw[cs] (r4.north) |- ($(fu.east)+(0,2mm)$);
+  \draw[cs] (hu.west) -| node[lab,pos=.75,left,align=right]{\sig{run}:\\giữ PC,\\IF/ID} (sif.north);
+  \draw[cs] (hu.south west) -- (r1.north);
+\end{tikzpicture}
+\caption{Pipeline 5 tầng, bốn thanh ghi pipeline, hai khối xử lý hazard.}
+\label{fig:pipe}
+\end{figure}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.3cm}X@{}}
+\toprule
+\textbf{Thanh ghi} & \textbf{Chứa}\\
+\midrule
+IF/ID & \sig{pc_id}, \sig{instr_id}\\
+ID/EX & \sig{pc_ex}, \sig{rs1_data_ex}, \sig{rs2_data_ex}, \sig{imm_ex}, \sig{rs1_ex}, \sig{rs2_ex}, \sig{rd_ex}, \sig{funct3_ex}, \sig{funct7_ex}, từ điều khiển \sig{ctrl_ex}\\
+EX/MEM & \sig{alu_result_mem}, \sig{store_data_mem}, \sig{pc_plus4_mem}, \sig{rd_mem}, \sig{funct3_mem}, điều khiển \sig{RegWrite MemWrite MemRead WBSel}\\
+MEM/WB & \sig{alu_result_wb}, \sig{mem_rdata_wb}, \sig{pc_plus4_wb}, \sig{rd_wb}, điều khiển \sig{RegWrite WBSel}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Thời điểm ghi của register file}
+Register file ghi ở \emph{cạnh xuống} của xung nhịp. Lệnh ở tầng WB ghi trong nửa đầu chu kỳ, lệnh ở tầng ID đọc trong nửa sau nên thấy giá trị mới: không cần forwarding cho khoảng cách 3 lệnh.
+
+\subsection{Hazard dữ liệu: forwarding}
+\sig{ForwardingUnit} so \sig{rs1_ex}, \sig{rs2_ex} với thanh ghi đích của các lệnh ở MEM và WB:
+\[
+\mathtt{ForwardA}=
+\begin{cases}
+10 & \text{nếu } \mathtt{RegWrite\_mem}\wedge\mathtt{rd\_mem}\ne0\wedge\mathtt{rd\_mem}=\mathtt{rs1\_ex}\quad(\text{từ EX/MEM})\\
+01 & \text{ngược lại nếu điều tương tự đúng với WB}\quad(\text{từ MEM/WB})\\
+00 & \text{còn lại}\quad(\text{từ register file}).
+\end{cases}
+\]
+EX/MEM được ưu tiên vì mới hơn; điều kiện $\mathtt{rd}\ne0$ ngăn forward \texttt{x0}; \texttt{ForwardB} tương tự với \sig{rs2_ex}. Giá trị lấy từ EX/MEM là kết quả ALU, \emph{riêng \texttt{jal}/\texttt{jalr} là PC$+4$}.
+
+Hình~\ref{fig:fwd} minh họa ba nguồn của toán hạng ALU.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=10mm,y=10mm]
+  \node[mux,minimum width=18mm,minimum height=8mm] (ma) at (4.5,1.1) {A};
+  \node[mux,minimum width=18mm,minimum height=8mm] (mb) at (4.5,-1.1) {B};
+  \node[blk,minimum height=30mm,minimum width=12mm] (alu) at (6.8,0) {\sig{ALU}};
+  \node[ctl] (fa) at (4.5,2.7) {\sig{ForwardA}};
+  \node[ctl] (fb) at (4.5,-2.7) {\sig{ForwardB}};
+  \foreach \m in {ma,mb} {
+    \foreach \dy/\t in {0.45/{00: register file (đọc ở ID)},0/{10: EX/MEM (ALU hoặc PC+4)},-0.45/{01: MEM/WB (dữ liệu ghi lại)}} {
+      \draw[ar] ($(\m.west)+(-1.2,\dy)$) node[lab,left]{\t} -- ($(\m.west)+(0,\dy)$);
+    }
+  }
+  \draw[bus] (ma.east) -- (ma.east -| alu.west);
+  \draw[bus] (mb.east) -- (mb.east -| alu.west);
+  \draw[cs] (fa) -- (ma);
+  \draw[cs] (fb) -- (mb);
+  \draw[ar] ($(mb.east)+(0.3,0)$) |- ++(0,-1.0) -- ++(3.0,0) node[lab,right]{dữ liệu store};
+\end{tikzpicture}
+\caption{Forwarding: toán hạng của ALU lấy từ register file (00), MEM/WB (01) hoặc EX/MEM (10).}
+\label{fig:fwd}
+\end{figure}
+
+\subsection{Hazard dữ liệu không forward được: load-use}
+Lệnh load chỉ có dữ liệu ở cuối tầng MEM. Nếu lệnh liền sau cần nó ở EX thì phải chờ một chu kỳ. \sig{HazardUnit} phát hiện
+$\mathtt{MemRead\_ex}\wedge\mathtt{rd\_ex}\ne0\wedge(\mathtt{rd\_ex}=\mathtt{rs1\_id}\lor\mathtt{rd\_ex}=\mathtt{rs2\_id})$; khi đó PC và IF/ID đứng yên
+(\sig{run}$=0$) và từ điều khiển đi vào ID/EX bị thay bằng 0 (một \emph{bubble}). Chi phí đúng một chu kỳ; load, một lệnh không liên quan rồi mới dùng thì không mất gì.
+
+\subsection{Hazard điều khiển: branch, JAL, JALR}
+Lệnh rẽ nhánh/nhảy được quyết định ở tầng EX: $\mathtt{pc\_src\_ex}=\mathtt{branch\_taken}\lor\mathtt{IsJAL}\lor\mathtt{IsJALR}$. PC chuyển sang địa chỉ đích, lệnh đang được nạp bị đổi thành 0
+và từ điều khiển vào ID/EX bị xóa, nên hai lệnh sau lệnh rẽ nhánh bị hủy. Mức phạt là 2 chu kỳ cho mỗi lệnh rẽ nhánh/nhảy được thực hiện; rẽ nhánh không rẽ không mất gì (dự đoán tĩnh ``không rẽ'').
+
+\begin{center}
+\small
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Tình huống} & \textbf{Chu kỳ thêm}\\
+\midrule
+lệnh phụ thuộc ngay sau lệnh ALU (forwarding) & 0\\
+dùng giá trị vừa load ở lệnh kế tiếp (load-use) & 1\\
+load, một lệnh không liên quan, rồi mới dùng & 0\\
+branch không rẽ & 0\\
+branch được rẽ / \texttt{jal} / \texttt{jalr} & 2\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Ví dụ: chương trình \texttt{hazards\_demo.s}}
+Chương trình nhỏ này gom đủ ba loại hazard: \texttt{li x1,100}; \texttt{sw x1,0(x0)} (forwarding); \texttt{lw x2,0(x0)}; \texttt{addi x3,x2,1} (load-use $\Rightarrow$ stall);
+\texttt{add x4,x3,x2}; \texttt{beq x4,x4,skip} (luôn rẽ $\Rightarrow$ flush hai lệnh \texttt{addi x5} và \texttt{addi x6}). Kết quả đúng là $x1=\mathtt{0x64}$, $x3=\mathtt{0x65}$, $x4=\mathtt{0xc9}$, $x7=7$
+và $x5=x6=0$ (các lệnh bị hủy không để lại dấu vết).
+
+Hình~\ref{fig:hazard} là giản đồ pipeline của chương trình này: ô cam là lệnh bị giữ ở ID (stall), ô đỏ là lệnh bị flush.
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[x=11mm,y=-6.5mm]
+  % cột thời gian
+  \foreach \cl in {0,...,13} \node[lab] at (\cl+0.5,-0.2) {\cl};
+  \node[lab,anchor=east] at (-0.1,-0.2) {sau tick};
+  % hàng: lệnh
+  \node[lab,anchor=east] at (-0.1,1.2) {\texttt{li x1}};
+  \node[lab,anchor=east] at (-0.1,2.2) {\texttt{sw x1}};
+  \node[lab,anchor=east] at (-0.1,3.2) {\texttt{lw x2}};
+  \node[lab,anchor=east] at (-0.1,4.2) {\texttt{addi x3}};
+  \node[lab,anchor=east] at (-0.1,5.2) {\texttt{add x4}};
+  \node[lab,anchor=east] at (-0.1,6.2) {\texttt{beq}};
+  \node[lab,anchor=east] at (-0.1,7.2) {\texttt{addi x5}};
+  \node[lab,anchor=east] at (-0.1,8.2) {\texttt{addi x6}};
+  \node[lab,anchor=east] at (-0.1,9.2) {\texttt{addi x7}};
+  % các ô: (hàng, cột, nhãn)
+  \foreach \rr/\cl/\lbl in {
+    1/0/IF,1/1/ID,1/2/EX,1/3/ME,1/4/WB,
+    2/1/IF,2/2/ID,2/3/EX,2/4/ME,2/5/WB,
+    3/2/IF,3/3/ID,3/4/EX,3/5/ME,3/6/WB,
+    4/3/IF,4/4/ID,4/5/ID,4/6/EX,4/7/ME,4/8/WB,
+    5/4/IF,5/5/IF,5/6/ID,5/7/EX,5/8/ME,5/9/WB,
+    6/6/IF,6/7/ID,6/8/EX,6/9/ME,6/10/WB,
+    7/7/IF,7/8/ID,
+    8/8/IF,
+    9/9/IF,9/10/ID,9/11/EX,9/12/ME,9/13/WB} {
+    \node[stg,fill=blue!8,minimum width=10.5mm] at (\cl+0.5,\rr+0.2) {\tiny\lbl};}
+  % stall và flush
+  \node[stg,fill=orange!35,minimum width=10.5mm] at (5.5,4.2) {\tiny ID};
+  \node[stg,fill=red!25,minimum width=10.5mm] at (9.5,7.2) {\tiny X};
+  \node[stg,fill=red!25,minimum width=10.5mm] at (9.5,8.2) {\tiny X};
+  % chú thích
+  \node[stg,fill=orange!35,minimum width=8mm] (l1) at (0.5,10.6) {\tiny ID};
+  \node[lab,anchor=west] at (l1.east) {\ stall load-use (giữ ở ID)};
+  \node[stg,fill=red!25,minimum width=8mm] (l2) at (5.5,10.6) {\tiny X};
+  \node[lab,anchor=west] at (l2.east) {\ bị flush (thành bubble)};
+\end{tikzpicture}
+\caption{Pipeline của \texttt{hazards\_demo.s}. Cột là trạng thái sau mỗi tick. Cam: lệnh \texttt{addi x3} bị giữ ở ID một chu kỳ (stall load-use). Đỏ (X): hai lệnh sau \texttt{beq} bị flush thành bubble.}
+\label{fig:hazard}
+\end{figure}
+
+\subsection{Chạy một lần bấm}
+Mỗi CPU có thêm chân vào \sig{PAUSE} và chân ra \sig{DONE}. Xung nhịp thật của Clock đi qua một cổng AND với điều kiện cho phép chạy; điều kiện này tắt khi \sig{PAUSE}$=1$ hoặc khi chương trình đã kết thúc.
+Ở CPU đơn chu kỳ, chương trình kết thúc khi lệnh hiện tại là \texttt{halt: j halt} (\texttt{0x0000006f}); ở CPU pipeline, một thanh ghi 1 bit nhớ lệnh \texttt{jal} có hằng số 0 vừa đi qua tầng EX và xung nhịp dừng một chu kỳ sau,
+khi mọi lệnh cũ đã ghi xong. Nhờ vậy chỉ cần bật Auto-Tick một lần (\texttt{Simulate} $\rightarrow$ \texttt{Auto-Tick Enabled}) là chương trình chạy từ đầu đến cuối rồi tự dừng, đèn \sig{DONE} sáng.
+
+% ===================================================================== 7
+\section{Chương trình và công cụ hỗ trợ}
+\begin{itemize}
+  \item \textbf{Assembler} (\texttt{tools/rv.py asm}): nhãn, lệnh giả (\texttt{li}, \texttt{mv}, \texttt{bnez}, \texttt{ret}, \texttt{j}), tên thanh ghi ABI; tạo ảnh ROM dạng \texttt{v2.0 raw} để nạp bằng \emph{Load Image}.
+  \item \textbf{Bộ mô phỏng tham chiếu} (\texttt{tools/rv.py sim}): viết độc lập với mạch; là ``chuẩn'' của mọi bài test.
+  \item \textbf{Bộ chạy không giao diện} (\texttt{tools/java/Run.java}): nạp ROM, đảo xung nhịp, đọc \texttt{PC}, \texttt{x0..x31} và RAM từ mạch thật.
+  \item \textbf{Bộ sinh mạch} (\texttt{tools/build/}): sinh circuit từ netlist, kiểm tra từng net, đặt chú thích tiếng Việt cạnh từng linh kiện.
+  \item \textbf{Bản web trực quan} (\texttt{docs/web/index.html}): mô phỏng bằng JavaScript hai CPU cùng tên khối và tên tín hiệu, có băng chuyền lệnh, biểu đồ hiệu năng và sơ đồ luồng; engine được kiểm với bộ mô phỏng tham chiếu.
+\end{itemize}
+
+Hình~\ref{fig:proof} tóm tắt cách chứng minh tính đúng đắn.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=10mm]
+  \node[blk] (src) {chương trình\\\texttt{.s}};
+  \node[blk,right=of src] (asm) {assembler\\\texttt{rv.py asm}};
+  \node[mem,right=of asm] (hex) {ảnh ROM\\\texttt{.hex}};
+  \node[blk,above right=4mm and 14mm of hex] (c1) {mạch \sig{main}};
+  \node[blk,below right=4mm and 14mm of hex] (c2) {mạch \sig{Pipeline}};
+  \node[blk,right=of src,yshift=-18mm,xshift=0mm] (sim) {mô phỏng\\tham chiếu};
+  \node[ctl,right=30mm of hex] (cmp) {so sánh 32\\thanh ghi + RAM\\$\Rightarrow$ \textbf{OK} / \textbf{DIFFERENT}};
+  \draw[ar] (src) -- (asm); \draw[ar] (asm) -- (hex);
+  \draw[ar] (hex) -- (c1); \draw[ar] (hex) -- (c2);
+  \draw[ar] (c1) -- (cmp); \draw[ar] (c2) -- (cmp);
+  \draw[ar] (src.south) |- (sim.west);
+  \draw[ar] (sim.east) -| (cmp.south);
+  \end{tikzpicture}
+\caption{Cách chứng minh: cùng một chương trình chạy trên hai mạch và trên bộ mô phỏng độc lập, rồi so sánh.}
+\label{fig:proof}
+\end{figure}
+
+% ===================================================================== 8
+\section{Kiểm chứng}
+Việc kiểm chứng tự động ở ba mức:
+\begin{enumerate}
+  \item \textbf{Test module} (\texttt{tests/run\_tests.ps1}): 106 hàng test-vector trên 9 module (\sig{MainControl}, \sig{ImmGen}, \sig{ALU}, \sig{ALUControl}, \sig{BranchUnit}, \sig{LoadExtract}, \sig{StoreMerge}, \sig{ForwardingUnit}, \sig{HazardUnit}), do chính Logisim chạy.
+  \item \textbf{Chương trình} (\texttt{tests/run\_cpu\_tests.py}): 7 chương trình (\texttt{alu}, \texttt{mem}, \texttt{branch}, \texttt{jump}, \texttt{fib}, \texttt{hazard}, \texttt{demo}) chạy trên cả hai CPU. Sau khi chạy, cả 32 thanh ghi và mọi từ dữ liệu khác 0
+  phải bằng kết quả của bộ mô phỏng tham chiếu. Chương trình \texttt{hazard} đánh vào các tình huống: phụ thuộc liên tiếp, phụ thuộc cách 3 lệnh, load-use, load rồi store giá trị vừa load,
+  load làm địa chỉ, branch trên giá trị vừa load, branch được rẽ nhảy qua lệnh, liên kết \texttt{jal} dùng ngay, \texttt{jalr} qua thanh ghi vừa ghi, \texttt{x0} làm đích.
+  \item \textbf{Chương trình ngẫu nhiên} (\texttt{tests/fuzz.py}): chương trình ngẫu nhiên 60--80 lệnh chỉ dùng 7 thanh ghi (nên hầu hết lệnh đều phụ thuộc lệnh gần đó), load/store đủ kích thước, branch và nhảy tiến;
+  30 chương trình (60 lượt chạy trên hai CPU) đã được chạy trên project cuối, tất cả khớp.
+\end{enumerate}
+Bản thân bộ mô phỏng tham chiếu được kiểm bằng các mã hóa đã biết (\texttt{addi x1,x0,5} $=$ \texttt{00500093}, \texttt{add x3,x1,x2} $=$ \texttt{002081B3}) và bằng các chương trình tự kiểm có kết quả tính tay.
+Ngoài ra \texttt{tools/live\_proof.py} chạy một chương trình trên bộ mô phỏng tham chiếu, trên CPU đơn chu kỳ và trên CPU pipeline rồi in bảng so sánh ba cột và dòng kết luận.
+
+% ===================================================================== 9
+\section{Kết quả}
+Số chu kỳ được đo đến lần ghi thanh ghi cuối cùng (đã tính thời gian làm đầy và xả pipeline); CPU đơn chu kỳ luôn có CPI $=1$.
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lrrrrX@{}}
+\toprule
+\textbf{Chương trình} & \textbf{Lệnh} & \textbf{Đơn chu kỳ} & \textbf{Pipeline} & \textbf{CPI pipeline} & \textbf{Lý do}\\
+\midrule
+\texttt{alu} & 91 & 91 & 94 & 1,03 & không có branch được rẽ; forwarding che hết phụ thuộc\\
+\texttt{mem} & 69 & 69 & 73 & 1,06 & ít branch\\
+\texttt{hazard} & 67 & 67 & 82 & 1,22 & stall load-use, 4 branch/nhảy được rẽ\\
+\texttt{jump} & 27 & 27 & 38 & 1,41 & 4 lệnh nhảy\\
+\texttt{branch} & 69 & 69 & 104 & 1,51 & nhiều branch được rẽ\\
+\texttt{fib} & 123 & 123 & 181 & 1,47 & vòng lặp: 1 branch được rẽ mỗi 4 lệnh\\
+\texttt{demo} & 39 & 39 & 64 & 1,64 & vòng lặp 10 lần và một lần gọi hàm\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Hình~\ref{fig:chart} so sánh số chu kỳ của hai CPU.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[gray!40] (-0.2,0.000) -- (14.7,0.000);
+  \node[font=\scriptsize,anchor=east] at (-0.25,0.000) {0};
+  \draw[gray!40] (-0.2,1.000) -- (14.7,1.000);
+  \node[font=\scriptsize,anchor=east] at (-0.25,1.000) {50};
+  \draw[gray!40] (-0.2,2.000) -- (14.7,2.000);
+  \node[font=\scriptsize,anchor=east] at (-0.25,2.000) {100};
+  \draw[gray!40] (-0.2,3.000) -- (14.7,3.000);
+  \node[font=\scriptsize,anchor=east] at (-0.25,3.000) {150};
+  \draw[gray!40] (-0.2,4.000) -- (14.7,4.000);
+  \node[font=\scriptsize,anchor=east] at (-0.25,4.000) {200};
+  \draw[thick] (-0.2,0) -- (14.7,0);
+  \fill[blue!60] (0.20,0) rectangle (0.90,0.780);
+  \fill[orange!85] (0.95,0) rectangle (1.65,1.280);
+  \node[font=\tiny,anchor=south] at (0.55,0.780) {39};
+  \node[font=\tiny,anchor=south] at (1.30,1.280) {64};
+  \node[font=\scriptsize,anchor=north] at (0.92,-0.05) {\texttt{demo}};
+  \fill[blue!60] (2.00,0) rectangle (2.70,0.140);
+  \fill[orange!85] (2.75,0) rectangle (3.45,0.260);
+  \node[font=\tiny,anchor=south] at (2.35,0.140) {7};
+  \node[font=\tiny,anchor=south] at (3.10,0.260) {13};
+  \node[font=\scriptsize,anchor=north] at (2.72,-0.05) {\texttt{hazards\_demo}};
+  \fill[blue!60] (3.80,0) rectangle (4.50,1.820);
+  \fill[orange!85] (4.55,0) rectangle (5.25,1.880);
+  \node[font=\tiny,anchor=south] at (4.15,1.820) {91};
+  \node[font=\tiny,anchor=south] at (4.90,1.880) {94};
+  \node[font=\scriptsize,anchor=north] at (4.52,-0.05) {\texttt{alu}};
+  \fill[blue!60] (5.60,0) rectangle (6.30,1.380);
+  \fill[orange!85] (6.35,0) rectangle (7.05,2.080);
+  \node[font=\tiny,anchor=south] at (5.95,1.380) {69};
+  \node[font=\tiny,anchor=south] at (6.70,2.080) {104};
+  \node[font=\scriptsize,anchor=north] at (6.32,-0.05) {\texttt{branch}};
+  \fill[blue!60] (7.40,0) rectangle (8.10,2.460);
+  \fill[orange!85] (8.15,0) rectangle (8.85,3.620);
+  \node[font=\tiny,anchor=south] at (7.75,2.460) {123};
+  \node[font=\tiny,anchor=south] at (8.50,3.620) {181};
+  \node[font=\scriptsize,anchor=north] at (8.12,-0.05) {\texttt{fib}};
+  \fill[blue!60] (9.20,0) rectangle (9.90,1.340);
+  \fill[orange!85] (9.95,0) rectangle (10.65,1.640);
+  \node[font=\tiny,anchor=south] at (9.55,1.340) {67};
+  \node[font=\tiny,anchor=south] at (10.30,1.640) {82};
+  \node[font=\scriptsize,anchor=north] at (9.92,-0.05) {\texttt{hazard}};
+  \fill[blue!60] (11.00,0) rectangle (11.70,0.540);
+  \fill[orange!85] (11.75,0) rectangle (12.45,0.760);
+  \node[font=\tiny,anchor=south] at (11.35,0.540) {27};
+  \node[font=\tiny,anchor=south] at (12.10,0.760) {38};
+  \node[font=\scriptsize,anchor=north] at (11.72,-0.05) {\texttt{jump}};
+  \fill[blue!60] (12.80,0) rectangle (13.50,1.380);
+  \fill[orange!85] (13.55,0) rectangle (14.25,1.460);
+  \node[font=\tiny,anchor=south] at (13.15,1.380) {69};
+  \node[font=\tiny,anchor=south] at (13.90,1.460) {73};
+  \node[font=\scriptsize,anchor=north] at (13.52,-0.05) {\texttt{mem}};
+  \fill[blue!60] (0.2,4.75) rectangle (0.5,5.0); \node[font=\scriptsize,anchor=west] at (0.55,4.875) {single-cycle};
+  \fill[orange!85] (3.0,4.75) rectangle (3.3,5.0); \node[font=\scriptsize,anchor=west] at (3.35,4.875) {pipeline};
+  \node[font=\scriptsize,rotate=90] at (-1.0,2.0) {số chu kỳ};
+\end{tikzpicture}
+\caption{Số chu kỳ xung nhịp để hoàn tất (đến lần ghi thanh ghi cuối cùng) của hai CPU trên từng chương trình; cột thấp hơn là nhanh hơn.}
+\label{fig:chart}
+\end{figure}
+
+Với \texttt{demo}: 39 lệnh cộng $11$ lần chuyển hướng $\times2=22$ chu kỳ mất (9 lần \texttt{bnez} được rẽ, một \texttt{jal}, một \texttt{ret}) cho $61$ chu kỳ; $3$ chu kỳ còn lại là thời gian làm đầy pipeline.
+Về số chu kỳ, pipeline ở đây \emph{không} nhanh hơn CPU đơn chu kỳ, vì mô phỏng của Logisim không có độ trễ cổng. Lợi ích thật của pipeline là chu kỳ xung nhịp ngắn hơn: đường dài nhất rút từ
+``nạp lệnh $+$ giải mã $+$ ALU $+$ bộ nhớ $+$ ghi lại'' xuống còn một tầng. Cái giá phải trả là mức phạt 2 chu kỳ cho mỗi lệnh rẽ nhánh được thực hiện; dự đoán rẽ nhánh hoặc quyết định nhánh sớm hơn (ở ID) sẽ loại bỏ phần lớn chi phí này.
+
+% ===================================================================== 10
+\section{Các lỗi đã gặp và bài học}
+Các khối ban đầu lần đầu được kiểm thử bằng test-vector và chương trình hoàn chỉnh; việc này đã tìm ra lỗi thật.
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{7.2cm}X@{}}
+\toprule
+\textbf{Ở đâu} & \textbf{Lỗi} & \textbf{Cách sửa}\\
+\midrule
+ALU & \texttt{SLTU} trả \texttt{FFFFFFFF} thay vì 1 (kết quả 1 bit bị mở rộng dấu) & mở rộng bằng 0\\
+ALUControl & \texttt{SLL} kiểu R chọn mã của \texttt{SRL} & sửa hằng số\\
+MainControl & JALR so với opcode của JAL; LUI chọn hằng số kiểu B & viết lại phần giải mã\\
+ImmGen & kiểu U thiếu $\ll12$; bit 0 của kiểu J bằng 1 & đã sửa\\
+Memory & load trả dữ liệu không xác định (RAM đọc đồng bộ) & đọc bất đồng bộ\\
+Datapath & JAL, JALR, LUI, AUIPC chưa có đường dữ liệu & thêm \sig{ASel}, \sig{WBSel}, logic PC kế tiếp\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Bài học về công cụ:} Logisim chỉ nối dây ở các \emph{đầu mút} (không nối ở chỗ giao chữ T), nên file sinh ra phải chia nhỏ dây; mọi vị trí phải nằm trên lưới 10 pixel; \sig{Constant} mặc định bằng 1 chứ không phải 0;
+RAM mặc định đọc đồng bộ nên CPU đơn chu kỳ không dùng được; circuit có tên bắt đầu bằng dấu gạch dưới bị đổi tên âm thầm. Bộ sinh mạch hiện kiểm tra tất cả điều này và kiểm chứng các net của từng circuit sau khi ghi.
+
+% ===================================================================== 11
+\section{Hướng dẫn chạy lại}
+Yêu cầu: Java 21, Python 3.
+\begin{enumerate}
+  \item Mở project: \texttt{java -jar logisim-evolution-4.1.0-all.jar RiscVComputer.circ}. Circuit \sig{main} là CPU đơn chu kỳ, \sig{Pipeline} là CPU pipeline.
+  \item Chạy từng bước: \texttt{Simulate} $\rightarrow$ \texttt{Manual Tick Full Cycle} (Ctrl+F9); chạy tự động: \texttt{Simulate} $\rightarrow$ \texttt{Auto-Tick Enabled} (Ctrl+K); đặt lại: \texttt{Reset Simulation} (Ctrl+R).
+  \item Nạp chương trình khác: chuột phải vào ROM $\rightarrow$ \emph{Load Image\dots} $\rightarrow$ chọn file \texttt{.hex}; tạo file bằng \texttt{python tools/rv.py asm prog.s -o prog.hex -l}.
+  \item Kiểm thử: \texttt{powershell -File tests/run\_tests.ps1} (module), \texttt{python tests/run\_cpu\_tests.py --circuit all} (chương trình trên hai CPU), \texttt{python tests/fuzz.py --count 20 --seed 1} (ngẫu nhiên).
+  \item Kiểm tra trước buổi trình bày: \texttt{powershell -File tools/presentation\_check.ps1}; chứng minh nhanh: \texttt{python tools/live\_proof.py}.
+\end{enumerate}
+
+% ===================================================================== 12
+\section{Mở rộng và hướng phát triển}
+\label{sec:future}
+Chưa cài đặt (tùy chọn trong đề bài): dự đoán rẽ nhánh, cache, bộ nhân/chia (mở rộng M), ngắt, GPIO/UART, số thực. Các bước tiếp theo tự nhiên, rẻ nhất trước:
+quyết định \texttt{JAL} ở tầng ID (mức phạt 1 chu kỳ thay vì 2); bộ dự đoán nhánh 1--2 bit cùng bộ đệm đích nhánh nhỏ; UART ánh xạ bộ nhớ tại một địa chỉ cố định để chương trình có thể in ra;
+mở rộng \texttt{M} với bộ chia nhiều chu kỳ và tín hiệu stall dùng lại \sig{HazardUnit}.
+
+% ===================================================================== 13
+\section{Kết luận}
+Dự án đã hoàn thành đủ các yêu cầu cơ bản của đề: một máy tính 32-bit theo RV32I với đầy đủ lệnh tối thiểu và lệnh tùy chọn, hai phiên bản CPU (đơn chu kỳ và pipeline 5 tầng) xử lý đúng
+hazard dữ liệu và điều khiển, chương trình nạp qua bộ nhớ lệnh nhờ assembler, và bộ kiểm thử ba mức cho thấy hai CPU cho kết quả giống hệt bộ mô phỏng tham chiếu độc lập.
+Số liệu đo cho thấy pipeline cần nhiều chu kỳ hơn trong mô phỏng không độ trễ cổng, đúng như phân tích lý thuyết, và chi phí chủ yếu đến từ các lệnh rẽ nhánh được thực hiện.
+
+% ===================================================================== phụ lục
+\appendix
+\section{Mã hóa lệnh RV32I}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lccX@{}}
+\toprule
+\textbf{Lệnh} & \textbf{opcode} & \textbf{funct3} & \textbf{funct7 / imm}\\
+\midrule
+add / sub & 0110011 & 000 & 0000000 / 0100000\\
+sll & 0110011 & 001 & 0000000\\
+slt / sltu & 0110011 & 010 / 011 & 0000000\\
+xor & 0110011 & 100 & 0000000\\
+srl / sra & 0110011 & 101 & 0000000 / 0100000\\
+or / and & 0110011 & 110 / 111 & 0000000\\
+addi slti sltiu xori ori andi & 0010011 & 000 010 011 100 110 111 & imm[11:0]\\
+slli / srli / srai & 0010011 & 001 / 101 / 101 & 0000000 / 0000000 / 0100000\\
+lb lh lw lbu lhu & 0000011 & 000 001 010 100 101 & imm[11:0]\\
+sb sh sw & 0100011 & 000 001 010 & imm[11:5], imm[4:0]\\
+beq bne blt bge bltu bgeu & 1100011 & 000 001 100 101 110 111 & hằng số kiểu B\\
+jal & 1101111 & -- & hằng số kiểu J\\
+jalr & 1100111 & 000 & imm[11:0]\\
+lui / auipc & 0110111 / 0010111 & -- & imm[31:12]\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Cấu trúc thư mục dự án}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.6cm}X@{}}
+\toprule
+\textbf{Đường dẫn} & \textbf{Nội dung}\\
+\midrule
+\texttt{RiscVComputer.circ} & project Logisim (14 circuit, hai CPU)\\
+\texttt{programs/} & chương trình mẫu \texttt{demo.s}, \texttt{hazards\_demo.s} và ảnh ROM \texttt{.hex}\\
+\texttt{tests/} & test-vector của 9 module, 6 chương trình test, bộ fuzz, bộ chạy test\\
+\texttt{tools/rv.py} & assembler và bộ mô phỏng tham chiếu\\
+\texttt{tools/java/} & bộ chạy chương trình trên mạch không cần giao diện\\
+\texttt{tools/build/} & bộ sinh mạch từ netlist và kiểm chứng\\
+\texttt{tools/web/}, \texttt{docs/web/} & bản web trực quan và các file nguồn của nó\\
+\texttt{docs/} & báo cáo, hướng dẫn, giải thích, sơ đồ luồng (tiếng Anh và tiếng Việt)\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Phân công}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{5.4cm}X@{}}
+\toprule
+\textbf{Thành viên} & \textbf{Phần phụ trách} & \textbf{Ghi chú}\\
+\midrule
+\underline{\hspace{3.6cm}} & CPU đơn chu kỳ, giải mã, register file & \\
+\underline{\hspace{3.6cm}} & ALU, bộ nhớ, kiểm thử & \\
+\underline{\hspace{3.6cm}} & Pipeline, forwarding, hazard & \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{thebibliography}{9}
+\bibitem{riscv} A. Waterman, K. Asanović (eds.), \emph{The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA}, RISC-V International.
+\bibitem{ph} D. A. Patterson, J. L. Hennessy, \emph{Computer Organization and Design, RISC-V Edition}, Morgan Kaufmann.
+\bibitem{logisim} Logisim Evolution, \emph{https://github.com/logisim-evolution/logisim-evolution}.
+\end{thebibliography}
+
+\end{document}

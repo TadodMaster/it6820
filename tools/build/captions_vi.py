@@ -129,6 +129,10 @@ SPECIFIC = {
     ("HazardUnit", "uses"): "OR: lệnh ở ID dùng rs1 hoặc rs2 của load|Chỉ cần một trong hai khớp",
     ("HazardUnit", "stall"): "AND: load ở EX và rd khác x0 và có người dùng|=1: dừng PC, IF/ID một chu kỳ, chèn bubble|Forwarding không cứu được load-use",
     # ---------------- main
+    ("main", "CLK"): "AND: xung nhịp thật (CLK_RAW) và cho phép chạy|Chỉ cho xung đi qua khi clk_en = 1|Chạy một mạch: bật Auto-Tick (Ctrl+K), mạch tự dừng ở halt",
+    ("main", "clk_en"): "NOR: PAUSE hoặc is_halt|clk_en = 1 khi không tạm dừng và chưa tới halt|PAUSE = 1 hoặc gặp halt thì xung nhịp bị chặn",
+    ("main", "halt_code"): "Hằng số 0x0000006f = lệnh halt: j halt (jal x0, 0)|Dùng để nhận ra lệnh kết thúc chương trình",
+    ("main", "is_halt"): "So sánh lệnh hiện tại với 0x6f|=1 khi PC tới vòng lặp halt: đèn DONE sáng, xung nhịp dừng|Nhờ vậy chạy tự động thì mạch tự dừng, không quay mãi",
     ("main", "pc"): "PC (Program Counter): địa chỉ lệnh đang chạy|Nạp next_pc ở mỗi cạnh xung, RESET đưa về 0|Single-cycle cập nhật PC mỗi chu kỳ",
     ("main", "pc|pc_word"): "Lấy PC[9:2] làm địa chỉ từ của ROM|Lệnh dài 4 byte nên 2 bit thấp luôn 0",
     ("main", "four"): "Hằng số 4|Mỗi lệnh dài 4 byte, PC+4 là lệnh kế tiếp",
@@ -146,6 +150,12 @@ SPECIFIC = {
     ("main", "wb_data"): "Mux chọn giá trị ghi vào rd theo WBSel|00 ALU, 01 RAM (load), 10 PC+4 (jal/jalr)|Mỗi loại lệnh lấy kết quả từ nguồn khác nhau",
     ("main", "one"): "Hằng số 1 (cho phép ghi PC mọi chu kỳ)|CPU single-cycle không bao giờ dừng PC",
     # ---------------- Pipeline
+    ("Pipeline", "CLK"): "AND: xung nhịp thật (CLK_RAW) và cho phép chạy|Chỉ cho xung đi qua khi clk_en = 1|Chạy một mạch: bật Auto-Tick (Ctrl+K), mạch tự dừng sau halt",
+    ("Pipeline", "clk_en"): "NOR: PAUSE hoặc halt_d|clk_en = 1 khi không tạm dừng và chưa kết thúc|PAUSE = 1 hoặc halt_d = 1 thì xung nhịp bị chặn",
+    ("Pipeline", "imm_zero_c"): "Hằng số 0 (32 bit)|Để nhận ra jal có hằng số bằng 0 (nhảy về chính nó)",
+    ("Pipeline", "imm_is0"): "So sánh imm_ex với 0|=1 khi hằng số của lệnh ở EX bằng 0",
+    ("Pipeline", "halt_ex"): "AND: lệnh ở EX là jal và imm = 0|Đó là halt: j halt (nhảy về chính nó)",
+    ("Pipeline", "halt_d"): "Thanh ghi 1 bit: nhớ halt_ex sau một chu kỳ|Chờ thêm 1 chu kỳ để các lệnh cũ ghi xong rồi mới dừng xung nhịp|RESET xóa nó; đèn DONE = halt_d",
     ("Pipeline", "pc_if"): "PC (Program Counter): địa chỉ đang nạp lệnh|Giữ nguyên khi stall (run = 0), RESET đưa về 0|Stall dừng PC để lệnh load-use chờ",
     ("Pipeline", "pc_if|pc_word"): "Lấy PC[9:2] làm địa chỉ từ của ROM|Lệnh dài 4 byte nên 2 bit thấp luôn 0",
     ("Pipeline", "four"): "Hằng số 4|Mỗi lệnh dài 4 byte, PC+4 là lệnh kế tiếp",

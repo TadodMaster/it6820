@@ -202,7 +202,7 @@ Occupancy of the stages **after** each tick (what you see in the circuit and in 
 | 9 | skip (**20**) | **bubble** | **bubble** | beq | add x4 | 0 | 0 | 00 | 00 | **flush**: the two instructions fetched behind the `beq` (`addi x5`, `addi x6`) became bubbles; the PC is now the target 0x20 |
 | 10 | halt (24) | addi x7 | bubble | bubble | beq | 0 | 0 | 00 | 00 | the program continues at the target |
 | 11 | (28) | halt | addi x7 | bubble | bubble | 0 | 0 | 00 | 00 | `addi x7,x0,7` computes 7 |
-| 12 | (2c) | bubble | halt | addi x7 | bubble | 0 | **1** | 00 | 00 | the final `j halt` redirects (and flushes) again; this repeats forever and is normal |
+| 12 | (2c) | bubble | halt | addi x7 | bubble | 0 | **1** | 00 | 00 | the final `j halt` redirects (and flushes) again; in the web page this repeats forever; in the Logisim circuit the clock stops here (tick 13, `DONE` = 1) |
 
 (The `ForwardA = 10` at tick 5 belongs to the bubble in EX: a bubble keeps the register numbers of the stalled instruction but its control word is zero, so it does nothing.)
 

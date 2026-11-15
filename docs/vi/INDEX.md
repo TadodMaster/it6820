@@ -16,6 +16,10 @@
 | [../latex/KienTruc_RV32I.tex](../latex/KienTruc_RV32I.tex) | người học | tài liệu \LaTeX{} tiếng Việt học từng bước từng khối, có hình TikZ (biên dịch bằng pdfLaTeX); kế hoạch tiếng Anh: [../LEARNING_PLAN.md](../LEARNING_PLAN.md) |
 | [FLOWCHARTS.md](FLOWCHARTS.md) | người học | sơ đồ luồng Mermaid của từng circuit trong 14 circuit, giải thích từng bước, ví dụ thật, trường hợp đặc biệt |
 | [../web/index.html](../web/index.html) | mọi người | bản web trực quan: chạy từng tick CPU single-cycle và pipeline ngay trên trình duyệt, kèm sơ đồ luồng của từng circuit (mở file bằng trình duyệt; tạo bằng `python tools/build_web.py`) |
+| [HUONG_DAN_TRINH_BAY.md](HUONG_DAN_TRINH_BAY.md) | người thuyết trình | hướng dẫn ngắn: làm gì, cho thầy xem gì, nói gì ở từng bước (10-12 phút) |
+| [../pptx/RV32I_TrinhBay.pptx](../pptx/RV32I_TrinhBay.pptx) | người thuyết trình | bản PowerPoint 20 slide (tiếng Việt, có ghi chú người nói); sinh bởi `python tools/build_pptx.py` |
+| [../latex/BaoCao_RV32I.tex](../latex/BaoCao_RV32I.tex) | người chấm, nhóm | báo cáo bài tập lớn bằng \LaTeX{} (tiếng Việt, có hình TikZ); sinh bởi `python tools/build_report_tex.py` |
+| [../latex/HuongDan_TrinhBay.tex](../latex/HuongDan_TrinhBay.tex) | người thuyết trình | bản \LaTeX{} của hướng dẫn trình bày (biên dịch bằng pdfLaTeX hoặc Overleaf) |
 | [TEAM_SPLIT.md](TEAM_SPLIT.md) | nhóm ba người | ai học circuit nào, cần giải thích gì, câu hỏi có thể gặp |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | mọi người | đề bài (tiếng Việt) kèm trạng thái của từng mục |
 | [commands.txt](commands.txt) | mọi người | các lệnh để sao chép và dán |

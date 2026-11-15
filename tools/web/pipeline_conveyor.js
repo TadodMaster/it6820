@@ -2,13 +2,14 @@
 const CV = { track: $("#cvTrack"), fwd: $("#cvFwd"), els: new Map(), bub: {}, timers: new Set() };
 const CV_ST = ["IF", "ID", "EX", "MEM", "WB"], CV_COL = [COL.IF, COL.ID, COL.EX, COL.MEM, COL.WB];
 const CV_NAMES = ["IF - Nạp lệnh", "ID - Giải mã", "EX - Thực thi", "MEM - Bộ nhớ", "WB - Ghi lại"];
+const CV_ROLE = ["đọc ROM tại PC, tính PC+4", "đọc rs1/rs2, sinh imm, phát hiện stall", "ALU, so sánh nhánh, forwarding", "load đọc / store ghi RAM", "ghi kết quả vào rd"];
 function cvBuild() {
   const t = CV.track;
   t.querySelectorAll(".cvcol").forEach((e) => e.remove());
   CV_ST.forEach((s, i) => {
     const c = document.createElement("div");
     c.className = "cvcol"; c.style.left = i * 20 + "%"; c.style.setProperty("--c", CV_COL[i]);
-    c.innerHTML = `<b>${CV_NAMES[i]}</b>`;
+    c.innerHTML = `<b>${CV_NAMES[i]}</b><small>${CV_ROLE[i]}</small>`;
     t.appendChild(c);
   });
   CV.fwd.innerHTML = "";
@@ -23,11 +24,16 @@ function cvInstrColor(id) {
   return CLASS_COL[classOf(w & 0x7f)] || COL.gray;
 }
 function cvDetail(stage, id, k, cpu) {
-  if (stage === 0) return `nạp ${hx(k.instr_if)}`;
-  if (stage === 1) return `rs1=${hx(k.rs1_data_id)}`;
-  if (stage === 2) return `${RV.ALU_NAMES[k.ALUCtrl]} = ${hx(k.alu_result_ex)}`;
-  if (stage === 3) { const em = cpu.exmem; return em.MemWrite ? `ghi ${hx(em.store_data)}` : em.MemRead ? `đọc ${hx(k.mem_rdata_mem)}` : `addr ${hx(em.alu_result)}`; }
-  const mw = cpu.memwb; return mw.RegWrite && mw.rd ? `x${mw.rd} <- ${hx(k.wb_data)}` : "không ghi";
+  const fi = cpu.ifid, ie = cpu.idex, em = cpu.exmem, mw = cpu.memwb, X = (r) => "x" + r;
+  if (stage === 0) return [`nạp ${hx(k.instr_if)}`, `PC=${hx(k.pc_if, 4)} -> PC+4`];
+  if (stage === 1) { const d = k.dID; return [`rs1=${X(d.rs1)} (${hx(k.rs1_data_id)})`, `rs2=${X(d.rs2)} (${hx(k.rs2_data_id)})  imm=${hx(k.imm_id)}`]; }
+  if (stage === 2) {
+    const src = (f) => (f === 2 ? "EX/MEM" : f === 1 ? "MEM/WB" : "reg");
+    return [`A=${hx(k.alu_a)} (${ie.ctrl.ASel ? "PC/0" : src(k.ForwardA)})  B=${hx(k.alu_b)} (${ie.ctrl.ALUSrc ? "imm" : src(k.ForwardB)})`,
+            `${RV.ALU_NAMES[k.ALUCtrl]} = ${hx(k.alu_result_ex)}${ie.ctrl.IsBranch ? (k.branch_taken ? "  rẽ nhánh: CÓ" : "  rẽ nhánh: không") : ""}`];
+  }
+  if (stage === 3) return em.MemWrite ? [`ghi RAM[${hx(em.alu_result)}]`, `dữ liệu ${hx(em.store_data)}`] : em.MemRead ? [`đọc RAM[${hx(em.alu_result)}]`, `-> ${hx(k.mem_rdata_mem)}`] : [`không truy cập RAM`, `chuyển tiếp ${hx(em.alu_result)}`];
+  return mw.RegWrite && mw.rd ? [`ghi ${X(mw.rd)} <- ${hx(k.wb_data)}`, `nguồn: ${["ALU", "RAM", "PC+4", "-"][mw.WBSel]}`] : [`không ghi thanh ghi`, `lệnh hoàn tất`];
 }
 function cvUpdate() {
   const cpu = PL.cpu, k = cpu.comb(), fi = cpu.ifid, ie = cpu.idex, em = cpu.exmem, mw = cpu.memwb;
@@ -43,7 +49,7 @@ function cvUpdate() {
     const key = "i" + o.id; seen.add(key);
     let e = CV.els.get(key), fresh = false;
     if (!e) {
-      e = document.createElement("div"); e.className = "cvcard"; e.innerHTML = "<b></b><i></i><u></u>";
+      e = document.createElement("div"); e.className = "cvcard"; e.innerHTML = "<b></b><i></i><u></u><em></em><em></em><span class=\"cvdots\"></span>";
       e.style.left = "-20%"; e.style.opacity = "0"; CV.track.appendChild(e); CV.els.set(key, e); fresh = true;
     }
     const col = cvInstrColor(o.id);
@@ -52,8 +58,12 @@ function cvUpdate() {
     e.querySelector("b").textContent = o.flush ? "X flush" : plName(o.id);
     const f = cpu.fetched[o.id];
     e.querySelector("i").textContent = f ? "PC " + hx(f.pc, 4) : "";
-    e.querySelector("u").textContent = o.flush ? "bị hủy" : o.doomed ? "sẽ bị flush" : o.held ? "giữ nguyên (stall)" : cvDetail(o.st, o.id, k, cpu);
-    const place = () => { e.style.left = o.st * 20 + "%"; e.style.opacity = "1"; };
+    const det = o.flush ? ["bị hủy", "không ghi gì"] : o.held ? ["giữ nguyên (stall)", "IF lặp lại cùng PC"] : o.stall ? ["bị giữ (stall)", "chờ dữ liệu load"] : cvDetail(o.st, o.id, k, cpu);
+    e.querySelector("u").textContent = o.flush ? "bị hủy" : o.doomed ? "sẽ bị flush" : o.held ? "giữ nguyên (stall)" : o.stall ? "bị giữ (stall)" : CV_ST[o.st] + ": " + CV_ROLE[o.st].split(",")[0];
+    const em2 = e.querySelectorAll("em"); em2[0].textContent = det[0]; em2[1].textContent = det[1];
+    e.querySelector(".cvdots").innerHTML = CV_ST.map((n, j) => `<s class="${j < o.st ? "done" : j === o.st ? "now" : ""}" style="--c:${CV_COL[j]}">${n}</s>`).join("");
+    e.dataset.st = o.st;
+    const place = () => { e.style.left = e.dataset.st * 20 + "%"; e.style.opacity = "1"; };
     if (fresh) requestAnimationFrame(() => requestAnimationFrame(place)); else place();
   });
   CV.els.forEach((e, key) => {
@@ -85,6 +95,14 @@ function cvUpdate() {
   if (fa || fb) chips.push(`<span class="badge fwd">forward</span> EX lấy toán hạng ${fa ? "A" : ""}${fa && fb ? " và " : ""}${fb ? "B" : ""} từ ${fa === 2 || fb === 2 ? "EX/MEM" : "MEM/WB"} thay vì register file`);
   if (!chips.length) chips.push('<span class="badge ok">bình thường</span> các thẻ tiến một tầng mỗi tick');
   $("#cvStatus").innerHTML = chips.join("<br>");
+  const rows = [];
+  for (let st = 0; st < 5; st++) {
+    const o = occ.find((x) => x.st === st);
+    if (!o) { rows.push(`<tr><td style="color:${CV_COL[st]}"><b>${CV_ST[st]}</b></td><td colspan="3" class="mut">bubble (NOP): tầng này trống tick này</td></tr>`); continue; }
+    const f = cpu.fetched[o.id], det = o.flush ? ["bị hủy", "lệnh nạp nhầm sau nhánh, biến thành NOP"] : cvDetail(o.st, o.id, k, cpu);
+    rows.push(`<tr><td style="color:${CV_COL[st]}"><b>${CV_ST[st]}</b></td><td><code>${o.flush ? "X" : plName(o.id)}</code></td><td>${f ? hx(f.pc, 4) : ""}</td><td>${det[0]}; ${det[1]}</td></tr>`);
+  }
+  $("#cvTable").innerHTML = `<table class="cvtab"><tr><th>Tầng</th><th>Lệnh</th><th>PC</th><th>Đang làm gì (giá trị thật của tick này)</th></tr>${rows.join("")}</table>`;
 }
 function cvEvents(key) {
   const p = PROGRAMS[key], q = new RV.Pipeline(p.words), found = {};

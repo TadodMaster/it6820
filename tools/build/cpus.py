@@ -27,8 +27,17 @@ def single_cycle(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
                       (3100, "EX - Execute and next PC"), (4150, "MEM - Data Memory"), (5000, "WB - Write Back")], y=100)
 
     # ---------------------------------------------------------------- IF
-    c.add("Clock", (150, 300), {"appearance": "NewPins"}, {"out": "CLK"})
-    c.text(130, 330, "Clock: Ctrl+F9 = 1 full cycle")
+    c.add("Clock", (150, 300), {"appearance": "NewPins"}, {"out": "CLK_RAW"})
+    c.text(130, 330, "Clock: Ctrl+F9 = 1 full cycle,  Ctrl+K = auto-tick")
+    # one-trigger run: the clock is gated.  PAUSE = 1 stops it, and it stops by itself at the final "halt: j halt" (instr = 0x0000006f)
+    c.add("AND Gate", (330, 300), {}, {"in1": "CLK_RAW", "in2": "clk_en", "out": "CLK"})
+    c.add("Pin", (150, 980), {"appearance": "classic", "label": "PAUSE"}, {"p": "PAUSE"})
+    c.text(150, 1010, "PAUSE = 1 stops the clock")
+    c.add("NOR Gate", (420, 980), {}, {"in1": "PAUSE", "in2": "is_halt", "out": "clk_en"})
+    c.add("Constant", (150, 1100), {"width": 32, "value": "0x6f"}, {"out": "halt_code"})
+    c.add("Comparator", (620, 1100), {"width": 32, "mode": "unsigned"}, {"a": "instr", "b": "halt_code", "eq": "is_halt"})
+    c.add("Pin", (940, 1100), {"appearance": "classic", "label": "DONE", "type": "output", "facing": "west"}, {"p": "is_halt"})
+    c.text(620, 1160, "DONE = 1: the program reached  halt: j halt  and the clock stopped")
     c.add("Pin", (150, 420), {"appearance": "classic", "label": "RESET"}, {"p": "RESET"})
     c.text(150, 450, "RESET = 1 holds PC at 0")
     c.add("Constant", (420, 500), {}, {"out": "one"})
@@ -57,7 +66,7 @@ def single_cycle(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
     sub(c, "ImmGen", (1980, 1100), {"Instruction": "instr", "ImmSel": "ImmSel", "Imm": "imm"})
     c.text(1850, 1070, "ImmGen")
     sub(c, "RegisterFile", (1980, 1400), {"write_data": "wb_data", "CLK": "CLK", "write": "RegWrite", "rd": "rd",
-                                          "rs1": "rs1", "rs2": "rs2", "rs1_data": "rs1_data", "rs2_data": "rs2_data"})
+                                          "rs1": "rs1", "rs2": "rs2", "rs1_data": "rs1_data", "rs2_data": "rs2_data", "reg_x1": "x1", "reg_x2": "x2", "reg_x3": "x3", "reg_x4": "x4", "reg_x5": "x5", "reg_x6": "x6", "reg_x7": "x7", "reg_x10": "x10", "reg_x11": "x11", "reg_x12": "x12", "reg_x13": "x13", "reg_x14": "x14"})
     c.text(1850, 1370, "RegisterFile")
 
     # ---------------------------------------------------------------- EX
@@ -119,6 +128,11 @@ def single_cycle(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
         ("mem_rdata", "mem_rdata", 16, ("mem_rdata: dữ liệu đọc từ RAM", "(chỉ có nghĩa với lệnh load)")),
         ("next_pc", "next_pc", 16, ("next_pc: địa chỉ lệnh kế tiếp", "(PC+4, đích rẽ nhánh hoặc JALR)")),
     ], "PROBE DỮ LIỆU: các giá trị chạy trong datapath")
+    notes = {1: "địa chỉ trả về / giá trị", 2: "thanh ghi tạm", 3: "thanh ghi tạm", 4: "thanh ghi tạm", 5: "thanh ghi tạm", 6: "thanh ghi tạm", 7: "thanh ghi tạm",
+             10: "tổng cộng dồn (demo)", 11: "biến đếm vòng lặp", 12: "kết quả hàm nhân đôi", 13: "giá trị đọc lại từ RAM", 14: "cờ so sánh"}
+    for row, grp in enumerate(([1, 2, 3, 4, 5, 6], [7, 10, 11, 12, 13, 14])):
+        c.monitor(700, 3080 + row * 260, 800, [(f"x{r}", f"x{r}", 16, (f"x{r}: giá trị thanh ghi x{r}", f"({notes[r]})")) for r in grp],
+                  "PROBE THANH GHI (RegisterFile): giá trị các thanh ghi chương trình mẫu dùng" if row == 0 else "PROBE THANH GHI (tiếp)")
 
     c.install(before="ALU")
     return c

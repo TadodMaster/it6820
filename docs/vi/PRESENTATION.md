@@ -119,7 +119,7 @@ Nhấn **Simulate > Manual Tick Full Cycle** (phím tắt **Ctrl+F9**) một l�
 Vừa bấm tick vừa nói: "x10 là tổng đang cộng dồn, x11 là biến đếm. Mỗi tick thực thi đúng một lệnh."  Chỉ vào **hàng theo dõi** ở cuối mạch (các probe màu vàng, mỗi probe có mô tả tiếng Việt phía trên): `PC`, `instr` = lệnh đang được thực thi (ví dụ `00b50533` = `add x10,x10,x11`), `alu_result`, `branch_taken`, `wb_data` = giá trị được ghi vào register (`0000000a`).
 
 ### Bước 5 - Chạy đến hết (1 phút)
-Nhấn **Ctrl+F9** đến khoảng tick 40 (hoặc giữ phím; hoặc `Simulate > Auto-Tick Enabled`, **Ctrl+K**, rồi tắt đi).  Trạng thái cuối:
+**Chạy một lần bấm, không cần bấm clock:** bật `Simulate > Auto-Tick Enabled` (**Ctrl+K**) một lần (tốc độ chỉnh ở `Simulate > Auto-Tick Frequency`, mạch mặc định 4 Hz).  Chương trình tự chạy từ đầu đến cuối và xung nhịp **tự dừng ở `halt: j halt`** cuối cùng: chân ra `DONE` thành 1 và PC đứng ở `0x28`.  (Logisim không tự bắt đầu tick được, nên một lần Ctrl+K chính là cú kích hoạt.)  Đặt chân vào `PAUSE` = 1 để đóng băng xung nhịp bất cứ lúc nào; **Ctrl+R** (Reset Simulation) để chạy lại.  Hoặc nhấn **Ctrl+F9** đến khoảng tick 40 như trước.  Trạng thái cuối:
 
 | PC | x1 | x10 | x12 | x13 | x14 | từ nhớ 0 |
 |---|---|---|---|---|---|---|
@@ -155,7 +155,7 @@ Bấm tick bằng **Ctrl+F9** và quan sát giá trị **PC** trong tab State (�
 - **Tick 6-8**: PC đi tiếp tới `0x14`, `0x18`, `0x1c`: lệnh `beq` tại `0x14` được thực hiện, nhưng hai lệnh nằm sau nó đã được fetch rồi.  Ở tick 9 PC là `0x20` (đích rẽ nhánh; ở đây nó bằng địa chỉ tuần tự kế tiếp, nên chỉ riêng PC không chứng minh được flush).  Bằng chứng của flush là **`x5 = x6 = 0`** ở cuối: hai lệnh nằm sau `beq` đã bị biến thành bubble.
 - Giá trị cuối sau khoảng 13 tick: `x1 = 0x64`, `x2 = 0x64`, `x3 = 0x65`, `x4 = 0xc9`, `x7 = 7`, và lại là **`x5 = x6 = 0`**: các lệnh bị flush không làm thay đổi gì cả.
 - Forwarding: `x3` và `x4` đúng dù mỗi giá trị phụ thuộc vào lệnh ngay trước nó (giá trị được lấy từ register EX/MEM hoặc MEM/WB, không phải từ register file).
-- Sau đó PC cứ quay vòng `0x24, 0x28, 0x2c` trong pipeline: bình thường, lệnh nhảy `halt` flush các lệnh phía sau nó mỗi lần.
+- Trong mạch Logisim, xung nhịp **tự dừng** một chu kỳ sau khi lệnh nhảy `halt` tới EX (tick 13, lúc mọi lệnh cũ đã ghi xong): `DONE` = 1 và PC đứng ở `0x24`.  (Trang web vẫn chạy tiếp qua điểm này: ở đó PC quay vòng `0x24, 0x28, 0x2c` vì lệnh nhảy `halt` flush các lệnh phía sau nó mỗi lần.)
 
 "Cùng chương trình, cùng kết quả như CPU single-cycle - nhưng có năm lệnh cùng đang được xử lý một lúc."
 

@@ -204,7 +204,7 @@ Tình trạng các tầng **sau** mỗi tick (cái bạn thấy trong mạch và
 | 9 | skip (**20**) | **bubble** | **bubble** | beq | add x4 | 0 | 0 | 00 | 00 | **flush**: hai lệnh nạp sau `beq` (`addi x5`, `addi x6`) đã thành bubble; PC giờ là đích 0x20 |
 | 10 | halt (24) | addi x7 | bubble | bubble | beq | 0 | 0 | 00 | 00 | chương trình tiếp tục ở đích |
 | 11 | (28) | halt | addi x7 | bubble | bubble | 0 | 0 | 00 | 00 | `addi x7,x0,7` tính 7 |
-| 12 | (2c) | bubble | halt | addi x7 | bubble | 0 | **1** | 00 | 00 | lệnh `j halt` cuối lại chuyển hướng (và flush); điều này lặp mãi và là bình thường |
+| 12 | (2c) | bubble | halt | addi x7 | bubble | 0 | **1** | 00 | 00 | lệnh `j halt` cuối lại chuyển hướng (và flush); trên trang web điều này lặp mãi; trong mạch Logisim xung nhịp dừng ở đây (tick 13, `DONE` = 1) |
 
 (`ForwardA = 10` ở tick 5 thuộc về bubble ở EX: bubble giữ số hiệu thanh ghi của lệnh bị stall nhưng từ điều khiển của nó bằng 0, nên nó không làm gì.)
 

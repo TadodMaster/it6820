@@ -484,7 +484,7 @@ class Circ:
                 '    <a name="appearance" val="logisim_evolution"/>\n'
                 f'    <a name="circuit" val="{self.name}"/>\n'
                 '    <a name="circuitnamedboxfixedsize" val="true"/>\n'
-                '    <a name="simulationFrequency" val="1.0"/>\n')
+                '    <a name="simulationFrequency" val="4.0"/>\n')
         # two texts must not overlap (a tight spread would otherwise stack lines on top of each other)
         boxes = []
         for x, y, s, font in self.texts:

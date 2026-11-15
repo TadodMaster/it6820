@@ -52,7 +52,20 @@ def pipeline(proj, rom_contents=DEMO, spread=(1.0, 1.0)):
             y += dy
 
     # ================================================================ IF
-    c.add("Clock", (150, 300), {"appearance": "NewPins"}, {"out": "CLK"})
+    c.add("Clock", (150, 300), {"appearance": "NewPins"}, {"out": "CLK_RAW"})
+    # one-trigger run: the clock is gated.  PAUSE = 1 stops it; it stops by itself one cycle after the final "halt: j halt"
+    # (a JAL with immediate 0) reaches EX, when every older instruction has been written back.
+    c.add("AND Gate", (330, 300), {}, {"in1": "CLK_RAW", "in2": "clk_en", "out": "CLK"})
+    c.add("Pin", (150, 800), {"appearance": "classic", "label": "PAUSE"}, {"p": "PAUSE"})
+    c.text(150, 830, "PAUSE = 1 stops the clock")
+    c.add("NOR Gate", (450, 800), {}, {"in1": "PAUSE", "in2": "halt_d", "out": "clk_en"})
+    c.add("Constant", (150, 920), {"width": 32, "value": "0x0"}, {"out": "imm_zero_c"})
+    c.add("Comparator", (540, 920), {"width": 32, "mode": "unsigned"}, {"a": "imm_ex", "b": "imm_zero_c", "eq": "imm_is0"})
+    c.add("AND Gate", (540, 1020), {}, {"in1": "IsJAL_ex", "in2": "imm_is0", "out": "halt_ex"})
+    c.add("Register", (540, 1120), {"appearance": "logisim_evolution", "label": "halt_d", "width": 1},
+          {"q": "halt_d", "d": "halt_ex", "clk": "CLK", "r": "RESET", "we": "one"})
+    c.add("Pin", (720, 1120), {"appearance": "classic", "label": "DONE", "type": "output", "facing": "west"}, {"p": "halt_d"})
+    c.text(300, 1200, "DONE = 1: halt: j halt was seen in EX one cycle ago, all older instructions are written back, the clock stopped")
     c.text(120, 330, "Clock: Ctrl+F9 = 1 full cycle")
     c.add("Pin", (150, 420), {"appearance": "classic", "label": "RESET"}, {"p": "RESET"})
     c.text(130, 450, "RESET = 1 holds PC at 0")

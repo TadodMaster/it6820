@@ -155,7 +155,7 @@ How to say it: "The probe `branch_taken` turns to 1 exactly when the loop jumps 
 After tick 31 the probe already shows `branch_taken` = 0 (x11 = 0): the last `bnez` will not be taken; tick 32 moves the PC on to 14.  The loop is over, the milestones in step 5 take over.
 
 ### Step 5 - Run to the end (1 min)
-Press **Ctrl+F9** until about tick 40 (or hold it; or `Simulate > Auto-Tick Enabled`, **Ctrl+K**, then switch it off).  Final state:
+**One trigger, no clicking on the clock:** enable `Simulate > Auto-Tick Enabled` (**Ctrl+K**) once (speed: `Simulate > Auto-Tick Frequency`, the circuits start at 4 Hz).  The program now runs from start to finish by itself and the clock **stops at the final `halt: j halt`**: the `DONE` output pin turns 1 and the PC stays at `0x28`.  (Logisim cannot start ticking by itself, so one Ctrl+K is the trigger.)  Set the input pin `PAUSE` to 1 to freeze the clock at any time; **Ctrl+R** (Reset Simulation) starts again.  Or press **Ctrl+F9** until about tick 40 as before.  Final state:
 
 | PC | x1 | x10 | x12 | x13 | x14 | memory word 0 |
 |---|---|---|---|---|---|---|
@@ -191,7 +191,7 @@ Tick with **Ctrl+F9** and watch the **PC** value in the State tab (this is the f
 - **Ticks 6-8**: the PC goes on to `0x14`, `0x18`, `0x1c`: the `beq` at `0x14` is taken, but the two instructions behind it were already fetched.  At tick 9 the PC is `0x20` (the branch target; it equals the next sequential address here, so the PC alone does not prove the flush).  The proof of the flush is **`x5 = x6 = 0`** at the end: the two instructions behind the `beq` were turned into bubbles.
 - Final values after about 13 ticks: `x1 = 0x64`, `x2 = 0x64`, `x3 = 0x65`, `x4 = 0xc9`, `x7 = 7`, and again **`x5 = x6 = 0`**: the flushed instructions did not change anything.
 - Forwarding: `x3` and `x4` are correct although each depends on the instruction right before it (the value is taken from the EX/MEM or MEM/WB register, not from the register file).
-- Afterwards the PC keeps cycling `0x24, 0x28, 0x2c` in the pipeline: normal, the `halt` jump flushes the instructions after it every time.
+- In the Logisim circuit the clock **stops by itself** one cycle after the `halt` jump reaches EX (tick 13, when every older instruction has been written back): `DONE` = 1 and the PC stays at `0x24`.  (The web page keeps ticking past this point: there the PC would cycle `0x24, 0x28, 0x2c`, because the `halt` jump flushes the instructions after it every time.)
 
 "Same program, same results as the single-cycle CPU - but five instructions are in flight at once."
 
