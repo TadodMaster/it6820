@@ -1,101 +1,99 @@
-# RV32I computer in Logisim Evolution
+# Máy tính RV32I trong Logisim Evolution
 
-> **Web visualisation:** open [docs/web/index.html](docs/web/index.html) in a browser (step the CPUs with an animated datapath, see hazards, performance charts, flowcharts); rebuild with `python tools/build_web.py`, test with `node tools/web/test_engine.js`.
+> **Bản web trực quan:** mở [docs/web/index.html](docs/web/index.html) bằng trình duyệt (chạy từng tick với datapath hoạt hình, xem hazard, biểu đồ hiệu năng, sơ đồ luồng); dựng lại bằng `python tools/build_web.py`, kiểm thử bằng `node tools/web/test_engine.js`.
 
-> Tiếng Việt: [docs/vi/README.md](docs/vi/README.md) (all docs are also available in Vietnamese in `docs/vi/`).
+Một máy tính RISC-V (RV32I) 32-bit được xây dựng trong **Logisim Evolution 4.1.0** cho đồ án môn học
+(đề bài: [docs/BAO_CAO.md](docs/BAO_CAO.md)).  Dự án gồm **hai CPU** dùng chung các
+khối xây dựng và chạy cùng các chương trình:
 
-A 32-bit RISC-V (RV32I) computer built in **Logisim Evolution 4.1.0** for the course project
-(assignment: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)).  The project contains **two CPUs** that share the same
-building blocks and run the same programs:
-
-| Circuit | What it is |
+| Circuit | Đó là gì |
 |---|---|
-| `main` | **single-cycle CPU** (one instruction per clock cycle) |
-| `Pipeline` | **5-stage pipeline** IF > ID > EX > MEM > WB with forwarding, load-use stall and branch / jump flush |
+| `main` | **CPU single-cycle** (một lệnh mỗi chu kỳ clock) |
+| `Pipeline` | **pipeline 5 tầng** IF > ID > EX > MEM > WB với forwarding, load-use stall và flush khi rẽ nhánh / nhảy |
 
-Both implement the whole RV32I base integer ISA except `fence`, `ecall`, `ebreak` (they execute as no-ops).
-Everything is tested: 9 module test files, 7 whole-CPU test programs and a random-program fuzzer, all compared with an
-independent reference simulator.  Technical report: [docs/REPORT.md](docs/REPORT.md).
+Cả hai đều cài đặt toàn bộ tập lệnh số nguyên cơ sở RV32I trừ `fence`, `ecall`, `ebreak` (chúng thực thi như no-op).
+Mọi thứ đều được kiểm thử: 9 file test module, 7 chương trình test toàn CPU và một fuzzer chương trình ngẫu nhiên, tất cả được so sánh với một
+bộ mô phỏng tham chiếu độc lập.  Báo cáo kỹ thuật: [docs/BAO_CAO.md](docs/BAO_CAO.md).
 
-![single-cycle CPU](docs/img/main.png)
+![CPU single-cycle](docs/img/main.png)
 
-## Quick start
+## Bắt đầu nhanh
 
-Requirements: Java 21 or newer (Logisim Evolution 4.1.0 does not start on Java 17), Python 3.10+.
+Yêu cầu: Java 21 trở lên (Logisim Evolution 4.1.0 không khởi động được trên Java 17), Python 3.10+.
 
 ```powershell
 cd D:\hust\logisim
 java -jar .\logisim-evolution-4.1.0-all.jar .\RiscVComputer.circ
 ```
 
-1. In the project tree open `main` (single-cycle) or `Pipeline`.
-2. **Load a program** into the instruction ROM: right-click the ROM > **Load Image...**, type the path of a
-   `.hex` file (Logisim "v2.0 raw" format) and press Enter. (*Edit Contents...* opens a hex editor instead.) Make one from assembly:
+1. Trong cây dự án, mở `main` (single-cycle) hoặc `Pipeline`.
+2. **Nạp chương trình** vào ROM lệnh: nhấp phải vào ROM > **Load Image...**, gõ đường dẫn của một
+   file `.hex` (định dạng "v2.0 raw" của Logisim) rồi nhấn Enter. (*Edit Contents...* thì mở trình soạn hex.) Tạo file từ assembly:
    ```powershell
    python tools\rv.py asm programs\demo.s -o programs\demo.hex -l
    ```
-   The ROM already contains `programs/demo.s` (sum 1..10, store/load, a function call).
-3. Poke `RESET` to 1 and back to 0 (puts PC at 0).
-4. Step: `Simulate > Manual Tick Full Cycle` (**Ctrl+F9**) once per clock cycle (`Auto-Tick Enabled`, Ctrl+K, free-runs; `Reset Simulation` is Ctrl+R).  **One trigger:** enable Auto-Tick once (Ctrl+K) and the program runs from start to finish by itself; the clock stops at the final `halt: j halt` (output pin `DONE` = 1), and the input pin `PAUSE` = 1 freezes it at any time.
-5. Watch the registers live in the **State** tab (bottom-left, next to *Properties*): it lists `PC` and `x0`..`x31` and updates on every tick.
-   `instr` and `wb_data` are shown by the yellow probes in the circuit.
+   ROM đã chứa sẵn `programs/demo.s` (tổng 1..10, store/load, một lệnh gọi hàm).
+3. Chỉnh `RESET` lên 1 rồi về lại 0 (đặt PC về 0).
+4. Chạy từng bước: `Simulate > Manual Tick Full Cycle` (**Ctrl+F9**) mỗi lần một chu kỳ clock (`Auto-Tick Enabled`, Ctrl+K, chạy tự do; `Reset Simulation` là Ctrl+R).
+5. Xem các register trực tiếp ở tab **State** (góc dưới bên trái, cạnh *Properties*): tab này liệt kê `PC` và `x0`..`x31` và cập nhật sau mỗi tick.
+   `instr` và `wb_data` được hiển thị bằng các probe màu vàng trong circuit.
 
-Demo program expected result: `x10 = 55`, `x12 = 110`, `x13 = 55`, `x14 = 1`; the single-cycle CPU is done after 39 cycles, the pipeline after 64.
-See [docs/DEMO.md](docs/DEMO.md) for a demo script.
+Kết quả mong đợi của chương trình demo: `x10 = 55`, `x12 = 110`, `x13 = 55`, `x14 = 1`; CPU single-cycle xong sau 39 chu kỳ, pipeline sau 64.
+Xem [docs/TRINH_BAY.md](docs/TRINH_BAY.md) để có kịch bản demo.
 
-## Files
+## Các file
 
-| Path | Content |
+| Đường dẫn | Nội dung |
 |---|---|
-| `RiscVComputer.circ` | the project (both CPUs and all blocks) |
-| `programs/` | `demo.s` (preloaded in the ROM), `hazards_demo.s` (shows stall / forwarding / flush), with `.hex` images |
-| `tools/rv.py` | assembler (`asm`) and reference simulator (`sim`) |
-| `tools/java/`, `tools/bin/` | Java helpers: headless runner `Run`, renderer `Render`, pin dump `Ends` (`tools\compile.ps1` builds them) |
-| `tools/build/` | generators for the circuits (`build_all.py`), see [Rebuilding](#rebuilding-the-circuits) |
-| `tests/` | module test vectors, test programs, test runners |
-| `docs/` | documentation, see the index below |
-| `backup/` | earlier versions of the `.circ` |
-| `logisim-mcp/` | MCP server so Claude Code can read / test circuits (see `commands.txt`) |
+| `RiscVComputer.circ` | dự án (cả hai CPU và mọi khối) |
+| `programs/` | `demo.s` (nạp sẵn trong ROM), `hazards_demo.s` (minh họa stall / forwarding / flush), kèm các ảnh `.hex` |
+| `tools/rv.py` | assembler (`asm`) và bộ mô phỏng tham chiếu (`sim`) |
+| `tools/java/`, `tools/bin/` | các helper Java: bộ chạy headless `Run`, bộ vẽ `Render`, bộ dump chân `Ends` (`tools\compile.ps1` biên dịch chúng) |
+| `tools/build/` | các bộ sinh circuit (`build_all.py`), xem [Dựng lại các mạch](#dựng-lại-các-mạch) |
+| `tests/` | test vector của module, chương trình test, bộ chạy test |
+| `docs/` | tài liệu, xem mục lục bên dưới |
+| `logisim-mcp/` | MCP server để Claude Code đọc / test circuit (xem `commands.txt`) |
 
-## Documentation
+## Tài liệu
 
-| Document | Read it to ... |
+Toàn bộ tài liệu nằm trong `docs/` (tiếng Việt), gộp thành 5 file. **Mới vào repo thì đọc [docs/SU_DUNG_REPO.md](docs/SU_DUNG_REPO.md) trước.**
+
+| Tài liệu | Đọc để ... |
 |---|---|
-| [docs/GUIDE.md](docs/GUIDE.md) | **understand everything**: what a CPU does, every block, real signal values, the pipeline, tests, troubleshooting, glossary |
-| [docs/REPORT.md](docs/REPORT.md) | the formal technical report (architecture, modules, pipeline, hazards, tests, results) |
-| [docs/COMPONENTS.md](docs/COMPONENTS.md), [docs/BOM.md](docs/BOM.md) | the **configuration of every component and why** (settings, GUI names, traps, design decisions), and the generated bill of materials |
-| [docs/TOOLS.md](docs/TOOLS.md) | how the assembler, simulator, runner, generator and tests work inside |
-| [docs/DESIGN_LOG.md](docs/DESIGN_LOG.md) | history, design decisions, pitfalls found |
-| [docs/DEMO.md](docs/DEMO.md) | script for the demo video |
-| [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | the assignment (Vietnamese) with the status of each item |
-| [docs/INDEX.md](docs/INDEX.md) | map of all documents and a suggested reading order |
+| [docs/SU_DUNG_REPO.md](docs/SU_DUNG_REPO.md) | **cách dùng repo**: cài gì, chạy Logisim, file `.hex` và mã test ở đâu, chạy test, sửa gì thì chạy lại gì |
+| [docs/HUONG_DAN.md](docs/HUONG_DAN.md) | **hiểu và dùng mọi thứ**: CPU làm gì, từng khối, giá trị tín hiệu thực tế, pipeline, test, xử lý sự cố; cùng các công cụ (assembler, mô phỏng, bộ sinh mạch, kiểm thử) |
+| [docs/KIEN_TRUC.md](docs/KIEN_TRUC.md) | cấu hình từng component và lý do, bảng kê vật tư (BOM), nhật ký thiết kế, sơ đồ luồng của 14 circuit |
+| [docs/TRINH_BAY.md](docs/TRINH_BAY.md) | **trình bày cho thầy**: hướng dẫn ngắn, kịch bản demo, giải thích từng tick, kịch bản quay video, kịch bản hazard của pipeline (có bản [PDF](docs/TRINH_BAY.pdf)) |
+| [docs/BAO_CAO.md](docs/BAO_CAO.md) | báo cáo kỹ thuật, đề bài kèm trạng thái từng mục, phân công nhóm |
 
-## Instruction set
+Ngoài ra: [docs/web/index.html](docs/web/index.html) (bản web trực quan) và [docs/LEARNING_PLAN.md](docs/LEARNING_PLAN.md) (kế hoạch học, tiếng Anh).
 
-All of RV32I: `add sub sll slt sltu xor srl sra or and`, `addi slti sltiu xori ori andi slli srli srai`,
+## Tập lệnh
+
+Toàn bộ RV32I: `add sub sll slt sltu xor srl sra or and`, `addi slti sltiu xori ori andi slli srli srai`,
 `lb lh lw lbu lhu sb sh sw`, `beq bne blt bge bltu bgeu`, `jal jalr`, `lui auipc`.
-Pseudo instructions in the assembler: `nop li mv not neg j jr ret call beqz bnez bltz bgez blez bgtz bgt ble bgtu bleu seqz snez`.
-Memory: instruction ROM 256 words, data RAM 256 words (address wraps modulo 1 KiB), Harvard organisation.
-Loads / stores need natural alignment (a misaligned access uses the aligned word / halfword).
+Các lệnh giả trong assembler: `nop li mv not neg j jr ret call beqz bnez bltz bgez blez bgtz bgt ble bgtu bleu seqz snez`.
+Bộ nhớ: ROM lệnh 256 từ, RAM dữ liệu 256 từ (địa chỉ quay vòng theo modulo 1 KiB), tổ chức Harvard.
+Load / store cần căn chỉnh tự nhiên (truy cập không căn chỉnh sẽ dùng từ / halfword đã căn chỉnh).
 
-## Architecture in one page
+## Kiến trúc trong một trang
 
-Blocks (each is a circuit in the project, with a picture in `docs/img`):
+Các khối (mỗi khối là một circuit trong dự án, có hình trong `docs/img`):
 
-| Block | Role |
+| Khối | Vai trò |
 |---|---|
-| `InstructionDecode` | splits `instr` into `opcode rd funct3 rs1 rs2 funct7` |
+| `InstructionDecode` | tách `instr` thành `opcode rd funct3 rs1 rs2 funct7` |
 | `MainControl` | opcode > `RegWrite ALUSrc MemWrite MemRead IsBranch ALUOp ImmSel ASel WBSel IsJAL IsJALR` |
-| `ImmGen` | I / S / B / U / J immediates |
-| `RegisterFile` | x0..x31, 2 read ports, 1 write port |
-| `ALUControl`, `ALU` | 10 operations, `ALUCtrl` 0..9 |
+| `ImmGen` | các immediate I / S / B / U / J |
+| `RegisterFile` | x0..x31, 2 cổng đọc, 1 cổng ghi |
+| `ALUControl`, `ALU` | 10 phép toán, `ALUCtrl` 0..9 |
 | `BranchUnit` | `beq bne blt bge bltu bgeu` |
 | `Memory` = `LoadExtract` + `StoreMerge` + RAM | `lb lh lw lbu lhu sb sh sw` |
-| `ForwardingUnit`, `HazardUnit` | pipeline only |
+| `ForwardingUnit`, `HazardUnit` | chỉ dùng cho pipeline |
 
-Control signals (checked by `tests/maincontrol.vec`):
+Tín hiệu điều khiển (được kiểm tra bởi `tests/maincontrol.vec`):
 
-| opcode | class | RegWrite | ALUSrc | MemW | MemR | Branch | ALUOp | ImmSel | ASel | WBSel |
+| opcode | loại | RegWrite | ALUSrc | MemW | MemR | Branch | ALUOp | ImmSel | ASel | WBSel |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `0x33` | R-type | 1 | 0 | 0 | 0 | 0 | 10 | - | rs1 | ALU |
 | `0x13` | I-type ALU | 1 | 1 | 0 | 0 | 0 | 11 | I | rs1 | ALU |
@@ -110,15 +108,15 @@ Control signals (checked by `tests/maincontrol.vec`):
 `ALUCtrl`: 0 ADD, 1 SUB, 2 AND, 3 OR, 4 XOR, 5 SLL, 6 SRL, 7 SRA, 8 SLT, 9 SLTU.
 `ImmSel`: 0 I, 1 S, 2 B, 3 U, 4 J.  `ASel`: 00 rs1, 01 PC, 10 zero.  `WBSel`: 00 ALU, 01 memory, 10 PC+4.
 
-**Pipeline hazards** (details in the report):
+**Hazard của pipeline** (chi tiết trong báo cáo):
 
-* *Data hazard, ALU result needed soon*: `ForwardingUnit` selects the operand of EX from EX/MEM or MEM/WB (`wb_data`).
-  The register file writes on the falling clock edge, so WB and ID can use it in the same cycle.
-* *Load-use*: `HazardUnit` stalls PC and IF/ID for one cycle and inserts a bubble in ID/EX.
-* *Control hazard*: branch / JAL / JALR are resolved in EX; when taken, PC is redirected and the two instructions behind
-  are flushed (2-cycle penalty). There is no branch prediction (always "not taken").
+* *Hazard dữ liệu, kết quả ALU cần dùng sớm*: `ForwardingUnit` chọn toán hạng của EX từ EX/MEM hoặc MEM/WB (`wb_data`).
+  Register file ghi ở sườn xuống của clock, nên WB và ID có thể dùng nó trong cùng một chu kỳ.
+* *Load-use*: `HazardUnit` dừng PC và IF/ID một chu kỳ và chèn một bubble vào ID/EX.
+* *Hazard điều khiển*: branch / JAL / JALR được xác định ở EX; khi được thực hiện, PC được chuyển hướng và hai lệnh nằm sau
+  bị flush (penalty 2 chu kỳ). Không có dự đoán nhánh (luôn là "not taken").
 
-## Tests
+## Kiểm thử
 
 ```powershell
 powershell -File tests\run_tests.ps1                  # 9 module test files (Logisim test vectors), ~35 s
@@ -126,15 +124,15 @@ python tests\run_cpu_tests.py --circuit all            # test programs on both C
 python tests\fuzz.py --count 20 --seed 1               # random programs on both CPUs
 ```
 
-| Test | What it checks |
+| Test | Kiểm tra gì |
 |---|---|
-| `tests/*.vec` | every module in isolation: `ALU` 15 rows, `ALUControl` 23, `MainControl` 10, `ImmGen` 6, `BranchUnit` 16, `LoadExtract` 15, `StoreMerge` 7, `ForwardingUnit` 9, `HazardUnit` 5 |
-| `tests/programs/*.s` | `alu` (all R/I ops), `mem` (all loads / stores), `branch` (6 conditions, taken and not), `jump` (jal jalr lui auipc, call / ret), `fib`, `hazard` (dependent instructions, load-use, branch after load, ...). They check themselves: `x31 = 0x600D` when everything was right |
-| `tests/fuzz.py` | random programs (loads, stores, branches, jumps, dense register reuse) compared register-by-register and word-by-word with the reference simulator |
+| `tests/*.vec` | từng module riêng lẻ: `ALU` 15 hàng, `ALUControl` 23, `MainControl` 10, `ImmGen` 6, `BranchUnit` 16, `LoadExtract` 15, `StoreMerge` 7, `ForwardingUnit` 9, `HazardUnit` 5 |
+| `tests/programs/*.s` | `alu` (mọi phép R/I), `mem` (mọi load / store), `branch` (6 điều kiện, được thực hiện và không), `jump` (jal jalr lui auipc, call / ret), `fib`, `hazard` (lệnh phụ thuộc, load-use, branch sau load, ...). Chúng tự kiểm tra: `x31 = 0x600D` khi mọi thứ đều đúng |
+| `tests/fuzz.py` | chương trình ngẫu nhiên (load, store, branch, jump, dùng lại register dày đặc) được so sánh từng register và từng từ với bộ mô phỏng tham chiếu |
 
-Measured cycles (clock cycles until the last register write has completed; instructions = the instructions executed up to that write):
+Số chu kỳ đo được (số chu kỳ clock cho đến khi lần ghi register cuối cùng hoàn tất; instructions = các lệnh đã thực hiện đến lần ghi đó):
 
-| program | instructions | single-cycle | pipeline | pipeline CPI |
+| chương trình | instructions | single-cycle | pipeline | CPI pipeline |
 |---|---|---|---|---|
 | alu | 91 | 91 | 94 | 1.03 |
 | mem | 69 | 69 | 73 | 1.06 |
@@ -144,30 +142,30 @@ Measured cycles (clock cycles until the last register write has completed; instr
 | fib | 123 | 123 | 181 | 1.47 |
 | demo | 39 | 39 | 64 | 1.64 |
 
-The pipeline reaches CPI 1.0 on straight-line code; loops with taken branches cost 2 extra cycles each.
+Pipeline đạt CPI 1.0 trên mã tuyến tính; các vòng lặp có branch được thực hiện tốn thêm 2 chu kỳ mỗi lần.
 
-## Rebuilding the circuits
+## Dựng lại các mạch
 
-`RiscVComputer.circ` is generated from netlists by `tools/build/build_all.py` (no hand wiring for the new blocks); the hand-drawn
-blocks `ALU`, `InstructionDecode`, `RegisterFile`, `ImmGen`, `ALUControl` come from `tools/build/base.circ`.
+`RiscVComputer.circ` được sinh từ các netlist bởi `tools/build/build_all.py` (không đi dây tay cho các khối mới); các khối vẽ tay
+`ALU`, `InstructionDecode`, `RegisterFile`, `ImmGen`, `ALUControl` lấy từ `tools/build/base.circ`.
 
 ```powershell
 powershell -File tools\compile.ps1                                           # once: compile the Java helpers
 python tools\build\build_all.py tools\build\base.circ RiscVComputer.circ     # regenerate everything
 ```
 
-The generator asks Logisim for the exact pin positions, draws stubs and named tunnels, avoids collisions, and then **verifies** the
-saved file: every net must be connected as intended, nothing may be shorted.  Rules learned the hard way: Logisim connects wires
-only at their end points (no T-junctions in files), everything must lie on the 10-pixel grid, and `Constant` defaults to the value 1.
+Bộ sinh hỏi Logisim vị trí chính xác của các chân, vẽ các đoạn dây ngắn và các tunnel có tên, tránh va chạm, rồi **xác minh** file
+đã lưu: mọi net phải được nối đúng như dự định, không được có chập mạch.  Những quy tắc học được một cách đắt giá: Logisim nối dây
+chỉ tại các điểm đầu cuối (không có ngã ba chữ T trong file), mọi thứ phải nằm trên lưới 10 pixel, và `Constant` mặc định có giá trị 1.
 
-## Known limits
+## Giới hạn đã biết
 
-* No branch prediction, cache, multiplier / divider, interrupts, GPIO / UART or floating point (the optional extensions).
-* `fence`, `ecall`, `ebreak`, CSR instructions are not implemented (treated as `nop`).
-* The instruction ROM and data RAM are 256 words; the data RAM is separate from the ROM (a program cannot modify itself).
-* The report is drafted in [docs/REPORT.md](docs/REPORT.md) (to be proof-read and exported by the group); the demo video still has to be recorded ([docs/DEMO.md](docs/DEMO.md) is a script).
+* Không có dự đoán nhánh, cache, bộ nhân / chia, ngắt, GPIO / UART hay dấu phẩy động (các phần mở rộng tùy chọn).
+* Các lệnh `fence`, `ecall`, `ebreak`, CSR chưa được cài đặt (xử lý như `nop`).
+* ROM lệnh và RAM dữ liệu đều 256 từ; RAM dữ liệu tách biệt với ROM (chương trình không thể tự sửa mình).
+* Báo cáo đã được soạn thảo trong [docs/BAO_CAO.md](docs/BAO_CAO.md) (nhóm cần đọc soát và xuất file); video demo vẫn cần được quay ([docs/TRINH_BAY.md](docs/TRINH_BAY.md) là kịch bản).
 
-## Tools
+## Công cụ
 
-Java 21 (JDK 21.0.12 at `C:\Program Files\Java\jdk-21.0.12.1`), Python 3.10, `logisim-mcp` MCP server (venv needs `mcp<2`).
-`commands.txt` lists the commands.
+Java 21 (JDK 21.0.12 tại `C:\Program Files\Java\jdk-21.0.12.1`), Python 3.10, MCP server `logisim-mcp` (venv cần `mcp<2`).
+`commands.txt` liệt kê các lệnh.

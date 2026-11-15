@@ -1,4 +1,4 @@
-# Small program for watching pipeline hazards (see docs/GUIDE.md section 8).
+# Small program for watching pipeline hazards (see docs/TRINH_BAY.md, kịch bản hazard).
         li   x1, 100
         sw   x1, 0(x0)
         lw   x2, 0(x0)          # load ...

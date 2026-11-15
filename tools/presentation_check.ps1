@@ -36,19 +36,20 @@ Step 'Project files present' {
     @{ Ok = ($missing.Count -eq 0); Note = $(if ($missing) { 'missing: ' + ($missing -join ', ') } else { 'all there' }) }
 }
 
-Step 'ROM of both CPUs holds programs\demo.s' {
+Step 'ROM holds a demo program (main: demo.s, Pipeline: demo.s or hazards_demo.s)' {
     $out = python -c @"
 import re, sys
 t = open('RiscVComputer.circ', encoding='utf-8').read()
-want = [w.strip() for w in open('programs/demo.hex').read().split()[2:]]
+rd = lambda f: [int(w, 16) for w in open('programs/' + f).read().split()[2:]]
 res = []
-for c in ('main', 'Pipeline'):
+for c, wants in (('main', [rd('demo.hex')]), ('Pipeline', [rd('demo.hex'), rd('hazards_demo.hex')])):
     b = re.search(r'  <circuit name=\"%s\">.*?</circuit>' % c, t, re.S).group(0)
     rom = re.search(r'name=\"ROM\">.*?<a name=\"contents\">(.*?)</a>', b, re.S).group(1).split()[3:]
-    res.append(rom[:len(want)] == want)
+    rom = [int(w, 16) for w in rom]
+    res.append(any(rom[:len(w)] == w for w in wants))
 print('OK' if all(res) else 'DIFFERENT')
 "@
-    @{ Ok = ($out -match 'OK'); Note = $(if ($out -match 'OK') { 'main and Pipeline: 13 words match' } else { 'ROM differs from demo.hex: rebuild or reload the program' }) }
+    @{ Ok = ($out -match 'OK'); Note = $(if ($out -match 'OK') { 'main = demo.s; Pipeline = demo.s or hazards_demo.s' } else { 'ROM differs from demo.hex: rebuild or reload the program' }) }
 }
 
 Step 'Module tests (9 files, Logisim test vectors)' {
@@ -76,8 +77,8 @@ Step 'Live proof (the screen you will show)' {
 Write-Host ''
 if ($results -notcontains $false) {
     Write-Host 'READY: everything passed.' -ForegroundColor Green
-    Write-Host 'Before you start: close other Logisim windows, close chat / mail apps (notifications pop up over the screen), then follow docs\PRESENTATION.md.'
+    Write-Host 'Before you start: close other Logisim windows, close chat / mail apps (notifications pop up over the screen), then follow docs\TRINH_BAY.md.'
 } else {
-    Write-Host 'NOT READY: fix the FAIL lines first (docs\PRESENTATION.md, section "If something goes wrong").' -ForegroundColor Red
+    Write-Host 'NOT READY: fix the FAIL lines first (docs\TRINH_BAY.md, section "If something goes wrong").' -ForegroundColor Red
     exit 1
 }

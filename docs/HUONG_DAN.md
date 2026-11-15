@@ -1,6 +1,14 @@
-# Hướng dẫn đầy đủ: máy tính này hoạt động như thế nào
+# Hướng dẫn sử dụng và công cụ
 
-> Bản tiếng Việt của docs/GUIDE.md.
+Cách máy tính hoạt động từ đầu đến cuối, cách chạy, và các công cụ (assembler, mô phỏng, bộ sinh mạch, kiểm thử).
+
+## Nội dung
+- Hướng dẫn đầy đủ: máy tính này hoạt động như thế nào
+- Tài liệu tham khảo về công cụ: toolchain hoạt động bên trong như thế nào
+
+---
+
+## Hướng dẫn đầy đủ: máy tính này hoạt động như thế nào
 
 Tài liệu này giải thích **mọi thứ** trong dự án, bắt đầu từ "CPU là gì" và kết thúc ở cách các bài kiểm thử và bộ sinh mạch (generator) hoạt động.
 Mọi giá trị tín hiệu được nêu đều là thật: chúng được đọc từ các mạch đang chạy bằng `tools/probe.py`.
@@ -23,11 +31,11 @@ Hãy đọc từ đầu đến cuối một lần; về sau dùng mục lục nh
 | [13](#13-troubleshooting) | sự cố và cách khắc phục |
 | [14](#14-glossary) | các thuật ngữ dùng trong dự án |
 
-Chi tiết hơn: [REPORT.md](REPORT.md) (báo cáo chính thức), [TOOLS.md](TOOLS.md) (cách các công cụ hoạt động bên trong), [DESIGN_LOG.md](DESIGN_LOG.md) (lịch sử và các bẫy thường gặp).
+Chi tiết hơn: [REPORT.md](BAO_CAO.md) (báo cáo chính thức), [TOOLS.md](HUONG_DAN.md) (cách các công cụ hoạt động bên trong), [DESIGN_LOG.md](KIEN_TRUC.md) (lịch sử và các bẫy thường gặp).
 
 ---
 
-## 1. What a computer does
+### 1. What a computer does
 
 Bộ xử lý lặp lại mãi một vòng, chu trình **fetch - decode - execute** (nạp - giải mã - thực thi):
 
@@ -41,7 +49,7 @@ Bộ xử lý lặp lại mãi một vòng, chu trình **fetch - decode - execut
 Năm bước đó chính là năm stage IF, ID, EX, MEM, WB.  CPU *single-cycle* thực hiện tất cả trong một chu kỳ xung nhịp; CPU *pipelined*
 xử lý năm lệnh khác nhau cùng lúc, mỗi lệnh ở một stage.
 
-### RISC-V in five minutes
+#### RISC-V in five minutes
 RISC-V là một tập lệnh mở.  Tập số nguyên 32 bit cơ sở được gọi là **RV32I**.  Nó có:
 
 * **32 thanh ghi (register)** `x0..x31`, mỗi thanh ghi 32 bit.  `x0` luôn đọc ra 0 và bỏ qua mọi thao tác ghi.  Trình hợp dịch cũng hiểu các tên ABI:
@@ -85,7 +93,7 @@ Ví dụ: `addi x1, x0, 5` là `0x00500093`: `imm = 000000000101`, `rs1 = 0`, `f
 
 ---
 
-## 2. The project at a glance
+### 2. The project at a glance
 
 ```
 RiscVComputer.circ
@@ -100,7 +108,7 @@ Cả hai CPU được xây từ **cùng các khối**; chỉ khác nhau ở các
 Bộ nhớ được tổ chức theo kiểu máy **Harvard**: một ROM lệnh 256 từ và một RAM dữ liệu 256 từ riêng biệt (mỗi bộ 1 KiB).
 Không thể nạp lệnh từ RAM dữ liệu và chương trình không thể tự ghi đè lên chính nó.
 
-### How a Logisim project is organised
+#### How a Logisim project is organised
 * Mỗi hộp có thanh tiêu đề đen (`ALU`, `MainControl`, ...) là một **sub-circuit** (mạch con): một mạch được dùng như một con chip.  Nhấp đúp vào nó
   (công cụ Poke: nhấp vào kính lúp) để xem bên trong.
 * **Tunnel** là một đầu dây có gắn nhãn (`rs1_data`, `alu_result`, ...).  **Mọi tunnel cùng tên trong một mạch đều được nối với nhau**,
@@ -109,7 +117,7 @@ Không thể nạp lệnh từ RAM dữ liệu và chương trình không thể 
 * **Register** lưu một giá trị tại sườn lên của xung nhịp khi tín hiệu enable của nó bằng 1.
 * Độ dày và màu của dây: dày = bus nhiều bit, mỏng = 1 bit; xanh lục nhạt = 1, tối = 0, xanh dương = thả nổi (floating), đỏ = xung đột, cam = lệch độ rộng.
 
-### What each folder is for
+#### What each folder is for
 | Thư mục | Mục đích |
 |---|---|
 | `programs/` | các chương trình hợp ngữ: `demo.s` (nạp sẵn), `hazards_demo.s` |
@@ -120,7 +128,7 @@ Không thể nạp lệnh từ RAM dữ liệu và chương trình không thể 
 
 ---
 
-## 3. Using the circuits in Logisim
+### 3. Using the circuits in Logisim
 
 1. Khởi động: `java -jar logisim-evolution-4.1.0-all.jar RiscVComputer.circ` (Java **21** trở lên).
 2. Nhấp đúp `main` trong cây bên trái.  Biểu tượng bàn tay trên thanh công cụ là **Poke tool** (nhấp vào giá trị để thay đổi), mũi tên là công cụ Edit.
@@ -138,17 +146,17 @@ Không thể nạp lệnh từ RAM dữ liệu và chương trình không thể 
 
 ---
 
-## 4. The building blocks one by one
+### 4. The building blocks one by one
 
 Với mỗi khối: **làm gì**, **được xây dựng ra sao**, **vì sao**, **kiểm thử thế nào**.  Hình ảnh nằm ở `docs/img/<Block>.png`; hãy mở mạch trong
 Logisim để xem cùng nội dung đó trực tiếp.
 
-### 4.1 InstructionDecode
+#### 4.1 InstructionDecode
 *Làm gì:* tách lệnh thành các trường.  *Cách xây dựng:* một splitter duy nhất.  Ở đây không có gì được "quyết định": với lệnh I-type thì `rs2` thực chất là một phần của
 immediate, nhưng splitter vẫn xuất các bit [24:20] thành `rs2`; đơn vị điều khiển quyết định trường nào có ý nghĩa.
 `opcode = instr[6:0]`, `rd = [11:7]`, `funct3 = [14:12]`, `rs1 = [19:15]`, `rs2 = [24:20]`, `funct7 = [31:25]`.
 
-### 4.2 MainControl
+#### 4.2 MainControl
 *Làm gì:* biến `opcode` thành các tín hiệu điều khiển.  *Cách xây dựng:* chín bộ so sánh, mỗi bộ so sánh opcode 7 bit với một hằng số, cho ra chín cờ một bit
 (`IsR IsI IsLoad IsStore IsBranch IsLui IsAuipc IsJAL IsJALR`).  Các cổng OR kết hợp các cờ thành các tín hiệu:
 
@@ -168,7 +176,7 @@ immediate, nhưng splitter vẫn xuất các bit [24:20] thành `rs2`; đơn v�
 Thêm hai bộ chọn nhỏ cho phép tất cả các lệnh này dùng lại đường đi ALU thông thường.
 *Kiểm thử:* `tests/maincontrol.vec` kiểm tra toàn bộ bảng cho cả chín opcode và một opcode không xác định.
 
-### 4.3 ImmGen
+#### 4.3 ImmGen
 *Làm gì:* tạo immediate 32 bit.  Các bit immediate bị **xáo trộn** trong lệnh (để `rs1`, `rs2`, `rd` luôn nằm ở vị trí cố định); ImmGen
 sắp xếp chúng lại:
 
@@ -183,14 +191,14 @@ sắp xếp chúng lại:
 Sau đó một bộ mở rộng bit sao chép bit cao nhất để lấp đầy 32 bit (**sign extension** - mở rộng dấu), nhờ vậy `addi x1,x1,-1` cộng thêm `0xFFFFFFFF`.
 Một bộ ghép kênh (multiplexer) 8 đầu vào (dùng 5 đầu vào) chọn định dạng theo `ImmSel`.  *Kiểm thử:* `immgen.vec`.
 
-### 4.4 RegisterFile
+#### 4.4 RegisterFile
 *Làm gì:* 32 thanh ghi, hai cổng đọc (`rs1_data`, `rs2_data`) và một cổng ghi.  *Cách xây dựng:* 32 component register; phía **ghi** là một bộ phân kênh (demultiplexer) 1 sang 32
 có đầu vào dữ liệu là `RegWrite` và đầu chọn là `rd`, nên chỉ thanh ghi `rd` nhận write-enable (và chỉ khi `RegWrite = 1`).
 Mọi thanh ghi dùng chung `wb_data` và xung nhịp.  Phía **đọc** là hai bộ ghép kênh 32 sang 1 được chọn bởi `rs1` / `rs2`; chúng *bất đồng bộ*: đổi `rs1`
 thì `rs1_data` đổi ngay lập tức.  Thanh ghi `x0` có hằng số 0 làm đầu vào dữ liệu, nên nó luôn giữ giá trị 0.
 *Vì sao đọc bất đồng bộ?* Trong CPU single-cycle, giá trị phải tới ALU ngay trong cùng chu kỳ.
 
-### 4.5 ALU and ALUControl
+#### 4.5 ALU and ALUControl
 *ALU:* tính đồng thời cả mười phép toán (bộ cộng, bộ trừ, AND, OR, XOR, ba bộ dịch, hai bộ so sánh); một bộ ghép kênh 16 sang 1 chọn một kết quả
 theo `ALUCtrl`.  Lượng dịch = 5 bit thấp của B.  `SLT` / `SLTU` cho ra 0 hoặc 1 (mở rộng bằng số 0).
 
@@ -203,7 +211,7 @@ theo `ALUCtrl`.  Lượng dịch = 5 bit thấp của B.  `SLT` / `SLTU` cho ra 
 `11` giải mã funct3 cho các lệnh immediate (bit 5 của funct7 chỉ dùng cho SRLI / SRAI, vì `addi` không có dạng "sub").
 *Kiểm thử:* `alu.vec`, `alucontrol.vec` (mọi phép toán, dạng R và I).
 
-### 4.6 BranchUnit
+#### 4.6 BranchUnit
 *Làm gì:* quyết định một nhánh có điều kiện có được thực hiện hay không.  *Cách xây dựng:* một bộ so sánh không dấu và một bộ so sánh có dấu cho ra `a==b`, `a<u b`, `a<s b`; các cổng NOT cho ra `!=`,
 `>=u`, `>=s`; một bộ ghép kênh được chọn bởi `funct3` chọn điều kiện; `branch_taken = IsBranch AND condition`.
 
@@ -213,7 +221,7 @@ theo `ALUCtrl`.  Lượng dịch = 5 bit thấp của B.  `SLT` / `SLTU` cho ra 
 
 *Kiểm thử:* `branchunit.vec` (cả hai chiều của mỗi điều kiện, cộng các trường hợp biên có dấu so với không dấu như `-1` so với `1`).
 
-### 4.7 The next-PC logic (inside `main` / `Pipeline`)
+#### 4.7 The next-PC logic (inside `main` / `Pipeline`)
 ```
 pc_target   = PC + imm                          (đích của nhánh và JAL)
 jalr_target = (rs1 + imm) với bit 0 bị xóa       (kết quả ALU, đã che bit)
@@ -224,11 +232,11 @@ next_pc     = IsJALR ? jalr_target : take_target ? pc_target : PC + 4
 
 ---
 
-## 5. Following instructions through the single-cycle CPU
+### 5. Following instructions through the single-cycle CPU
 
 Đây là các giá trị thật từ `main` đang chạy `programs/demo.s` (đọc bằng `python tools/probe.py RiscVComputer.circ main programs/demo.s N <signals>`).
 
-### 5.1 `add x10, x10, x11`  (R-type; `instr = 00b50533`, vòng lặp đầu tiên)
+#### 5.1 `add x10, x10, x11`  (R-type; `instr = 00b50533`, vòng lặp đầu tiên)
 | Stage | Tín hiệu |
 |---|---|
 | Fetch | `pc = 8`, `instr = 00b50533`, `pc_plus4 = 0c` |
@@ -238,30 +246,30 @@ next_pc     = IsJALR ? jalr_target : take_target ? pc_target : PC + 4
 | Execute | `ALUCtrl = 0 (ADD)`, `alu_a = 0`, `alu_b = 0x0a`, `alu_result = 0x0a` |
 | Write back | `wb_data = 0x0a` được ghi vào x10 ở sườn xung nhịp; `next_pc = 0c` |
 
-### 5.2 `bnez x11, loop`  (= `bne x11, x0, loop`; `instr = fe059ce3`, được thực hiện)
+#### 5.2 `bnez x11, loop`  (= `bne x11, x0, loop`; `instr = fe059ce3`, được thực hiện)
 `opcode = 63`, `imm = 0xfffffff8` (-8, B-immediate), `IsBranch = 1`, `ALUOp = 01`, `rs1_data = 8` (x11), `rs2_data = 0`.  `BranchUnit`: `8 != 0` nên
 `branch_taken = 1`.  `pc_target = 0x10 + (-8) = 0x08` và `next_pc = 0x08`: vòng lặp quay lại lệnh `add`.  `RegWrite = 0`: không có gì được ghi.
 
-### 5.3 `lw x12, 0(x0)`  (`instr = 00002603`)
+#### 5.3 `lw x12, 0(x0)`  (`instr = 00002603`)
 `imm = 0` (I-type), `alu_a = x0 = 0`, `alu_b = imm = 0`, `alu_result = 0` chính là **địa chỉ**.  `MemRead = 1`.  `Memory` trả về `mem_rdata = 0x37` (55, được lưu trước đó bởi
 `sw`).  `WBSel = 01` chọn giá trị từ bộ nhớ: `wb_data = 0x37`, được ghi vào x12.
 
-### 5.4 `jal x1, double`  (`instr = 010000ef`, tại `pc = 0x1c`)
+#### 5.4 `jal x1, double`  (`instr = 010000ef`, tại `pc = 0x1c`)
 `imm = 0x10` (J-immediate).  `IsJAL = 1`, `take_target = 1`, `pc_target = 0x1c + 0x10 = 0x2c`, nên `next_pc = 0x2c`.  `WBSel = 10`: `wb_data = pc_plus4 = 0x20` được ghi vào `x1`
 (`ra`), tức địa chỉ trả về.  Không cần dùng đến ALU.
 
-### 5.5 `ret`  (= `jalr x0, 0(x1)`; `instr = 00008067`)
+#### 5.5 `ret`  (= `jalr x0, 0(x1)`; `instr = 00008067`)
 `rs1_data = 0x20` (ra), `imm = 0`, `alu_result = 0x20`, `jalr_target = 0x20`; `IsJALR = 1` khiến `next_pc = jalr_target = 0x20`: việc thực thi tiếp tục sau lệnh gọi.
 `rd = x0`, nên giá trị liên kết `wb_data = 0x34` bị bỏ đi (thao tác ghi vào x0 bị bỏ qua).
 
 ---
 
-## 6. The memory system
+### 6. The memory system
 
-### 6.1 Instruction ROM
+#### 6.1 Instruction ROM
 256 từ.  PC đếm theo byte, nên địa chỉ ROM là **chỉ số từ** `PC[9:2]` (hai bit thấp luôn bằng 0 vì lệnh căn hàng theo 4 byte).
 
-### 6.2 Data RAM
+#### 6.2 Data RAM
 Một RAM Logisim gồm 256 từ x 32 bit, được cấu hình với **đọc bất đồng bộ** (đầu ra dữ liệu theo địa chỉ ngay lập tức; cần thiết vì lệnh load phải
 trả giá trị ngay trong cùng chu kỳ) và **một tín hiệu write enable** (từ được ghi tại sườn lên của xung nhịp).  Địa chỉ dữ liệu được tách ra:
 
@@ -270,7 +278,7 @@ trả giá trị ngay trong cùng chu kỳ) và **một tín hiệu write enable
 
 Các địa chỉ lớn hơn 1023 sẽ quay vòng (chỉ dùng 10 bit địa chỉ).
 
-### 6.3 Loads: `LoadExtract`
+#### 6.3 Loads: `LoadExtract`
 RAM luôn xuất cả từ.  `LoadExtract` lấy phần mà lệnh cần:
 
 | funct3 | lệnh | kết quả |
@@ -283,7 +291,7 @@ RAM luôn xuất cả từ.  `LoadExtract` lấy phần mà lệnh cần:
 
 Ví dụ: từ `0x8899AABB`, `lb` tại byte 1 cho `0xFFFFFFAA`, `lbu` cho `0x000000AA`, `lh` ở nửa trên cho `0xFFFF8899`.
 
-### 6.4 Stores: `StoreMerge`
+#### 6.4 Stores: `StoreMerge`
 RAM chỉ có thể ghi cả từ.  Vì vậy với `sb` / `sh`, mạch đọc từ cũ, thay các byte được ghi rồi ghi lại cả từ
 (một thao tác **read-modify-write**, tất cả trong một chu kỳ).  Vì RAM đọc bất đồng bộ nên việc này không cần thêm chu kỳ nào.
 
@@ -303,9 +311,9 @@ Truy cập không căn hàng (ví dụ `lw` tại địa chỉ 2) không đượ
 
 ---
 
-## 7. The pipelined CPU
+### 7. The pipelined CPU
 
-### 7.1 Why
+#### 7.1 Why
 Trong CPU single-cycle, chu kỳ xung nhịp phải bao trùm *toàn bộ* đường đi (fetch + decode + ALU + bộ nhớ + write back).  Trong pipeline, các stage được ngăn cách bằng thanh ghi, nên xung nhịp
 chỉ cần bao trùm *stage chậm nhất*; tốt nhất là mỗi chu kỳ hoàn thành một lệnh.  (Logisim không mô hình hóa độ trễ cổng, nên bạn thấy cùng số chu kỳ nhưng không thấy xung nhịp nhanh hơn.)
 
@@ -317,7 +325,7 @@ instr 3                 IF   ID   EX   MEM  WB
 instr 4                      IF   ID   EX   MEM  WB
 ```
 
-### 7.2 The pipeline registers
+#### 7.2 The pipeline registers
 Mọi giá trị vẫn còn cần ở một stage sau phải đi cùng lệnh qua các thanh ghi giữa các stage:
 
 | Giữa | Các thanh ghi |
@@ -331,11 +339,11 @@ Các tín hiệu điều khiển được giải mã **một lần**, ở ID.  C
 3 bit ở MEM/WB (mỗi stage bỏ đi những bit nó không còn cần).  Một splitter đóng gói các bit trước một thanh ghi và một splitter khác tháo ra sau thanh ghi đó.
 Một control word toàn số 0 là một **NOP / bubble**: nó không ghi gì cả.
 
-### 7.3 A trick: the register file writes on the falling edge
+#### 7.3 A trick: the register file writes on the falling edge
 WB và ID cùng dùng register file trong một chu kỳ.  Nếu một lệnh ở WB ghi `x5` trong khi lệnh đứng sau nó 3 vị trí đọc `x5` ở ID, thì bên đọc phải thấy giá trị **mới**.  Xung nhịp của register file là `CLK_n` (xung nhịp đảo):
 nó ghi ở nửa đầu của chu kỳ còn ID đọc ở nửa sau.
 
-### 7.4 Hazards
+#### 7.4 Hazards
 *Hazard* là tình huống mà việc cứ cho các lệnh chạy xuôi qua các stage sẽ cho kết quả sai.
 
 **Data hazard (đọc sau ghi).**  `add x1,x2,x3` theo sau là `sub x4,x1,x5`: `sub` đọc `x1` ở ID trong khi `add` chưa ghi nó.  Giải pháp: **forwarding**.  Giá trị tồn tại sau stage EX của `add`; nó được
@@ -367,7 +375,7 @@ Vì vậy một nhánh / lệnh nhảy được thực hiện tốn **2 chu kỳ
 
 ---
 
-## 8. Watching the pipeline: a real trace
+### 8. Watching the pipeline: a real trace
 
 `programs/hazards_demo.s`:
 
@@ -407,7 +415,7 @@ Cách đọc:
 
 ---
 
-## 9. Performance
+### 9. Performance
 
 * **CPI** (cycles per instruction - số chu kỳ trên mỗi lệnh) = số chu kỳ / số lệnh.  Single-cycle: đúng bằng 1.  Pipeline: 1 + trung bình số stall và flush.
 * **Thời gian thực thi** = số lệnh x CPI x chu kỳ xung nhịp.  Pipeline có CPI cao hơn nhưng chu kỳ xung nhịp ngắn hơn, nên trong một hiện thực thực tế nó nhanh hơn.  Logisim mô phỏng theo "tick", không phải nano giây, nên ở đây chỉ thấy được CPI.
@@ -431,9 +439,9 @@ Cách cải thiện: xử lý `jal` ở ID (phạt 1), thêm bộ dự đoán nh
 
 ---
 
-## 10. Writing and running programs
+### 10. Writing and running programs
 
-### 10.1 Assembly syntax (`tools/rv.py`)
+#### 10.1 Assembly syntax (`tools/rv.py`)
 ```
         li   x10, 0            # comments start with # or ;
 loop:   add  x10, x10, x11     # labels end with a colon
@@ -448,14 +456,14 @@ halt:   j    halt              # end of program: jump to itself
 * `chk rd, value` (dùng trong các bài kiểm thử): `li x30, value` rồi `bne rd, x30, fail`; nó cần nhãn `fail:` và dùng thanh ghi `x30`.
 * Chương trình kết thúc bằng một vòng lặp vô tận; các công cụ kiểm thử nhận biết "nhảy về chính nó" là điểm kết thúc.
 
-### 10.2 Commands
+#### 10.2 Commands
 ```powershell
 python tools\rv.py asm prog.s -o prog.hex -l     # assemble, print a listing (address, machine code, source)
 python tools\rv.py sim prog.s                    # run on the reference simulator and print the registers
 ```
 `-l` in ra các dòng như `0008: 00b50533  loop:   add  x10, x10, x11`.
 
-### 10.3 Memory map
+#### 10.3 Memory map
 | Vùng | Địa chỉ | Ghi chú |
 |---|---|---|
 | ROM lệnh | 0x000 - 0x3FF | 256 từ, chỉ đọc, được địa chỉ hóa bởi `PC[9:2]` |
@@ -466,7 +474,7 @@ Các thanh ghi bắt đầu bằng 0.  Không có khởi tạo con trỏ stack: 
 
 ---
 
-## 11. How everything is tested
+### 11. How everything is tested
 
 Nguyên tắc thiết kế: **một oracle độc lập**.  Trình mô phỏng tham chiếu trong `tools/rv.py` được viết tách biệt với các mạch, nên một lỗi phải được mắc hai lần mới có thể lọt qua mà không bị phát hiện.
 
@@ -487,7 +495,7 @@ Những gì các bài kiểm thử **không** bao phủ: thời gian (timing, Lo
 
 ---
 
-## 12. How to extend the design
+### 12. How to extend the design
 
 **Thêm một lệnh R-type** (ví dụ một phép ALU mới): (1) thêm phép toán vào `ALU` và gán cho nó một số `ALUCtrl` (bộ ghép kênh có 16 đầu vào, còn trống 6); (2) dạy `ALUControl` tổ hợp funct3 / funct7;
 (3) thêm lệnh vào `tools/rv.py` (`R_OPS`) và vào trình mô phỏng `alu()`; (4) thêm các hàng vào `alu.vec`, `alucontrol.vec` và một chương trình kiểm thử; (5) build lại.
@@ -502,7 +510,7 @@ Những gì các bài kiểm thử **không** bao phủ: thời gian (timing, Lo
 
 ---
 
-## 13. Troubleshooting
+### 13. Troubleshooting
 
 | Triệu chứng | Nguyên nhân / cách khắc phục |
 |---|---|
@@ -520,7 +528,7 @@ Những gì các bài kiểm thử **không** bao phủ: thời gian (timing, Lo
 
 ---
 
-## 14. Glossary
+### 14. Glossary
 
 | Từ | Ý nghĩa |
 |---|---|
@@ -544,3 +552,189 @@ Những gì các bài kiểm thử **không** bao phủ: thời gian (timing, Lo
 | Stall | giữ phần đầu của pipeline lại trong một chu kỳ |
 | Test vector | một bảng đầu vào và đầu ra mong đợi cho một mạch |
 | Tunnel | một đầu dây có tên; cùng tên = được nối với nhau |
+
+---
+
+## Tài liệu tham khảo về công cụ: toolchain hoạt động bên trong như thế nào
+
+Mọi thứ không phải là mạch đều nằm trong `tools/` và `tests/`.  Trang này giải thích từng công cụ: mục đích, cách dùng, cách hoạt động và các giới hạn.
+Về bản thân CPU, hãy đọc [GUIDE.md](HUONG_DAN.md).
+
+```
+programs/*.s --rv.py asm--> *.hex --(ROM contents)--> circuit
+                  |                                      |
+                  +--rv.py sim (reference)               +--Run.java (headless run) --> registers / memory
+                            \                                         /
+                             +------------- compare ------------------+   tests/run_cpu_tests.py, tests/fuzz.py
+
+tools/build/*.py --(netlists)--> RiscVComputer.circ --Ends.java--> pin positions   (used while generating)
+                                        |
+                                        +--Render.java--> docs/img/*.png
+                                        +--verify.py  (checks the saved nets)
+```
+
+| Công cụ | Tệp | Yêu cầu |
+|---|---|---|
+| Trình hợp dịch (assembler) + mô phỏng tham chiếu | `tools/rv.py` | Python 3.10 |
+| Trình chạy không giao diện (headless) | `tools/java/Run.java` | JDK 21 + tệp jar của Logisim |
+| Dò / theo dõi net | `tools/probe.py` | các mục trên |
+| Trình vẽ (PNG của một mạch) | `tools/java/Render.java` | các mục trên |
+| Xuất vị trí chân (pin) | `tools/java/Ends.java` | các mục trên |
+| Bộ sinh mạch | `tools/build/` | các mục trên |
+| Các trình chạy kiểm thử | `tests/run_tests.ps1`, `tests/run_cpu_tests.py`, `tests/fuzz.py` | các mục trên |
+
+Đặt biến môi trường `JAVA` thành đường dẫn `java.exe` của JDK 21 nếu `java` trong PATH cũ hơn (`$env:JAVA = "C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe"`).
+`powershell -File tools\compile.ps1` biên dịch các tệp Java vào `tools/bin` (cần `javac`).
+
+---
+
+### 1. `tools/rv.py` - trình hợp dịch và mô phỏng tham chiếu
+
+`python tools/rv.py asm prog.s [-o prog.hex] [-l]` và `python tools/rv.py sim prog.s [-n max_steps]`.  Cũng có thể import (`import rv`):
+`rv.assemble(text) -> (words, listing, labels)`, `rv.Sim(words)`, `rv.to_hex(words)`.
+
+#### Trình hợp dịch
+Hai lượt:
+1. **Lượt 1** đọc các dòng, loại bỏ chú thích (`#` hoặc `;`), thu thập nhãn (`name:` cho địa chỉ của lệnh *máy* kế tiếp) và **khai triển các lệnh giả (pseudo instruction)** thành
+   lệnh thật.  Vì `li` có thể khai triển thành một hoặc hai lệnh, địa chỉ chỉ biết được sau khi khai triển.
+2. **Lượt 2** mã hóa mọi lệnh theo bố cục bit của RV32I (`enc_r`, `enc_i`, `enc_s`, `enc_b`, `enc_u`, `enc_j`); toán hạng nhãn trở thành `label - current address`
+   cho lệnh rẽ nhánh và nhảy.  Các lỗi phạm vi (immediate quá lớn, rẽ nhánh quá xa, offset lẻ) phát sinh `AsmError` kèm số dòng.
+
+`li rd, v` trở thành `addi rd, x0, v` nếu `v` vừa 12 bit, nếu không thì `lui rd, hi` + `addi rd, rd, lo`, trong đó `lo` là 12 bit thấp được mở rộng dấu và `hi` được hiệu chỉnh +1 khi `lo` âm.
+`chk rd, v` là macro tự kiểm tra cho các bài test (`li x30, v` + `bne rd, x30, fail`).
+
+Định dạng đầu ra (ảnh bộ nhớ "raw" của Logisim): dòng đầu `v2.0 raw`, sau đó mỗi dòng một từ 32 bit dạng hex (Logisim cũng chấp nhận nhiều từ trên một dòng).
+
+#### Mô phỏng tham chiếu (`rv.Sim`)
+Một mô hình Python thuần của kiến trúc, cố ý độc lập với các mạch:
+* 32 thanh ghi (x0 bị ép bằng 0), PC, ROM 256 từ, bộ nhớ dữ liệu 256 từ (`(addr >> 2) & 0xFF`, nên địa chỉ quay vòng giống phần cứng);
+* `step()` giải mã opcode và thực thi (R, I, load, store, branch, LUI, AUIPC, JAL, JALR); các opcode không biết (fence, ecall) hoạt động như NOP;
+* load và store dưới một từ dùng cùng cách chọn byte / halfword như phần cứng (`lh` ở địa chỉ lẻ dùng halfword đã căn hàng, giống `LoadExtract`);
+* `run()` dừng khi một lệnh nhảy về chính nó (quy ước `halt: j halt`) hoặc sau `max_steps`.
+
+Giới hạn: không có CSR, không có trap, không có ngoại lệ truy cập không căn hàng.
+
+---
+
+### 2. `tools/java/Run.java` - chạy chương trình trên mạch không cần GUI
+
+```
+java -cp "logisim-evolution-4.1.0-all.jar;tools\bin" Run <file.circ> <circuit> <program.hex> <cycles> [trace|x] [@probe ...]
+```
+
+Cách hoạt động (dùng chính các lớp Java của Logisim):
+1. `LogisimFile.load` nạp project; mạch tên `<circuit>` phải chứa đúng một ROM; thuộc tính nội dung của nó (`Rom.CONTENTS_ATTR`) bị ghi đè bằng các từ của tệp hex.
+2. `CircuitState.createRootState(project, circuit, Thread.currentThread())` tạo một trạng thái mô phỏng mà propagator thuộc về *main thread* (`Project`/`Simulator`
+   thông thường tạo luồng riêng và từ chối lời gọi từ nơi khác).
+3. Với mỗi chu kỳ: `propagator.toggleClocks(); propagator.propagate();` hai lần (sườn lên và sườn xuống).  Thành phần `Clock` của mạch là thứ được đảo.
+4. Sau khi chạy nó in `CYCLES=`, `PC=` (thanh ghi có nhãn `PC`), `x0..x31` (các thanh ghi có nhãn `x0..x31` trong trạng thái mạch con `RegisterFile`) và
+   mọi từ khác 0 của RAM trong trạng thái mạch con `Memory`, dưới dạng `MEM[addr]=value`.  Các lớp trạng thái như `RegisterData` là package-private nên được đọc bằng reflection.
+5. **Chế độ trace** (`trace`) in `T <cycle> PC=<hex> <probe values...>` sau mỗi chu kỳ.  **Probe** là `@x,y` (một điểm trong mạch trên cùng) hoặc `@Circuit:x,y` (bên trong một
+   mạch con); giá trị của dây tại điểm đó được in ra (`U` = bit không xác định, `E` = lỗi, `-` = không có dây tại điểm đó).
+
+Vì sao thanh ghi được gắn nhãn: bộ sinh đặt tên 32 thanh ghi là `x0..x31` và thanh ghi PC là `PC` chính là để các công cụ tìm được chúng.
+
+### 3. `tools/probe.py` - xem các tín hiệu có tên
+
+`python tools/probe.py [--trace] file.circ circuit prog.s cycles label...` hợp dịch chương trình, tra **tên tunnel** trong mạch để tìm vị trí dây cho từng nhãn,
+và gọi `Run` với các probe đó.  Không có `--trace` thì in các giá trị sau `cycles` chu kỳ; có `--trace` thì in một bảng mỗi chu kỳ một hàng.  Ví dụ:
+
+```powershell
+python tools\probe.py RiscVComputer.circ main programs\demo.s 2 pc instr rs1_data rs2_data alu_result wb_data
+python tools\probe.py --trace RiscVComputer.circ Pipeline programs\hazards_demo.s 12 pc_if pc_id pc_ex stall ForwardA
+```
+Giá trị nhiều bit được in dạng hex không có số 0 đứng đầu đối với bus hẹp (`0a`, `2`).  Giá trị là trạng thái *sau* số chu kỳ xung nhịp đầy đủ đã cho.
+
+### 4. `tools/java/Render.java` và `Ends.java`
+
+* `Render <file.circ> <outdir> <circuit|ALL> <scale>` vẽ một mạch vào `<outdir>/<circuit>.png` bằng chính mã vẽ của Logisim (`Circuit.draw`).  (Dùng từ `ALL`: trên Windows
+  `java` khai triển một dấu `*` trần thành tên tệp.)
+* `Ends <file.circ> [circuit]` in ra cho mỗi thành phần vị trí, hộp bao và **vị trí, độ rộng, hướng chính xác của mọi chân của nó**.  Đây là cách bộ sinh
+  biết nơi nối dây: không có offset chân nào được hard-code.
+
+---
+
+### 5. `tools/build/` - bộ sinh mạch
+
+`python tools/build/build_all.py <base.circ> <out.circ>` đọc thư viện vẽ tay (`base.circ`: ALU, InstructionDecode, RegisterFile, ImmGen, ALUControl), (tái) sinh mọi
+mạch còn lại và ghi ra project.
+
+| Tệp | Nội dung |
+|---|---|
+| `circgen.py` | engine sinh mạch: `Project` (văn bản .circ), `Circ` (một mạch đang được xây) |
+| `blocks.py` | netlist của `MainControl`, `BranchUnit`, `LoadExtract`, `StoreMerge`, `Memory`, `ForwardingUnit`, `HazardUnit` |
+| `cpus.py` | CPU đơn chu kỳ `main`, tìm kiếm bố cục `tightest()` |
+| `pipeline.py` | pipeline 5 tầng |
+| `fonts.py` | lượt cuối: mọi font trở thành `Monospaced` |
+| `verify.py` | kiểm tra mọi mạch đã sinh sau khi lưu |
+| `build_all.py` | trình điều khiển: vá, sinh, lưu, xác minh |
+
+#### Mô tả một mạch
+```python
+c = Circ(proj, "HazardUnit", spread=(1.5, 1.3))
+c.pin_in("rd_ex", 5, (120, 180))                                   # circuit input pin
+c.add("Comparator", (700, 300), {"width": 5, "mode": "unsigned"},  # component, location, attributes
+      {"a": "rd_ex", "b": "rs1_id", "eq": "hit1"})                  # pin name -> net name
+c.add("AND Gate", (1450, 300), {"inputs": 3}, {"in1": "MemRead_ex", "in2": "rd_ok", "in3": "uses", "out": "stall"})
+c.pin_out("stall", 1, (1750, 300))
+c.install()
+```
+Một **net** chỉ là một cái tên; mọi chân có cùng tên đều được nối với nhau.  `c.link(c1, "out", c2, "b")` vẽ trực tiếp một dây thay vì dùng tunnel.  Tên chân của từng thành phần nằm trong `pin_names()`
+(`a b out` cho bộ cộng, `d0..dN sel out` cho bộ ghép kênh, `bus b0..` cho splitter, ...); với mạch con thì tên là nhãn của các chân bên trong chúng.
+
+#### `build()` làm gì
+1. **Dò (Probe)**: ghi một project tạm chứa mọi thành phần (không có dây) và chạy `Ends` trên đó để biết vị trí chân và hộp bao thực.
+2. **Độ rộng net**: độ rộng của mỗi net lấy từ các chân của nó (probe báo độ rộng 0 cho đến khi được nối, nên dùng giá trị lớn nhất).
+3. **Stub và tunnel**: mỗi chân có một đoạn dây ngắn và một **tunnel** mang tên net.  Bộ định tuyến thử độ dài stub theo bước 10 px, các khúc gấp ngang, và (với chân ở trên hoặc
+   dưới của thành phần) cả hai hướng, và chấp nhận cách đặt đầu tiên mà dây và hộp nhãn không chạm vào bất kỳ thành phần, stub hay nhãn nào khác.  Các chân chỉ cách nhau
+   10 px (splitter, bộ ghép kênh 8 đầu vào, đầu ra của comparator) được **xòe ra**: các stub uốn về các hàng cách nhau 30 px với các cột gấp không giao nhau và mọi nhãn thẳng hàng.
+4. **Chia dây**: Logisim chỉ nối dây tại các đầu mút, nên mọi dây bị chia tại các đầu mút của dây khác.
+5. **Đặt văn bản**: các chú thích được đặt sau khi định tuyến và được đẩy ra khỏi mọi thứ chúng chồng lên.
+6. **Lint**: sai lệch độ rộng, net không có driver, net có nhiều driver, đầu ra không dùng đều được báo; mọi tọa độ không nằm trên lưới 10 px là lỗi.
+7. **Tìm kiếm bố cục** (`cpus.tightest`): hai CPU được xây với một chuỗi hệ số tỉ lệ bố cục (0.5 ... 1.15) cho đến khi bộ định tuyến tìm đủ chỗ cho mọi thứ; cái nhỏ nhất thắng.
+
+#### Bộ xác minh (`verify.py`)
+Sau khi tệp được lưu, nó được đọc lại **một cách độc lập**: lấy vị trí chân từ `Ends`, nối dây tại các đầu mút và tunnel theo nhãn, rồi kiểm tra với mọi mạch đã sinh rằng
+* mọi chân của một net dự định thực sự là một net điện (nếu không: "net X is split"),
+* không có hai net dự định khác nhau bị nối điện với nhau ("SHORT"),
+* mọi tunnel đều nằm trên một đầu mút dây.
+
+Kiểm tra này tồn tại vì những lỗi có thật khi xây công cụ (chỗ nối chữ T hở, tunnel lệch lưới, hai tunnel trên cùng một điểm); xem [DESIGN_LOG.md](KIEN_TRUC.md).
+Quá trình build thoát với mã lỗi nếu có mạch nào không đạt.
+
+#### Quy tắc chỉnh sửa
+* **Không** sửa tay các mạch đã sinh trong Logisim: lần build kế tiếp sẽ ghi đè.  Hãy đổi phần mô tả Python.
+* Các khối vẽ tay: mở `tools/build/base.circ` trong Logisim, sửa, lưu, build lại.
+* Các loại thành phần Logisim mới cần một mục trong `LIB` (số thư viện) và `pin_names()` trong `circgen.py`.
+
+---
+
+**Chú thích tiếng Việt.**  `tools/build/captions_vi.py` chứa chú thích của từng linh kiện (nó làm gì ở đúng chỗ đó và vì sao), tra theo circuit và net đầu ra; `circgen.py` đặt mỗi chú thích ở chỗ trống gần nhất cạnh linh kiện (bố cục nào có chú thích không tìm được chỗ sẽ bị loại, nên bộ tìm chọn hệ số giãn lớn hơn).  Năm circuit vẽ tay được chú thích bằng `annotate_vi.annotate_components()`; khối giải thích dưới mỗi circuit lấy từ `annotate_vi.NOTES`.  Hàng probe tạo bằng `Circ.monitor()`, chữ của chúng cố định.  Không đặt radix 10 cho probe (`Ends` và Logisim bị treo): dùng 16.  Bộ tìm bố cục thu nhỏ x và y độc lập (`cpus.tightest`), nên một lần dựng lại mất khoảng 6 phút.
+
+---
+
+### 5b. `tools/web/` và `tools/build_web.py` - bản web trực quan
+
+* `tools/web/engine.js` là mô hình JavaScript của cả hai CPU (single-cycle `main` và pipeline 5 tầng `Pipeline`) với tên khối và tên tín hiệu giống mạch.  `tools/web/template.html` là trang web; `python tools/build_web.py` nhúng engine, các chương trình đã assemble (`tools/web/dump_programs.py`) và `docs/FLOWCHARTS.md` / `docs/vi/FLOWCHARTS.md` vào một file duy nhất `docs/web/index.html`.
+* Tab pipeline mở đầu bằng **băng chuyền** hoạt ảnh (`tools/web/pipeline_conveyor.js`): mỗi lệnh là một thẻ tiến qua năm tầng, thẻ nhấp nháy khi stall, thẻ đỏ khi bị flush, mũi tên hoạt ảnh cho forwarding và cho lần nhảy PC, cùng các nút nhảy tới forwarding / stall / flush đầu tiên và nút lùi 1 tick (trang chạy lại từ đầu).  Ở tab single-cycle, datapath sáng lên lần lượt từng tầng sau mỗi lần Tick thủ công (có ô tắt).
+* Bên dưới băng chuyền là sơ đồ datapath chi tiết của circuit `Pipeline` (`tools/web/pipeline_detail.js`, được build nhúng vào): bốn thanh ghi pipeline cùng các trường, HazardUnit, ForwardingUnit với các mux và đường forwarding, ALU, BranchUnit, logic tính đích nhảy, Memory và write-back, tất cả có giá trị thật; bảng bên dưới cho thấy từ điều khiển đi cùng lệnh qua ID, EX, MEM, WB.
+* Trang có năm tab: giới thiệu, single-cycle, pipeline, biểu đồ hiệu năng (đo trực tiếp 8 chương trình ngay trên trình duyệt: số chu kỳ, CPI, phân tích chi phí) và sơ đồ luồng.  Các biểu đồ là SVG thuần do một thư viện nhỏ trong template vẽ (không dùng thư viện biểu đồ bên ngoài).
+* `node tools/web/test_engine.js` kiểm engine: thanh ghi và bộ nhớ cuối của 8 chương trình trên cả hai CPU so với bộ mô phỏng tham chiếu Python, vết probe single-cycle của `demo.s`, vết probe pipeline của `hazards_demo.s` và trạng thái pipeline sau 20 tick của `demo.s` (đều đo trên mạch Logisim).
+* Trang nhận `?prog=<tên>&t=<số tick>#single|#pipe|#flow` để mở sẵn ở một trạng thái; sơ đồ flowchart do Mermaid vẽ, tải từ CDN (chỉ phần này cần mạng).
+
+---
+
+### 6. Các trình chạy kiểm thử
+
+* `tests/run_tests.ps1 [file.circ]` - với mỗi module chạy `java -jar logisim.jar --test-vector <circuit> tests/<module>.vec <file>` và in `passed N, failed M`.
+  Định dạng `.vec`: dòng tiêu đề `pin[width] ...`; mỗi hàng là một test, giá trị dạng hex `0x...` hoặc nhị phân; đầu vào và đầu ra kỳ vọng cùng nằm trên một hàng.
+  Hạn chế: trong các thử nghiệm của chúng tôi, nội dung RAM không được giữ từ hàng này sang hàng sau, nên RAM được kiểm thử qua các chương trình hoàn chỉnh.
+* `tests/run_cpu_tests.py [--circuit main|Pipeline|all] [--circ file] [programs]` - hợp dịch từng chương trình, chạy mô phỏng tham chiếu, chạy mạch trong
+  `2 * steps + 24` chu kỳ, so sánh mọi thanh ghi và mọi từ dữ liệu khác 0, kiểm tra giá trị tự kiểm `x31 = 0x600D` (nếu chương trình dùng) và báo số chu kỳ.
+* `tests/fuzz.py [--count N --seed S --length L]` - chương trình ngẫu nhiên: xem hướng dẫn, mục 11.  Các chương trình thất bại được ghi vào thư mục tạm dưới tên `fuzz_fail_<seed>.s`.
+
+### 7. Các giới hạn đã biết của công cụ
+* Trình hợp dịch không có directive nào ngoài `.word`, không có `%hi/%lo`, không có section.
+* ROM chứa 256 từ; chương trình lớn hơn bị từ chối.
+* `Run.java` tìm ROM, thanh ghi và RAM theo tên / nhãn; các mạch không theo cách đặt tên này (`PC`, `x0..x31`, mạch con `RegisterFile`, `Memory`) cần sửa đổi nhỏ.
+* Bố cục của các mạch được sinh thiên về chức năng hơn là đẹp: tín hiệu là các tunnel có tên, không phải dây được định tuyến.
