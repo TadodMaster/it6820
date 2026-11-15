@@ -1,8 +1,8 @@
-# Hướng dẫn chạy: cách dùng repo này
+# Hướng dẫn chạy
 
 File này trả lời nhanh: **cài gì, chạy Logisim thế nào, file `.hex` ở đâu, mã test ở đâu, chạy test ra sao, sửa gì thì chạy lại gì**. Lệnh viết cho PowerShell trên Windows, chạy ở thư mục gốc của repo (thư mục chứa `RiscVComputer.circ`).
 
-## 1. Cần cài gì
+## 1. Cài đặt
 
 | Thứ | Phiên bản | Dùng để |
 |---|---|---|
@@ -19,7 +19,7 @@ $env:JAVA = "C:\Program Files\Java\jdk-21.0.12.1\bin\java.exe"
 
 File `logisim-evolution-4.1.0-all.jar` phải nằm ở thư mục gốc repo (các công cụ tìm nó ở đó).
 
-## 2. Repo có gì và nằm ở đâu
+## 2. Cấu trúc repo
 
 ```
 RiscVComputer.circ        dự án Logisim: mạch main (single-cycle), Pipeline, và 12 khối con
@@ -69,7 +69,7 @@ python tools\rv.py sim programs\demo.s                           # chạy bằng
 
 Muốn chạy chương trình mới: viết `ten.s` trong `programs\`, dịch ra `ten.hex`, rồi nạp vào ROM như mục 3. Chương trình phải kết thúc bằng một vòng `halt: j halt`.
 
-## 5. Mã test nằm ở đâu và chạy thế nào
+## 5. Kiểm thử
 
 | Nơi | Là gì |
 |---|---|
@@ -93,7 +93,7 @@ powershell -ExecutionPolicy Bypass -File tools\presentation_check.ps1 -Quick
 
 Phải thấy dòng cuối `READY: everything passed.`
 
-## 6. Công cụ trong `tools\`
+## 6. Công cụ
 
 | File | Làm gì |
 |---|---|
@@ -118,7 +118,7 @@ Phải thấy dòng cuối `READY: everything passed.`
 | `docs\web\index.html` | mở bằng trình duyệt: chạy từng tick CPU, xem hazard, biểu đồ |
 | `docs\img\` | ảnh của từng mạch |
 
-## 8. Sửa gì thì chạy lại gì
+## 8. Chỉnh sửa và chạy lại
 
 - **Đổi chương trình `.s`:** dịch lại bằng `tools\rv.py asm`, nạp hex vào ROM. Nếu muốn lưu trong mạch, bấm Save trong Logisim.
 - **Đổi mạch:** `RiscVComputer.circ` được sinh ra từ mã Python, **đừng sửa tay trong Logisim rồi lưu** nếu bạn định sinh lại, vì sinh lại sẽ ghi đè. Muốn đổi mạch thì sửa trong `tools\build\*.py` rồi chạy:
@@ -128,7 +128,7 @@ Phải thấy dòng cuối `READY: everything passed.`
   (khoảng 5-7 phút; đóng Logisim trước, vì file tự lưu `.RiscVComputer.circ.autosave` làm bước kiểm tra bị treo). Sau đó chạy lại bộ test ở mục 5.
 - **Đổi trang web:** sửa trong `tools\web\`, chạy `python tools\build_web.py`, rồi `node tools\web\test_engine.js`.
 
-## 9. Lỗi hay gặp
+## 9. Xử lý lỗi
 
 | Triệu chứng | Cách xử lý |
 |---|---|
